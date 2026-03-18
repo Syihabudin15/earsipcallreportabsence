@@ -1,0 +1,362 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum EDataStatus {
+  ALL
+  USER
+}
+
+enum EPermitStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ENominalType {
+  RUPIAH
+  PERCENT
+}
+
+enum ECostType {
+  ALLOWANCE
+  DEDUCTION
+}
+
+enum EAbsenceStatus {
+  HADIR
+  TERLAMBAT
+  CUTI
+  PERDIN
+  SAKIT
+  ALPHA
+}
+
+enum EGBookStatus {
+  AKANDATANG
+  TELAHDATANG
+}
+
+model Role {
+  id          String      @id @default(uuid())
+  name        String
+  permission  String      @db.Text
+  data_status EDataStatus @default(ALL)
+
+  status     Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  users      User[]
+}
+
+model Position {
+  id          String  @id @default(uuid())
+  name        String
+  description String? @db.Text
+
+  status     Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  User       User[]
+}
+
+model User {
+  id           String  @id @default(uuid())
+  fullname     String
+  nik          String?
+  nip          String?
+  phone        String?
+  email        String?
+  username     String  @unique
+  password     String
+  salary       Int
+  ptkp         String
+  absen_method String
+  face         String? @db.Text
+  photo        String?
+
+  status        Boolean         @default(true)
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @default(now())
+  Position      Position        @relation(fields: [positionId], references: [id], onUpdate: Cascade)
+  ReuestMade    PermitFile[]    @relation("RequesterRelation")
+  ApprovMade    PermitFile[]    @relation("ApproverRelation")
+  Submission    Submission[]
+  LogActivities LogActivities[]
+  Visit         Visit[]
+  UserCost      UserCost[]
+  Absence       Absence[]
+  Role          Role            @relation(fields: [roleId], references: [id], onUpdate: Cascade)
+  roleId        String
+  positionId    String
+}
+
+model SubmissionType {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  status     Boolean   @default(true)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  Debitur    Debitur[]
+}
+
+model ProductType {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  status          Boolean           @default(true)
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @default(now())
+  ProductTypeFile ProductTypeFile[]
+  Product         Product[]
+}
+
+model ProductTypeFile {
+  id   String @id @default(uuid())
+  name String
+  type String
+
+  status        Boolean     @default(true)
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @default(now())
+  ProductType   ProductType @relation(fields: [productTypeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  Files         Files[]
+  productTypeId String
+}
+
+model Product {
+  id   String @id @default(uuid())
+  name String
+
+  status        Boolean      @default(true)
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @default(now())
+  ProductType   ProductType  @relation(fields: [productTypeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  Submission    Submission[]
+  productTypeId String
+}
+
+model Debitur {
+  id         String    @id @default(uuid())
+  cif        String?
+  fullname   String
+  nik        String    @unique
+  birthplace String?
+  birthdate  DateTime?
+  address    String?   @db.Text
+  phone      String?
+  email      String?
+
+  status           Boolean        @default(true)
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @default(now())
+  SubmissionType   SubmissionType @relation(fields: [submissionTypeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  submissionTypeId String
+  Submissions      Submission[]
+  Visit            Visit[]
+}
+
+model Submission {
+  id               String  @id @default(uuid())
+  purpose          String?
+  coments          String? @db.Text
+  account_number   String?
+  activities       String? @db.Text
+  value            Int
+  guarantee_status Boolean @default(false)
+  drawer_code      String
+
+  is_active        Boolean            @default(true)
+  status           Boolean            @default(true)
+  created_at       DateTime           @default(now())
+  updated_at       DateTime           @default(now())
+  Debitur          Debitur            @relation(fields: [debiturId], references: [id], onUpdate: Cascade)
+  Product          Product            @relation(fields: [productId], references: [id], onUpdate: Cascade)
+  User             User               @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  Files            Files[]
+  debiturId        String
+  productId        String
+  userId           String
+  PermitFileDetail PermitFileDetail[]
+}
+
+model Files {
+  id             String @id @default(uuid())
+  name           String
+  url            String
+  allow_download String @db.Text
+
+  created_at        DateTime           @default(now())
+  Submission        Submission         @relation(fields: [submissionId], references: [id], onUpdate: Cascade)
+  ProductTypeFile   ProductTypeFile    @relation(fields: [productTypeFileId], references: [id], onUpdate: Cascade)
+  submissionId      String
+  productTypeFileId String
+  PermitFileDetail  PermitFileDetail[]
+}
+
+model PermitFile {
+  id            String        @id @default(uuid())
+  action        String
+  description   String?
+  permit_status EPermitStatus @default(PENDING)
+  process_at    DateTime?
+
+  status      Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+  Requester   User     @relation("RequesterRelation", fields: [requesterId], references: [id], onUpdate: Cascade)
+  Approver    User?    @relation("ApproverRelation", fields: [approverId], references: [id], onUpdate: Cascade)
+  requesterId String
+  approverId  String?
+}
+
+model PermitFileDetail {
+  id           String     @id @default(uuid())
+  Submission   Submission @relation(fields: [submissionId], references: [id], onUpdate: Cascade)
+  Files        Files[]
+  submissionId String
+}
+
+model LogActivities {
+  id        String  @id @default(uuid())
+  action    String
+  method    String
+  status    String
+  ip        String
+  userAgent String
+  payload   String?
+  User      User    @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  userId    String
+}
+
+model Visit {
+  id           String        @id @default(uuid())
+  date         DateTime
+  type         String
+  purpose      String
+  value        Int
+  summary      String?       @db.Text
+  need         String?       @db.Text
+  comment      String?       @db.Text
+  last_action  String?       @db.Text
+  date_action  DateTime?
+  geo          String?
+  files        String?       @db.Text
+  visit_status EPermitStatus @default(PENDING)
+
+  status     Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  Debitur    Debitur  @relation(fields: [debiturId], references: [id], onUpdate: Cascade)
+  User       User     @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  debiturId  String
+  userId     String
+}
+
+model AbsenceConfig {
+  id                   String  @id @default(uuid())
+  late_eduction        Int     @default(0)
+  fast_leave_deduction Int     @default(0)
+  alpha_deduction      Int     @default(0)
+  shift_start          Int     @default(0)
+  shift_end            Int     @default(0)
+  shift_tolerance      Int     @default(0)
+  last_shift           Int?    @default(0)
+  geo_location         String?
+  meter_tolerance      Int?    @default(0)
+
+  updatedAt DateTime @default(now())
+}
+
+model UserCost {
+  id           String       @id @default(uuid())
+  name         String
+  type         ECostType
+  nominal      Float
+  nominal_type ENominalType @default(RUPIAH)
+  periode      DateTime?
+
+  User   User   @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  userId String
+}
+
+model Absence {
+  id             String         @id @default(uuid())
+  method         String
+  check_in       DateTime? // jam masuk
+  check_out      DateTime? // jam pulang
+  geo_in         String?
+  geo_out        String?
+  absence_status EAbsenceStatus @default(HADIR)
+  description    String?
+
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @default(now())
+  User          User            @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  userId        String
+  PermitAbsence PermitAbsence[]
+}
+
+model PermitAbsence {
+  id            String         @id @default(uuid())
+  type          EAbsenceStatus
+  description   String?        @db.Text
+  file          String?
+  absence_date  DateTime       @default(now())
+  end_date      DateTime?
+  deduction     Int
+  allowance     Int
+  permis_status EPermitStatus  @default(PENDING)
+
+  status     Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  Absence    Absence? @relation(fields: [absenceId], references: [id], onUpdate: Cascade)
+  absenceId  String?
+}
+
+model GBookType {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  status     Boolean     @default(true)
+  created_at DateTime    @default(now())
+  updated_at DateTime    @default(now())
+  guestBooks GuestBook[]
+}
+
+model GuestBook {
+  id          String       @id @default(uuid())
+  name        String
+  date        DateTime
+  status_come EGBookStatus @default(TELAHDATANG)
+  description String?      @db.Text
+
+  status     Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+
+  GbookType    GBookType     @relation(fields: [gBookTypeId], references: [id], onUpdate: Cascade)
+  gBookTypeId  String
+  participants Participant[]
+}
+
+model Participant {
+  id      String  @id @default(uuid())
+  name    String
+  phone   String?
+  email   String?
+  comment String?
+
+  GuestBook   GuestBook @relation(fields: [guestBookId], references: [id], onUpdate: Cascade)
+  guestBookId String
+}

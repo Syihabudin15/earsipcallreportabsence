@@ -1,0 +1,11 @@
+import { Router } from "express";
+import * as UserRepo from "./repositories.js";
+
+const router = Router();
+
+router.get("/", UserRepo.GET);
+router.post("/", UserRepo.POST);
+router.put("/", UserRepo.PUT);
+router.delete("/", UserRepo.DELETE);
+
+export default router;

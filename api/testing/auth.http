@@ -1,0 +1,14 @@
+@baseUrl = http://localhost:5000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+
+GET {{baseUrl}}/auth
+
+###
+
+POST {{baseUrl}}/auth
+Content-Type: application/json
+
+{
+  "username": "developer",
+  "password": "Tsani182"
+}

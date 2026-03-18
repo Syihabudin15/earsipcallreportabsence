@@ -1,0 +1,47 @@
+@baseUrl = http://localhost:5000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+
+GET {{baseUrl}}/role
+
+###
+
+POST {{baseUrl}}/role
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Developer",
+  "data_status": "ALL",
+  "created_at": "{{$datetime iso8601}}",
+  "updated_at": "{{$datetime iso8601}}",
+  "status": true,
+  "permission": [
+    {"path":"/app/role","access":["read","write","update","delete"]},
+    {"path":"/app/user","access":["read","write","update","delete"]}
+  ]
+}
+
+###
+
+PUT {{baseUrl}}/role?id=10
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "RL01",
+  "name": "Developer",
+  "data_status": "USER",
+  "created_at": "{{$datetime iso8601}}",
+  "updated_at": "{{$datetime iso8601}}",
+  "status": true,
+  "permission": [
+    {"path":"/app/role","access":["read","write","update","delete"]},
+    {"path":"/app/user","access":["read","write","update","delete"]}
+  ]
+}
+
+###
+
+DELETE {{baseUrl}}/role?id=RL01
+Authorization: Bearer {{token}}
+Content-Type: application/json
