@@ -3,14 +3,14 @@ import { Plus, Filter, Download } from "lucide-react";
 import { useState } from "react";
 
 const DataDebitur = () => {
-  const [loading, setLoading] = useState(false);
+  const [loading, _setLoading] = useState(false);
 
   const columns: TableProps["columns"] = [
     {
       title: "ID",
       key: "id",
       dataIndex: "id",
-      render(value, record, index) {
+      render(_value, _record, index) {
         return <>{index + 1}</>;
       },
     },

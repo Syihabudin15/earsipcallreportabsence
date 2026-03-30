@@ -1,14 +1,11 @@
 import {
-  App,
   Button,
   DatePicker,
   Input,
-  Modal,
   Popover,
   Select,
   Table,
   Tag,
-  Typography,
   type TableProps,
 } from "antd";
 import { Plus, Edit, Trash, Filter } from "lucide-react";
@@ -22,15 +19,13 @@ import type {
   IVisitPurpose,
   IVisitStatus,
 } from "../../libs/interface";
-import type { HookAPI } from "antd/es/modal/useModal";
-import api from "../../libs/api";
 import useContext from "../../libs/context";
 import { CollapseList, CollapseText } from "../utils/utilComp";
 import moment from "moment";
 import { Link } from "react-router-dom";
 import dayjs from "dayjs";
 import { CloseOutlined } from "@ant-design/icons";
-const { Text } = Typography;
+import api from "../../libs/api";
 const { RangePicker } = DatePicker;
 
 export default function DataVisit() {
@@ -54,7 +49,6 @@ export default function DataVisit() {
     process: false,
     record: undefined,
   });
-  const { modal } = App.useApp();
   const { hasAccess } = useContext((state: any) => state);
   const [subTypes, setSubTypes] = useState<ISubType[]>([]);
   const [visitStatuses, setVisitStatuses] = useState<IVisitStatus[]>([]);
