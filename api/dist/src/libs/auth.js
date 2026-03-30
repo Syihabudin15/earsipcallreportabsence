@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 const secretkey = process.env.APP_JWT_SECRET;
 export const signIn = async (user) => {
-    const token = jwt.sign(user, secretkey, { expiresIn: "15h" });
+    const token = jwt.sign(user, secretkey);
     return token;
 };
 export const comparaPassword = async (pass, has) => {

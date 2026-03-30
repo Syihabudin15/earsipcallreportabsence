@@ -57,7 +57,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
     await prisma.role.create({
       data: {
         ...body,
-        id: body.id ? body.id : genId,
+        id: body.id && body.id !== "" ? body.id : genId,
         permission: JSON.stringify(body.permission),
       },
     });

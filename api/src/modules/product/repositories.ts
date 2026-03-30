@@ -17,7 +17,8 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       },
       skip: skip,
       take: limit,
-      include: { ProductType: true },
+      include: { ProductType: { include: { ProductTypeFile: true } } },
+      orderBy: { id: "asc" },
     });
 
     const total = await prisma.product.count({
@@ -48,11 +49,11 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
   let body = req.body;
   try {
     const genId = await generateId(body.productTypeId);
-    const { ProdukType, ...saved } = body;
+    const { id, ProductType, ...saved } = body;
     await prisma.product.create({
       data: {
-        id: body.id ? body.id : genId,
         ...saved,
+        id: body.id && body.id !== "" ? body.id : genId,
       },
     });
     return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
@@ -79,7 +80,7 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
-    const { ProdukType, ...saved } = body;
+    const { ProductType, ...saved } = body;
     await prisma.product.update({
       where: { id: find.id },
       data: {

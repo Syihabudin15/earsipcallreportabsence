@@ -14,6 +14,7 @@ export interface IPageProps<T> {
   data: T[];
   [key: string]: any;
 }
+type EStatus = "APPROVED" | "REJECTED" | "PENDING";
 
 export interface IMenu {
   path: string;
@@ -29,6 +30,16 @@ export interface IPermission {
   access: string[];
 }
 
+export interface IComments {
+  name: string;
+  date: Date;
+  comment: string;
+}
+export interface IActivities {
+  date: Date;
+  name: string;
+  activities: string;
+}
 // MODEL
 
 export interface IRole {
@@ -50,11 +61,37 @@ export interface IPosition {
   updated_at: Date;
   User: IUser[];
 }
+export interface IAbsence {
+  id: string;
+  method: string;
+  check_in: Date | null;
+  check_out: Date | null;
+  geo_in: string | null;
+  geo_out: string | null;
+  absence_status: "HADIR" | "TERLAMBAT" | "CUTI" | "PERDIN" | "SAKIT";
+  description: string | null;
+
+  created_at: Date;
+  updated_at: Date;
+  userId: string;
+}
 export interface IUser {
   id: string;
   fullname: string;
+  nik: string | null;
+  nip: string | null;
+  phone: string | null;
+  email: string | null;
+  username: string | null;
+  password: string | null;
+  salary: number;
+  ptkp: string;
+  absence_method: "BUTTON" | "FACE";
+  face: string | null;
+  photo: string | null;
   Role: IRole;
   Position: IPosition;
+  Absence: IAbsence[];
 }
 export interface IDebitur {
   id: string;
@@ -69,6 +106,10 @@ export interface IDebitur {
   status: boolean;
   created_at: Date;
   updated_at: Date;
+  SubmissionType: ISubType;
+  Visit: IVisit[];
+  Submissions: ISubmission[];
+  submissionTypeId: string;
 }
 export interface ISubType {
   id: string;
@@ -96,16 +137,17 @@ export interface IProductTypeFile {
   created_at: Date;
   updated_at: Date;
   Files: IFile[];
+  productTypeId: string;
 }
 export interface IFile {
   id: string;
   name: string;
   url: string;
   allow_download: string;
-
+  submissionId: string | null;
+  productTypeFileId: string | null;
   created_at: Date;
 }
-
 export interface IProduct {
   id: string;
   name: string;
@@ -114,4 +156,81 @@ export interface IProduct {
   updated_at: Date;
   ProductType: IProductType;
   productTypeId: string;
+}
+export interface ISubmission {
+  id: string;
+  purpose: string | null;
+  coments: IComments[];
+  account_number: string | null;
+  activities: IActivities[];
+  value: number;
+  guarantee_status: boolean;
+  drawer_code: string;
+
+  is_active: boolean;
+  status: boolean;
+  created_at: Date;
+  updated_at: Date;
+  Debitur: IDebitur;
+  Product: IProduct;
+  User: IUser;
+  Files: IFile[];
+  debiturId: string;
+  productId: string;
+  userId: string;
+  // PermitFileDetail PermitFileDetail[]
+}
+
+export interface IVisitCategory {
+  id: string;
+  name: string;
+  description: string;
+  status: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface IVisitStatus {
+  id: string;
+  name: string;
+  description: string;
+  status: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+export interface IVisitPurpose {
+  id: string;
+  name: string;
+  description: string;
+  status: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface IVisit {
+  id: string;
+  date: string;
+  value: number;
+  purpose: string;
+  summary?: string;
+  coments?: IComments[];
+  date_action?: string;
+  geo?: string;
+  files?: string;
+  next_action?: string;
+  approve_status: EStatus;
+
+  status: boolean;
+  created_at: Date;
+  updated_at: Date;
+  Debitur: IDebitur;
+  User: IUser;
+  VisitCategory: IVisitCategory;
+  VisitStatus: IVisitStatus; // Di schema Anda bernama 'Visit' (relation name)
+  VisitPurpose: IVisitPurpose; // Di schema Anda bernama 'Visit' (relation name)
+  debiturId: string;
+  userId: string;
+  visitCategoryId: string;
+  visitStatusId: string;
+  visitPurposeId: string;
 }

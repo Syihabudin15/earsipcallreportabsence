@@ -7,7 +7,7 @@ import {
   Typography,
   type TableProps,
 } from "antd";
-import { Plus, Filter, Edit, Trash } from "lucide-react";
+import { Plus, Edit, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { IActionPage, IPageProps, ISubType } from "../../libs/interface";
 import type { HookAPI } from "antd/es/modal/useModal";
@@ -165,9 +165,6 @@ export default function DataSubmissionType() {
                 setPageprops({ ...pageprops, search: e.target.value })
               }
             />
-            <Button size="small">
-              <Filter size={14} /> Filter
-            </Button>
           </div>
         </div>
 

@@ -41,11 +41,12 @@ export const GET = async (req, res, next) => {
 export const POST = async (req, res, next) => {
     let body = req.body;
     try {
+        const { id, User, ...saved } = body;
         const genId = await generateId();
         await prisma.position.create({
             data: {
-                id: body.id ? body.id : genId,
-                ...body,
+                ...saved,
+                id: body.id && body.id !== "" ? body.id : genId,
             },
         });
         return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
@@ -71,10 +72,11 @@ export const PUT = async (req, res, next) => {
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
+        const { User, ...saved } = body;
         await prisma.position.update({
             where: { id: find.id },
             data: {
-                ...body,
+                ...saved,
                 updated_at: new Date(),
             },
         });

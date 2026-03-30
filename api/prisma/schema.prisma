@@ -34,7 +34,6 @@ enum EAbsenceStatus {
   CUTI
   PERDIN
   SAKIT
-  ALPHA
 }
 
 enum EGBookStatus {
@@ -195,9 +194,9 @@ model Files {
   allow_download String @db.Text
 
   created_at        DateTime           @default(now())
-  Submission        Submission         @relation(fields: [submissionId], references: [id], onUpdate: Cascade)
+  Submission        Submission?        @relation(fields: [submissionId], references: [id], onUpdate: Cascade)
   ProductTypeFile   ProductTypeFile    @relation(fields: [productTypeFileId], references: [id], onUpdate: Cascade)
-  submissionId      String
+  submissionId      String?
   productTypeFileId String
   PermitFileDetail  PermitFileDetail[]
 }
@@ -209,13 +208,14 @@ model PermitFile {
   permit_status EPermitStatus @default(PENDING)
   process_at    DateTime?
 
-  status      Boolean  @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @default(now())
-  Requester   User     @relation("RequesterRelation", fields: [requesterId], references: [id], onUpdate: Cascade)
-  Approver    User?    @relation("ApproverRelation", fields: [approverId], references: [id], onUpdate: Cascade)
-  requesterId String
-  approverId  String?
+  status           Boolean            @default(true)
+  created_at       DateTime           @default(now())
+  updated_at       DateTime           @default(now())
+  Requester        User               @relation("RequesterRelation", fields: [requesterId], references: [id], onUpdate: Cascade)
+  Approver         User?              @relation("ApproverRelation", fields: [approverId], references: [id], onUpdate: Cascade)
+  requesterId      String
+  approverId       String?
+  PermitFileDetail PermitFileDetail[]
 }
 
 model PermitFileDetail {
@@ -223,6 +223,8 @@ model PermitFileDetail {
   Submission   Submission @relation(fields: [submissionId], references: [id], onUpdate: Cascade)
   Files        Files[]
   submissionId String
+  PermitFile   PermitFile @relation(fields: [permitFileId], references: [id])
+  permitFileId String
 }
 
 model LogActivities {
@@ -237,28 +239,64 @@ model LogActivities {
   userId    String
 }
 
-model Visit {
-  id           String        @id @default(uuid())
-  date         DateTime
-  type         String
-  purpose      String
-  value        Int
-  summary      String?       @db.Text
-  need         String?       @db.Text
-  comment      String?       @db.Text
-  last_action  String?       @db.Text
-  date_action  DateTime?
-  geo          String?
-  files        String?       @db.Text
-  visit_status EPermitStatus @default(PENDING)
+model VisitCategory {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
 
   status     Boolean  @default(true)
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
-  Debitur    Debitur  @relation(fields: [debiturId], references: [id], onUpdate: Cascade)
-  User       User     @relation(fields: [userId], references: [id], onUpdate: Cascade)
-  debiturId  String
-  userId     String
+  Visit      Visit[]
+}
+
+model VisitStatus {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  status     Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  Visit      Visit[]
+}
+
+model VisitPurpose {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  status     Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  Visit      Visit[]
+}
+
+model Visit {
+  id             String        @id @default(uuid())
+  date           DateTime
+  value          Int
+  summary        String?       @db.Text
+  coments        String?       @db.Text
+  date_action    DateTime?
+  geo            String?
+  files          String?       @db.Text
+  next_action    String?       @db.Text
+  approve_status EPermitStatus @default(PENDING)
+
+  status          Boolean       @default(true)
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @default(now())
+  Debitur         Debitur       @relation(fields: [debiturId], references: [id], onUpdate: Cascade)
+  User            User          @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  VisitCategory   VisitCategory @relation(fields: [visitCategoryId], references: [id], onUpdate: Cascade)
+  VisitStatus     VisitStatus   @relation(fields: [visitStatusId], references: [id], onUpdate: Cascade)
+  debiturId       String
+  userId          String
+  visitCategoryId String
+  visitStatusId   String
+  VisitPurpose    VisitPurpose? @relation(fields: [visitPurposeId], references: [id])
+  visitPurposeId  String?
 }
 
 model AbsenceConfig {
@@ -282,7 +320,8 @@ model UserCost {
   type         ECostType
   nominal      Float
   nominal_type ENominalType @default(RUPIAH)
-  periode      DateTime?
+  start_at     DateTime     @default(now())
+  end_at       DateTime?
 
   User   User   @relation(fields: [userId], references: [id], onUpdate: Cascade)
   userId String

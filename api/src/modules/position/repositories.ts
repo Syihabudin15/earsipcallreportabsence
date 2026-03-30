@@ -44,12 +44,12 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
   let body = req.body;
   try {
-    const { User, ...saved } = body;
+    const { id, User, ...saved } = body;
     const genId = await generateId();
     await prisma.position.create({
       data: {
-        id: body.id ? body.id : genId,
         ...saved,
+        id: body.id && body.id !== "" ? body.id : genId,
       },
     });
     return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });

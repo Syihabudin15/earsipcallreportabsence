@@ -31,3 +31,25 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
   const token = await signIn(find);
   return ResponseServer(res, 200, { msg: "Berhasil login", token, data: find });
 };
+
+// USER INFO
+export const PATCH = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { id } = req.params;
+  if (!id) return ResponseServer(res, 400, { msg: "Not found" });
+  const find = await prisma.user.findFirst({
+    where: { id: id as string },
+    include: {
+      Absence: true,
+      Position: true,
+      Role: true,
+      UserCost: true,
+    },
+  });
+  if (!find) return ResponseServer(res, 400, { msg: "Not found" });
+
+  return ResponseServer(res, 200, { msg: "OK", data: find });
+};

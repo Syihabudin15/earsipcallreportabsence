@@ -5,5 +5,6 @@ const router = Router();
 
 router.get("/", AuthController.GET);
 router.post("/", AuthController.POST);
+router.patch("/", AuthController.PATCH);
 
 export default router;

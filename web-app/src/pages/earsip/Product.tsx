@@ -3,6 +3,7 @@ import {
   Button,
   Input,
   Modal,
+  Popover,
   Select,
   Table,
   Typography,
@@ -19,6 +20,7 @@ import type {
 import type { HookAPI } from "antd/es/modal/useModal";
 import api from "../../libs/api";
 import useContext from "../../libs/context";
+import { CloseOutlined } from "@ant-design/icons";
 const { Text } = Typography;
 
 export default function DataProduct() {
@@ -29,6 +31,7 @@ export default function DataProduct() {
     data: [],
     total: 0,
     search: "",
+    productTypeId: "",
   });
   const [action, setAction] = useState<IActionPage<IProduct>>({
     upsert: false,
@@ -45,9 +48,10 @@ export default function DataProduct() {
     const params = new URLSearchParams();
     params.append("page", pageprops.page.toString());
     params.append("limit", pageprops.limit.toString());
-    if (pageprops.search) {
-      params.append("search", pageprops.search);
-    }
+    if (pageprops.search) params.append("search", pageprops.search);
+    if (pageprops.productTypeId)
+      params.append("productTypeId", pageprops.productTypeId);
+
     await api
       .request({
         url: `${import.meta.env.VITE_API_URL}/product?${params.toString()}`,
@@ -67,7 +71,7 @@ export default function DataProduct() {
     (async () => {
       await api
         .request({
-          url: `${import.meta.env.VITE_API_URL}/product_type`,
+          url: `${import.meta.env.VITE_API_URL}/producttype`,
           method: "GET",
         })
         .then((res) => setProductTypes(res.data.data));
@@ -78,7 +82,12 @@ export default function DataProduct() {
       await getData();
     }, 200);
     return () => clearTimeout(timeout);
-  }, [pageprops.page, pageprops.limit, pageprops.search]);
+  }, [
+    pageprops.page,
+    pageprops.limit,
+    pageprops.search,
+    pageprops.productTypeId,
+  ]);
 
   const columns: TableProps<IProduct>["columns"] = [
     {
@@ -132,6 +141,36 @@ export default function DataProduct() {
       },
     },
   ];
+
+  const content = (
+    <div className="p-2 ">
+      <div className="flex flex-col w-48">
+        <p className="mb-1">Tipe Produk</p>
+        <Select
+          placeholder="Pilih tipe produk.."
+          className="w-full"
+          options={productTypes.map((t) => ({ label: t.name, value: t.id }))}
+          onChange={(val) => setPageprops({ ...pageprops, productTypeId: val })}
+          allowClear
+          value={pageprops.productTypeId}
+          optionFilterProp={"label"}
+          showSearch
+          size="small"
+        />
+      </div>
+      <div className="flex justify-end mt-4">
+        <Button
+          size="small"
+          danger
+          icon={<CloseOutlined />}
+          onClick={() => setPageprops({ ...pageprops, productTypeId: "" })}
+        >
+          Clear Filter
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-2">
       {/* --- HEADER --- */}
@@ -171,9 +210,19 @@ export default function DataProduct() {
                 setPageprops({ ...pageprops, search: e.target.value })
               }
             />
-            <Button size="small">
-              <Filter size={14} /> Filter
-            </Button>
+            <Popover
+              content={content}
+              title="Filter Tambahan"
+              trigger="click"
+              placement="left"
+            >
+              <Button
+                size="small"
+                type={pageprops.productTypeId ? "primary" : undefined}
+              >
+                <Filter size={14} /> Filter
+              </Button>
+            </Popover>
           </div>
         </div>
 

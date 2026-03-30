@@ -7,7 +7,7 @@ import {
   Typography,
   type TableProps,
 } from "antd";
-import { Plus, Filter, Edit, Trash } from "lucide-react";
+import { Plus, Edit, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { IActionPage, IPageProps, IPosition } from "../../libs/interface";
 import type { HookAPI } from "antd/es/modal/useModal";
@@ -163,9 +163,6 @@ export default function DataPosition() {
                 setPageprops({ ...pageprops, search: e.target.value })
               }
             />
-            <Button size="small">
-              <Filter size={14} /> Filter
-            </Button>
           </div>
         </div>
 
@@ -287,7 +284,7 @@ const UpsertData = ({
       style={{ top: 10 }}
       width={800}
       onOk={handleSubmit}
-      okButtonProps={{ loading: loading, disabled: !data.id || !data.name }}
+      okButtonProps={{ loading: loading, disabled: !data.name }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         <div>

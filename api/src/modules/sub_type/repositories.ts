@@ -45,11 +45,11 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
   let body = req.body;
   try {
     const genId = await generateId();
-    const { Debitur, ...saved } = body;
+    const { id, Debitur, ...saved } = body;
     await prisma.submissionType.create({
       data: {
-        id: body.id ? body.id : genId,
         ...saved,
+        id: body.id && body.id !== "" ? body.id : genId,
       },
     });
     return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });

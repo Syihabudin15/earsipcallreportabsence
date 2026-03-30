@@ -14,6 +14,7 @@ export const GET = async (req, res, next) => {
             },
             skip: skip,
             take: limit,
+            include: { Debitur: true },
         });
         const total = await prisma.submissionType.count({
             where: {
@@ -22,7 +23,7 @@ export const GET = async (req, res, next) => {
             },
         });
         return ResponseServer(res, 200, {
-            msg: "GET /sumissionType",
+            msg: "GET /sub_type",
             page,
             limit,
             search,
@@ -41,10 +42,11 @@ export const POST = async (req, res, next) => {
     let body = req.body;
     try {
         const genId = await generateId();
+        const { id, Debitur, ...saved } = body;
         await prisma.submissionType.create({
             data: {
-                id: body.id ? body.id : genId,
-                ...body,
+                ...saved,
+                id: body.id && body.id !== "" ? body.id : genId,
             },
         });
         return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
@@ -70,10 +72,11 @@ export const PUT = async (req, res, next) => {
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
+        const { Debitur, ...saved } = body;
         await prisma.submissionType.update({
             where: { id: find.id },
             data: {
-                ...body,
+                ...saved,
                 updated_at: new Date(),
             },
         });
@@ -96,7 +99,7 @@ export const DELETE = async (req, res, next) => {
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        await prisma.user.update({
+        await prisma.productType.update({
             where: { id: find.id },
             data: { status: false },
         });
@@ -110,7 +113,7 @@ export const DELETE = async (req, res, next) => {
     }
 };
 async function generateId() {
-    const prefix = "TYPE";
+    const prefix = "STYPE";
     const padLength = 2;
     const lastRecord = await prisma.submissionType.count({});
     return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;

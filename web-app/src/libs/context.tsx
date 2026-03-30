@@ -29,7 +29,12 @@ const useContext = create((set) => ({
     const userPermission = JSON.parse(
       String(parse.Role.permission) || "[]",
     ) as IPermission[];
-    const permission = userPermission.find((p) => p.path === path);
+    const permission = userPermission.find(
+      (p) =>
+        p.path === path ||
+        `/${path.split("/")[1]}/${path.split("/")[2]}/${path.split("/")[3]}` ===
+          p.path,
+    );
     if (!permission) return false;
     if (permission.access.includes(access)) return true;
     return false;

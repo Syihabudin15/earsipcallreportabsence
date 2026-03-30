@@ -22,12 +22,12 @@ async function main() {
     const position = await prisma.position.upsert({
         where: { id: "POS01" },
         create: {
-            name: "Head Of IT",
+            name: "IT",
             description: "",
         },
         update: {},
     });
-    const pass = await bcrypt.hash("Tsani182", 10);
+    const pass = await bcrypt.hash("syrel2025", 10);
     await prisma.user.upsert({
         where: { username: "developer" },
         update: {},

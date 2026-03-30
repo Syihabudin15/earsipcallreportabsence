@@ -5,9 +5,16 @@ import DataRole from "./app/Role";
 import useContext from "../libs/context";
 import { Button } from "antd";
 import DataPosition from "./app/Position";
-import DataSubmissionType from "./earsip/SubmissionType";
+import DataSubmissionType from "./app/SubmissionType";
 import DataProductType from "./earsip/ProductType";
 import DataProduct from "./earsip/Product";
+import DataSubmission from "./earsip/Submission";
+import UpsertSubmission from "./earsip/UpsertSubmission";
+import UpdateSubmission from "./earsip/UpdateSubmission";
+import DataVisitCategory from "./creport/Category";
+import DataVisitStatus from "./creport/Status";
+import DataVisitPurpose from "./creport/Purpose";
+import DataVisit from "./creport/Visit";
 
 function AppRouter() {
   const path = window.location.pathname;
@@ -22,8 +29,23 @@ function AppRouter() {
           <Route path="/debitur" element={<DataDebitur />} />
           <Route path="/role" element={<DataRole />} />
           <Route path="/position" element={<DataPosition />} />
+          <Route path="/earsip/" element={<DashboardApp />} />
           <Route path="/earsip/product_type" element={<DataProductType />} />
           <Route path="/earsip/product" element={<DataProduct />} />
+          <Route path="/earsip/submission" element={<DataSubmission />} />
+          <Route
+            path="/earsip/submission/upsert"
+            element={<UpsertSubmission />}
+          />
+          <Route
+            path="/earsip/submission/upsert/:id"
+            element={<UpdateSubmission />}
+          />
+          <Route path="/callreport/" element={<DashboardApp />} />
+          <Route path="/callreport/category" element={<DataVisitCategory />} />
+          <Route path="/callreport/status" element={<DataVisitStatus />} />
+          <Route path="/callreport/purpose" element={<DataVisitPurpose />} />
+          <Route path="/callreport/visit" element={<DataVisit />} />
         </Route>
 
         {/* 404 Page (Opsional) */}

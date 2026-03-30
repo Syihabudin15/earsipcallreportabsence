@@ -26,6 +26,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<LoginPage />} />
+
             {user && <Route path="/app/*" element={<MainLayout />} />}
 
             {/*  */}

@@ -13,10 +13,15 @@ import AppRouter from "./AppRouter";
 import { menus } from "../libs/list_app";
 import useContext from "../libs/context";
 import { Modal } from "antd";
+import { Link } from "react-router-dom";
 
 const APP_COLOR = import.meta.env.VITE_APP_COLOR || "#F58220";
 
-export default function MainLayout() {
+export default function MainLayout({
+  children,
+}: {
+  children?: React.ReactNode;
+}) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setCollapsed] = useState(false); // State untuk collapse di desktop
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
@@ -96,8 +101,8 @@ export default function MainLayout() {
               return (
                 <div key={i} className="w-full">
                   {/* Menu Utama atau Toggle Parent */}
-                  <a
-                    href={hasChildren ? "#" : m.path}
+                  <Link
+                    to={hasChildren ? "#" : m.path}
                     onClick={(e) => {
                       if (hasChildren) {
                         e.preventDefault();
@@ -123,20 +128,20 @@ export default function MainLayout() {
                         className={`transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
                       />
                     )}
-                  </a>
+                  </Link>
 
                   {/* Rendering Sub-Menu (Children) */}
                   {hasChildren && isOpen && !isCollapsed && (
                     <div className="mt-1 ml-9 flex flex-col gap-1 border-l border-slate-100 pl-2">
                       {m.children &&
                         m.children.map((child: any, idx: number) => (
-                          <a
+                          <Link
                             key={idx}
-                            href={child.path}
+                            to={child.path}
                             className="px-3 py-2 text-xs font-semibold text-slate-400! hover:text-orange-500! transition-colors rounded-lg hover:bg-orange-50 flex gap-2 items-center"
                           >
                             {child.icon} <span>{child.name}</span>
-                          </a>
+                          </Link>
                         ))}
                     </div>
                   )}
@@ -195,6 +200,7 @@ export default function MainLayout() {
         {/* PAGE CONTENT SCROLLABLE AREA */}
         <main className="flex-1 overflow-y-auto min-h-0 bg-slate-50 p-3 lg:p-4">
           <div className="max-w-7xl mx-auto">
+            {children}
             <AppRouter />
           </div>
         </main>

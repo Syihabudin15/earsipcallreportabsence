@@ -8,7 +8,7 @@ import {
   Typography,
   type TableProps,
 } from "antd";
-import { Plus, Filter, Edit, Trash } from "lucide-react";
+import { Plus, Edit, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
   IActionPage,
@@ -170,9 +170,6 @@ export default function DataRole() {
                 setPageprops({ ...pageprops, search: e.target.value })
               }
             />
-            <Button size="small">
-              <Filter size={14} /> Filter
-            </Button>
           </div>
         </div>
 
@@ -301,6 +298,11 @@ const UpsertData = ({
     {
       title: "Menu",
       key: "menu",
+      dataIndex: "name",
+    },
+    {
+      title: "Path",
+      key: "path",
       dataIndex: "path",
     },
     {
@@ -353,7 +355,7 @@ const UpsertData = ({
       onCancel={() => setOpen(false)}
       title={`Upsert Data ${record ? record.name : ""}`}
       style={{ top: 10 }}
-      width={800}
+      width={1000}
       onOk={handleSubmit}
       okButtonProps={{ loading: loading, disabled: !data.id || !data.name }}
     >
@@ -406,12 +408,12 @@ const defaultMenu: IPermission[] = menus
       return m.children
         .filter((c) => c.need_access)
         .map((c) => ({
-          path: c.path,
+          ...c,
           access: [],
         }));
     } else {
       return {
-        path: m.path,
+        ...m,
         access: [],
       };
     }

@@ -14,15 +14,7 @@ import {
   Tooltip,
   Typography,
 } from "antd";
-import {
-  Plus,
-  Filter,
-  Eye,
-  Edit2,
-  Delete,
-  Hash,
-  VideoIcon,
-} from "lucide-react";
+import { Plus, Eye, Edit2, Delete, Hash, VideoIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
   IActionPage,
@@ -38,6 +30,7 @@ import {
   FilePdfOutlined,
   FileImageOutlined,
   PlusCircleOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 const { Text, Title } = Typography;
 
@@ -69,7 +62,7 @@ export default function DataProductType() {
     }
     await api
       .request({
-        url: `${import.meta.env.VITE_API_URL}/product_type?${params.toString()}`,
+        url: `${import.meta.env.VITE_API_URL}/producttype?${params.toString()}`,
         method: "GET",
       })
       .then((res) =>
@@ -128,9 +121,6 @@ export default function DataProductType() {
                 setPageprops({ ...pageprops, search: e.target.value })
               }
             />
-            <Button size="small">
-              <Filter size={14} /> Filter
-            </Button>
           </div>
         </div>
 
@@ -214,7 +204,7 @@ const UpsertData = ({
     setLoading(true);
     await api
       .request({
-        url: import.meta.env.VITE_API_URL + "/product_type?id=" + record?.id,
+        url: import.meta.env.VITE_API_URL + "/producttype?id=" + record?.id,
         method: record ? "PUT" : "POST",
         data: data,
         headers: { "Content-Type": "Application/json" },
@@ -241,6 +231,47 @@ const UpsertData = ({
           content: err.message || "Internal Server Error",
         });
       });
+    setLoading(false);
+  };
+
+  const handleDeleteFile = async (record: IProductTypeFile) => {
+    setLoading(true);
+    if (record.productTypeId === "") {
+      setData({
+        ...data,
+        ProductTypeFile: data.ProductTypeFile.filter((f) => f.id !== record.id),
+      });
+    } else {
+      await api
+        .request({
+          url: import.meta.env.VITE_API_URL + "/producttype?id=" + record?.id,
+          method: "PATCH",
+          headers: { "Content-Type": "Application/json" },
+        })
+        .then(async (res) => {
+          if (res.status !== 200) {
+            hook.error({
+              title: "ERROR",
+              content: res.data.msg,
+            });
+          } else {
+            setData({
+              ...data,
+              ProductTypeFile: data.ProductTypeFile.map((f) => ({
+                ...f,
+                status: f.id === record.id ? false : f.status,
+              })),
+            });
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          hook.error({
+            title: "ERROR",
+            content: err.message || "Internal Server Error",
+          });
+        });
+    }
     setLoading(false);
   };
 
@@ -283,15 +314,11 @@ const UpsertData = ({
           />
         </div>
       </div>
-      <Divider
-        style={{ margin: 0, padding: 5 }}
-        titlePlacement="left"
-        className="italic"
-      >
+      <Divider style={{ margin: 0, padding: 2 }} titlePlacement="center">
         List Files
       </Divider>
       <div className="my-3 flex flex-col gap-2">
-        {data.ProductTypeFile.map((d, i) => (
+        {data.ProductTypeFile.filter((f) => f.status).map((d, i) => (
           <div key={i} className="flex gap-2">
             <div className="w-25">
               <Input
@@ -299,7 +326,6 @@ const UpsertData = ({
                 width={"100%"}
                 placeholder="ID"
                 value={d.id}
-                disabled
                 onChange={(e) =>
                   setData({
                     ...data,
@@ -347,6 +373,12 @@ const UpsertData = ({
                 }
               />
             </div>
+            <Button
+              icon={<DeleteOutlined />}
+              danger
+              size="small"
+              onClick={() => handleDeleteFile(d)}
+            ></Button>
           </div>
         ))}
       </div>
@@ -362,7 +394,7 @@ const UpsertData = ({
               ...data.ProductTypeFile,
               {
                 ...defaultFileType,
-                id: `${data.id}0${data.ProductTypeFile.length + 1}`,
+                id: `${data.id || "PTYPE" + Date.now()}0${data.ProductTypeFile.length + 1}`,
               },
             ],
           })
@@ -391,6 +423,7 @@ const defaultFileType: IProductTypeFile = {
   created_at: new Date(),
   updated_at: new Date(),
   Files: [],
+  productTypeId: "",
 };
 
 const DeleteData = ({
@@ -412,7 +445,7 @@ const DeleteData = ({
     setLoading(true);
     await api
       .request({
-        url: import.meta.env.VITE_API_URL + "/product_type?id=" + record?.id,
+        url: import.meta.env.VITE_API_URL + "/producttype?id=" + record?.id,
         method: "DELETE",
         headers: { "Content-Type": "Application/json" },
       })
@@ -479,7 +512,12 @@ const ProductTypeCard = ({
   return (
     <Card
       hoverable
-      style={{ width: 300, borderRadius: "12px", overflow: "hidden" }}
+      style={{
+        width: 300,
+        borderRadius: "12px",
+        overflow: "hidden",
+        boxShadow: "2px 2px 2px #eee",
+      }}
       actions={[
         <Tooltip title="Lihat Detail">
           <Button
@@ -529,7 +567,7 @@ const ProductTypeCard = ({
             ({record.id}) {record.name}
           </Title>
           <Text type="secondary" style={{ fontSize: "12px" }}>
-            {record.ProductTypeFile.length} Files
+            {record.ProductTypeFile.filter((d) => d.status).length} Files
           </Text>
         </div>
       </div>
@@ -556,7 +594,7 @@ const ProductTypeCard = ({
       >
         <List
           itemLayout="horizontal"
-          dataSource={record?.ProductTypeFile || []} // Asumsi data file ada di dalam record
+          dataSource={record?.ProductTypeFile.filter((f) => f.status) || []} // Asumsi data file ada di dalam record
           locale={{ emptyText: "Belum ada list file!" }}
           renderItem={(item) => (
             <List.Item>

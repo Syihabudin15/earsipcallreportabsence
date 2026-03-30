@@ -3,4 +3,5 @@ import * as AuthController from "./repositories.js";
 const router = Router();
 router.get("/", AuthController.GET);
 router.post("/", AuthController.POST);
+router.patch("/", AuthController.PATCH);
 export default router;

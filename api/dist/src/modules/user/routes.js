@@ -5,4 +5,5 @@ router.get("/", UserRepo.GET);
 router.post("/", UserRepo.POST);
 router.put("/", UserRepo.PUT);
 router.delete("/", UserRepo.DELETE);
+router.patch("/", UserRepo.PATCH);
 export default router;

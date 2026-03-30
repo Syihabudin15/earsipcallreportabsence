@@ -44,19 +44,19 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
   let body = req.body;
   try {
-    const { ProductTypeFile, ...savedProductType } = body;
+    const { id, ProductTypeFile, ...savedProductType } = body;
     const genId = await generateId();
     const saved = await prisma.productType.create({
       data: {
-        id: body.id ? body.id : genId,
         ...savedProductType,
+        id: body.id && body.id !== "" ? body.id : genId,
       },
     });
     if (ProductTypeFile.length !== 0) {
       await prisma.productTypeFile.createMany({
         data: ProductTypeFile.map((p) => {
           const { Files, ...pFile } = p;
-          return pFile;
+          return { ...pFile, productTypeId: saved.id };
         }),
       });
     }
@@ -139,6 +139,32 @@ export const DELETE = async (
       data: { status: false },
     });
 
+    return ResponseServer(res, 200, { msg: "Data berhasil dihapus" });
+  } catch (err) {
+    console.log(err);
+    return ResponseServer(res, 500, {
+      msg: (err as any).message || "Internal Server Error",
+    });
+  }
+};
+
+export const PATCH = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { id } = req.query;
+
+  if (!id) return ResponseServer(res, 404, { msg: "Not found data" });
+  try {
+    const find = await prisma.productTypeFile.findFirst({
+      where: { id: id as string },
+    });
+    if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
+    await prisma.productTypeFile.update({
+      where: { id: id as string },
+      data: { status: false },
+    });
     return ResponseServer(res, 200, { msg: "Data berhasil dihapus" });
   } catch (err) {
     console.log(err);
