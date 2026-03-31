@@ -15,6 +15,8 @@ import visitStatusRoute from "./modules/visit_status/routes.js";
 import visitPurposeRoute from "./modules/visit_purpose/routes.js";
 import visitRoute from "./modules/visit/routes.js";
 import debiturRoute from "./modules/debitur/routes.js";
+import absConfigRoute from "./modules/absence_config/routes.js";
+import absenceRoute from "./modules/absence_config/routes.js";
 import fileRoute from "./modules/file/routes.js";
 
 const app = express();
@@ -51,6 +53,8 @@ app.use("/visit_purpose", middleware, visitPurposeRoute);
 app.use("/visit", middleware, visitRoute);
 
 // ABSENSI
+app.use("/absence_config", middleware, absConfigRoute);
+app.use("/absence", middleware, absenceRoute);
 
 const PORT = process.env.APP_PORT || 5000;
 app.listen(PORT, () => {

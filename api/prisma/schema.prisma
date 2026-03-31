@@ -311,7 +311,7 @@ model AbsenceConfig {
   geo_location         String?
   meter_tolerance      Int?    @default(0)
 
-  updatedAt DateTime @default(now())
+  updated_at DateTime @default(now())
 }
 
 model UserCost {

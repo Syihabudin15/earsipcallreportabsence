@@ -52,6 +52,21 @@ async function main() {
     },
   });
 
+  await prisma.absenceConfig.create({
+    data: {
+      late_eduction: 0,
+      fast_leave_deduction: 0,
+      alpha_deduction: 0,
+      shift_start: 8,
+      shift_end: 17,
+      shift_tolerance: 5,
+      last_shift: 0,
+      geo_location: "0",
+      meter_tolerance: 1,
+      updated_at: new Date(),
+    },
+  });
+
   console.log("Seeding succeesfully...");
 }
 main()
