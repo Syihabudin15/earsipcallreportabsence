@@ -44,7 +44,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
   let body = req.body;
   try {
-    const { id, ProductTypeFile, ...savedProductType } = body;
+    const { id, ProductTypeFile, Product, ...savedProductType } = body;
     const genId = await generateId();
     const saved = await prisma.productType.create({
       data: {
@@ -83,7 +83,7 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
       where: { id: id as string },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
-    const { ProductTypeFile, ...savedProductType } = body;
+    const { ProductTypeFile, Product, ...savedProductType } = body;
 
     const saved = await prisma.productType.update({
       where: { id: find.id },
