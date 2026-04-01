@@ -392,6 +392,7 @@ const defaultData: IProduct = {
   updated_at: new Date(),
   ProductType: {} as IProductType,
   productTypeId: "",
+  Submission: [],
 };
 
 const DeleteData = ({

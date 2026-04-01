@@ -414,6 +414,7 @@ const defaultData: IProductType = {
   created_at: new Date(),
   updated_at: new Date(),
   ProductTypeFile: [],
+  Product: [],
 };
 const defaultFileType: IProductTypeFile = {
   id: "",

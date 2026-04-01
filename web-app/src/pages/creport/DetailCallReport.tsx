@@ -6,9 +6,6 @@ import {
   Clock,
   FileIcon,
   ExternalLink,
-  CheckCircle2,
-  Loader2,
-  AlertCircle,
 } from "lucide-react";
 import type { IVisit } from "../../libs/interface";
 import { useState } from "react";
