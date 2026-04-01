@@ -8,7 +8,14 @@ import {
   Tag,
   type TableProps,
 } from "antd";
-import { Plus, Edit, Trash, Filter } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash,
+  Filter,
+  CalendarArrowUp,
+  CalendarArrowDownIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
   IActionPage,
@@ -24,7 +31,7 @@ import { CollapseList, CollapseText } from "../utils/utilComp";
 import moment from "moment";
 import { Link } from "react-router-dom";
 import dayjs from "dayjs";
-import { CloseOutlined } from "@ant-design/icons";
+import { CloseOutlined, FolderOutlined } from "@ant-design/icons";
 import api from "../../libs/api";
 const { RangePicker } = DatePicker;
 
@@ -70,6 +77,8 @@ export default function DataVisit() {
     if (pageprops.approve_status)
       params.append("approve_status", pageprops.approve_status);
     if (pageprops.backdate) params.append("backdate", pageprops.backdate);
+    if (pageprops.submissionTypeId)
+      params.append("submissionTypeId", pageprops.submissionTypeId);
 
     await api
       .request({
@@ -128,6 +137,7 @@ export default function DataVisit() {
     pageprops.visitStatusId,
     pageprops.visitPurposeId,
     pageprops.approve_status,
+    pageprops.submissionTypeId,
     pageprops.backdate,
   ]);
 
@@ -180,6 +190,25 @@ export default function DataVisit() {
             <div>{record.VisitCategory?.name}</div>
             <div className="text-xs opacity-80">
               @{record.VisitPurpose?.name}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      title: "Tanggal",
+      key: "created_at",
+      dataIndex: "created_at",
+      render(_value, record, _index) {
+        return (
+          <div>
+            <div className="flex gap-2 items-center">
+              <CalendarArrowUp size={10} />{" "}
+              {moment(record.date).format("DD/MM/YY HH:mm")}
+            </div>
+            <div className="text-xs opacity-80 flex gap-2 items-center">
+              <CalendarArrowDownIcon size={10} />{" "}
+              {moment(record.date_action).format("DD/MM/YY HH:mm")}
             </div>
           </div>
         );
@@ -244,7 +273,7 @@ export default function DataVisit() {
       },
     },
     {
-      title: "Tanggal",
+      title: "LastUpdate",
       key: "created_at",
       dataIndex: "created_at",
       render(_value, record, _index) {
@@ -253,9 +282,6 @@ export default function DataVisit() {
             <div>{moment(record.created_at).format("DD/MM/YY HH:mm")}</div>
             <div className="text-xs opacity-80">
               {moment(record.updated_at).format("DD/MM/YY HH:mm")}
-            </div>
-            <div className="text-xs opacity-80">
-              Act: {moment(record.date_action).format("DD/MM/YY HH:mm")}
             </div>
           </div>
         );
@@ -268,14 +294,15 @@ export default function DataVisit() {
       render(_value, record, _index) {
         return (
           <div className="flex items-center gap-1">
-            <Button
-              icon={<Edit size={15} />}
-              size="small"
-              type="primary"
-              onClick={() => setAction({ ...action, upsert: true, record })}
-            ></Button>
+            <Link to={"/app/callreport/visit/" + record.id}>
+              <Button
+                icon={<FolderOutlined size={15} />}
+                size="small"
+                type="primary"
+              ></Button>
+            </Link>
             {hasAccess(window.location.pathname, "update") && (
-              <Link to={"/app/callreport/upsert/" + record.id}>
+              <Link to={"/app/callreport/visit/upsert/" + record.id}>
                 <Button
                   icon={<Edit size={15} />}
                   size="small"
@@ -353,9 +380,9 @@ export default function DataVisit() {
           placeholder="Pilih hasil kunjungan.."
           className="w-full"
           options={visitStatuses.map((t) => ({ label: t.name, value: t.id }))}
-          onChange={(val) => setPageprops({ ...pageprops, visit_status: val })}
+          onChange={(val) => setPageprops({ ...pageprops, visitStatusId: val })}
           allowClear
-          value={pageprops.visit_status}
+          value={pageprops.visitStatusId}
           optionFilterProp={"label"}
           showSearch
           size="small"
@@ -436,7 +463,7 @@ export default function DataVisit() {
         <div className="bg-white  flex flex-wrap items-center gap-4 mb-2">
           <div className="flex-1 flex">
             {hasAccess(window.location.pathname, "write") && (
-              <Link to={"/app/callreport/upsert"}>
+              <Link to={"/app/callreport/visit/upsert"}>
                 <Button icon={<Plus size={15} />} type="primary" size="small">
                   New
                 </Button>

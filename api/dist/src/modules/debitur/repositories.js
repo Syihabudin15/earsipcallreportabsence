@@ -2,35 +2,51 @@ import {} from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 export const GET = async (req, res, next) => {
-    let { page = 1, limit = 50, search, productTypeId } = req.query;
+    let { page = 1, limit = 50, search } = req.query;
     page = Number(page);
     limit = Number(limit);
     const skip = (page - 1) * limit;
     try {
-        const data = await prisma.product.findMany({
+        const data = await prisma.debitur.findMany({
             where: {
                 status: true,
-                ...(search && { name: { contains: search } }),
-                ...(productTypeId && { productTypeId: productTypeId }),
+                ...(search && {
+                    OR: [
+                        { fullname: { contains: search } },
+                        { cif: { contains: search } },
+                        { nik: { contains: search } },
+                        { id: { contains: search } },
+                    ],
+                }),
             },
             skip: skip,
             take: limit,
-            include: { ProductType: { include: { ProductTypeFile: true } } },
-            orderBy: { id: "asc" },
+            include: {
+                SubmissionType: true,
+                Submissions: {
+                    include: { Product: { include: { ProductType: true } } },
+                },
+                Visit: true,
+            },
         });
-        const total = await prisma.product.count({
+        const total = await prisma.debitur.count({
             where: {
                 status: true,
-                ...(search && { name: { contains: search } }),
-                ...(productTypeId && { productTypeId: productTypeId }),
+                ...(search && {
+                    OR: [
+                        { fullname: { contains: search } },
+                        { cif: { contains: search } },
+                        { nik: { contains: search } },
+                        { id: { contains: search } },
+                    ],
+                }),
             },
         });
         return ResponseServer(res, 200, {
-            msg: "GET /product",
+            msg: "GET /debitur",
             page,
             limit,
             search,
-            productTypeId,
             data,
             total,
         });
@@ -45,9 +61,9 @@ export const GET = async (req, res, next) => {
 export const POST = async (req, res, next) => {
     let body = req.body;
     try {
-        const genId = await generateId(body.productTypeId);
-        const { id, ProductType, ...saved } = body;
-        await prisma.product.create({
+        const { id, SubmissionType, Submissions, Visit, ...saved } = body;
+        const genId = await generateId();
+        await prisma.debitur.create({
             data: {
                 ...saved,
                 id: body.id && body.id !== "" ? body.id : genId,
@@ -71,13 +87,13 @@ export const PUT = async (req, res, next) => {
                 msg: "ID Not found",
                 params: req.params,
             });
-        const find = await prisma.product.findFirst({
+        const find = await prisma.debitur.findFirst({
             where: { id: id },
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const { ProductType, ...saved } = body;
-        await prisma.product.update({
+        const { SubmissionType, Submissions, Visit, ...saved } = body;
+        await prisma.debitur.update({
             where: { id: find.id },
             data: {
                 ...saved,
@@ -98,12 +114,12 @@ export const DELETE = async (req, res, next) => {
     try {
         if (!id)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const find = await prisma.product.findFirst({
+        const find = await prisma.debitur.findFirst({
             where: { id: id },
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        await prisma.product.update({
+        await prisma.debitur.update({
             where: { id: find.id },
             data: { status: false },
         });
@@ -116,11 +132,41 @@ export const DELETE = async (req, res, next) => {
         });
     }
 };
-async function generateId(typeId) {
-    const prefix = "P";
-    const padLength = 2;
-    const lastRecord = await prisma.product.count({
-        where: { productTypeId: typeId },
-    });
-    return `${prefix}${typeId}${String(lastRecord + 1).padStart(padLength, "0")}`;
+export const PATCH = async (req, res, next) => {
+    let { id } = req.query;
+    try {
+        if (!id)
+            return ResponseServer(res, 404, { msg: "Not found data" });
+        const find = await prisma.debitur.findFirst({
+            where: {
+                OR: [
+                    { id: id },
+                    { nik: id },
+                    { cif: id },
+                ],
+            },
+            include: {
+                SubmissionType: true,
+                Submissions: {
+                    include: { Product: { include: { ProductType: true } } },
+                },
+                Visit: true,
+            },
+        });
+        if (!find)
+            return ResponseServer(res, 404, { msg: "Not found data" });
+        return ResponseServer(res, 200, { msg: "OK", data: find });
+    }
+    catch (err) {
+        console.log(err);
+        return ResponseServer(res, 500, {
+            msg: err.message || "Internal Server Error",
+        });
+    }
+};
+async function generateId() {
+    const prefix = "DEB";
+    const padLength = 4;
+    const lastRecord = await prisma.debitur.count({});
+    return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
 }

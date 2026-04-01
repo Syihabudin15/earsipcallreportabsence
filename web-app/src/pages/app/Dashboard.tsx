@@ -1,46 +1,47 @@
-import {
-  Users,
-  TrendingUp,
-  CreditCard,
-  ArrowUpRight,
-  ArrowDownRight,
-} from "lucide-react";
+import { Users, TrendingUp, File } from "lucide-react";
+import { useEffect, useState } from "react";
+import type {
+  IProductType,
+  ISubType,
+  IVisitCategory,
+  IVisitStatus,
+} from "../../libs/interface";
+import api from "../../libs/api";
+import { IDRFormat } from "../utils/utilForm";
+import useContext from "../../libs/context";
 
 const Dashboard = () => {
   // Data dummy untuk statistik
-  const stats = [
-    {
-      label: "Total Nasabah",
-      value: "1,284",
-      icon: <Users size={24} />,
-      trend: "+12.5%",
-      trendUp: true,
-      color: "bg-blue-500",
-    },
-    {
-      label: "Total Transaksi",
-      value: "Rp 45.2M",
-      icon: <TrendingUp size={24} />,
-      trend: "+8.2%",
-      trendUp: true,
-      color: "bg-orange-500",
-    },
-    {
-      label: "Pinjaman Aktif",
-      value: "312",
-      icon: <CreditCard size={24} />,
-      trend: "-2.4%",
-      trendUp: false,
-      color: "bg-emerald-500",
-    },
-  ];
+  const [data, setData] = useState<{
+    submissionType: ISubType[];
+    productType: IProductType[];
+    visitCategory: IVisitCategory[];
+    visitStatus: IVisitStatus[];
+  }>({
+    submissionType: [],
+    productType: [],
+    visitCategory: [],
+    visitStatus: [],
+  });
+  const { user } = useContext((state: any) => state);
+
+  useEffect(() => {
+    (async () => {
+      await api
+        .request({
+          method: "GET",
+          url: `${import.meta.env.VITE_API_URL}/maindashboard`,
+        })
+        .then((res) => setData(res.data));
+    })();
+  }, []);
 
   return (
     <div className="space-y-8">
       {/* --- WELCOME SECTION --- */}
       <div>
         <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-          Selamat Pagi, Syihabudin! 👋
+          Selamat Pagi, {user?.fullname || "No Name"}! 👋
         </h1>
         <p className="text-slate-500 text-sm mt-1">
           Berikut adalah ringkasan performa Hasamitra wilayah Jawa Barat hari
@@ -50,36 +51,93 @@ const Dashboard = () => {
 
       {/* --- STATS CARDS --- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {stats.map((stat, index) => (
-          <div
-            key={index}
-            className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
-          >
-            <div className="flex justify-between items-start">
-              <div
-                className={`${stat.color} p-3 rounded-xl text-white shadow-lg`}
-              >
-                {stat.icon}
-              </div>
-              <div
-                className={`flex items-center gap-1 text-xs font-bold ${stat.trendUp ? "text-emerald-600" : "text-red-500"}`}
-              >
-                {stat.trend}
-                {stat.trendUp ? (
-                  <ArrowUpRight size={14} />
-                ) : (
-                  <ArrowDownRight size={14} />
-                )}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex  items-center gap-4">
+            <div className={`bg-blue-500 p-3 rounded-xl text-white shadow-lg`}>
+              <Users size={24} />
+            </div>
+            <div className={`text-xs font-bold text-emerald-600`}>
+              <div>
+                <p className="font-bold text-slate-500 text-sm">
+                  Total Debitur:{" "}
+                  {data.submissionType.flatMap((d) => d.Debitur).length}
+                </p>
+                <div className="ms-4">
+                  {data.submissionType.map((item) => (
+                    <p
+                      key={item.id}
+                      className="text-slate-500 text-sm font-medium"
+                    >
+                      {item.name} : {item.Debitur.length}
+                    </p>
+                  ))}
+                </div>
               </div>
             </div>
-            <div className="mt-4">
-              <p className="text-slate-500 text-sm font-medium">{stat.label}</p>
-              <h3 className="text-2xl font-black text-slate-800 mt-1">
-                {stat.value}
-              </h3>
+          </div>
+        </div>
+        {data.productType.map((item) => (
+          <div
+            className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+            key={item.id}
+          >
+            <div className="flex  items-center gap-4">
+              <div
+                className={`bg-orange-500 p-3 rounded-xl text-white shadow-lg`}
+              >
+                <TrendingUp size={24} />
+              </div>
+              <div className={`text-xs  text-emerald-600`}>
+                <div>
+                  <p className="font-bold text-slate-500 text-sm ">
+                    {item.name}
+                  </p>
+                  <p className=" text-slate-500 text-sm">
+                    Total Permohonan:{" "}
+                    {item.Product.flatMap((pd) => pd.Submission).length}
+                  </p>
+                  <p className=" text-slate-500 text-sm ">
+                    Total Nilai : Rp.{" "}
+                    {IDRFormat(
+                      item.Product.flatMap((pd) => pd.Submission).reduce(
+                        (acc, submission) => {
+                          const nominal = submission.value || 0;
+                          return acc + nominal;
+                        },
+                        0,
+                      ),
+                    )}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         ))}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex  items-center gap-4">
+            <div className={`bg-blue-500 p-3 rounded-xl text-white shadow-lg`}>
+              <File size={24} />
+            </div>
+            <div className={`text-xs font-bold text-emerald-600`}>
+              <div>
+                <p className="font-bold text-slate-500 text-sm">
+                  Total Kunjungan:{" "}
+                  {data.visitCategory.flatMap((d) => d.Visit).length}
+                </p>
+                <div className="ms-4">
+                  {data.visitCategory.map((item) => (
+                    <p
+                      key={item.id}
+                      className="text-slate-500 text-sm font-medium"
+                    >
+                      {item.name} : {item.Visit.length}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -109,7 +167,7 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="space-y-6">
-            {[1, 2, 3, 4].map((item) => (
+            {/* {[1, 2, 3, 4].map((item) => (
               <div key={item} className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
                   <UserIcon size={18} className="text-slate-400" />
@@ -126,7 +184,7 @@ const Dashboard = () => {
                   2m ago
                 </p>
               </div>
-            ))}
+            ))} */}
           </div>
         </div>
       </div>

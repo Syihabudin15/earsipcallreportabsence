@@ -116,6 +116,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
           setData((prev) => ({
             ...prev,
             Debitur: res.data.data,
+            debiturId: res.data.data.id,
           }));
         } else {
           alert(res.data.msg || "Data tidak ditemukan");

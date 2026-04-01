@@ -494,13 +494,56 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
         destroyOnHidden
       >
         {currentFile && (
-          <iframe
-            src={`${currentFile.url}#toolbar=0`}
-            width="100%"
-            height="100%"
-            style={{ border: "none" }}
-            title="PDF Preview"
-          />
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              background: "#f0f0f0",
+            }}
+            onContextMenu={(e) => e.preventDefault()} // Mematikan klik kanan pada kontainer luar
+          >
+            {currentFile.type === "video" ||
+            currentFile.url.match(/\.(mp4|webm|ogg)$/i) ? (
+              <video
+                controls
+                controlsList="nodownload"
+                onContextMenu={(e) => e.preventDefault()}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  backgroundColor: "#000",
+                }}
+              >
+                <source src={currentFile.url} type="video/mp4" />
+                Browser Anda tidak mendukung tag video.
+              </video>
+            ) : currentFile.type === "image" ||
+              currentFile.url.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? (
+              <img
+                src={currentFile.url}
+                alt={currentFile.name}
+                onContextMenu={(e) => e.preventDefault()}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            ) : (
+              <iframe
+                src={`${currentFile.url}#toolbar=0`}
+                width="100%"
+                height="100%"
+                style={{ border: "none" }}
+                title="File Preview"
+                onContextMenu={(e) => e.preventDefault()}
+              />
+            )}
+          </div>
         )}
       </Modal>
     </div>

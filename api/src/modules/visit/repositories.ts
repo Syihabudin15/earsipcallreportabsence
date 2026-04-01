@@ -62,7 +62,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
         }),
       },
       include: {
-        Debitur: true,
+        Debitur: { include: { SubmissionType: true } },
         VisitCategory: true,
         VisitStatus: true,
         VisitPurpose: true,
@@ -118,7 +118,11 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       page,
       limit,
       search,
-      data,
+      data: data.map((item) => ({
+        ...item,
+        files: JSON.parse(item.files || "[]"),
+        coments: JSON.parse(item.coments || "[]"),
+      })),
       total,
     });
   } catch (err) {
@@ -132,14 +136,34 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
   let body = req.body;
   try {
-    const { id, VisitCategory, VisitStatus, VisitPurpose, User, ...saved } =
-      body;
+    const {
+      id,
+      VisitCategory,
+      VisitStatus,
+      VisitPurpose,
+      User,
+      Debitur,
+      ...saved
+    } = body;
     const genId = await generateId();
-    await prisma.visit.create({
-      data: {
-        ...saved,
-        id: body.id && body.id !== "" ? body.id : genId,
-      },
+    const genDebId = await generateDebiturId();
+    Debitur.id = Debitur.id ? Debitur.id : genDebId;
+    await prisma.$transaction(async (tx) => {
+      const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
+
+      await tx.debitur.upsert({
+        where: { id: Debitur.id },
+        update: { ...savedeb },
+        create: { ...savedeb },
+      });
+      await tx.visit.create({
+        data: {
+          ...saved,
+          coments: JSON.stringify(saved.coments || []),
+          files: JSON.stringify(saved.files || []),
+          id: body.id && body.id !== "" ? body.id : genId,
+        },
+      });
     });
     return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
   } catch (err) {
@@ -164,14 +188,31 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
       where: { id: id as string },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
-    const { VisitCategory, VisitStatus, VisitPurpose, User, ...saved } = body;
+    const {
+      VisitCategory,
+      VisitStatus,
+      VisitPurpose,
+      User,
+      Debitur,
+      ...saved
+    } = body;
 
-    await prisma.visit.update({
-      where: { id: find.id },
-      data: {
-        ...saved,
-        updated_at: new Date(),
-      },
+    await prisma.$transaction(async (tx) => {
+      const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
+
+      await tx.debitur.update({
+        where: { id: Debitur.id as string },
+        data: savedeb,
+      });
+      await tx.visit.update({
+        where: { id: find.id },
+        data: {
+          ...saved,
+          coments: JSON.stringify(body.coments || []),
+          files: JSON.stringify(body.files || []),
+          updated_at: new Date(),
+        },
+      });
     });
 
     return ResponseServer(res, 200, { msg: "Data berhasil dirubah" });
@@ -211,9 +252,46 @@ export const DELETE = async (
   }
 };
 
+export const PATCH = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  let { id } = req.query;
+  try {
+    if (!id) return ResponseServer(res, 404, { msg: "Not found data" });
+    const find = await prisma.visit.findFirst({
+      where: { id: id as string },
+      include: {
+        Debitur: { include: { SubmissionType: true } },
+        VisitCategory: true,
+        VisitStatus: true,
+        VisitPurpose: true,
+        User: true,
+      },
+    });
+    if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
+
+    find.coments = JSON.parse(find.coments || "[]");
+    find.files = JSON.parse(find.files || "[]");
+    return ResponseServer(res, 200, { msg: "OK", data: find });
+  } catch (err) {
+    console.log(err);
+    return ResponseServer(res, 500, {
+      msg: (err as any).message || "Internal Server Error",
+    });
+  }
+};
+
 async function generateId() {
   const prefix = "VID";
   const padLength = 4;
   const lastRecord = await prisma.visit.count({});
+  return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
+}
+async function generateDebiturId() {
+  const prefix = "DEBT";
+  const padLength = 4;
+  const lastRecord = await prisma.debitur.count({});
   return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
 }

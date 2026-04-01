@@ -15,6 +15,9 @@ import DataVisitCategory from "./creport/Category";
 import DataVisitStatus from "./creport/Status";
 import DataVisitPurpose from "./creport/Purpose";
 import DataVisit from "./creport/Visit";
+import UpsertVisit from "./creport/UpsertVisit";
+import UpdateVisit from "./creport/UpdateVisit";
+import DetailVisit from "./creport/DetailVisit";
 
 function AppRouter() {
   const path = window.location.pathname;
@@ -46,6 +49,12 @@ function AppRouter() {
           <Route path="/callreport/status" element={<DataVisitStatus />} />
           <Route path="/callreport/purpose" element={<DataVisitPurpose />} />
           <Route path="/callreport/visit" element={<DataVisit />} />
+          <Route path="/callreport/visit/upsert" element={<UpsertVisit />} />
+          <Route
+            path="/callreport/visit/upsert/:id"
+            element={<UpdateVisit />}
+          />
+          <Route path="/callreport/visit/:id" element={<DetailVisit />} />
         </Route>
 
         {/* 404 Page (Opsional) */}

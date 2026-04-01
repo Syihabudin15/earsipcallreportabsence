@@ -3,7 +3,7 @@ import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
-  let { page = 1, limit = 50, search } = req.query;
+  let { page = 1, limit = 50, search, submissionTypeId } = req.query;
   page = Number(page);
   limit = Number(limit);
   const skip = (page - 1) * limit;
@@ -20,6 +20,9 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
             { id: { contains: search as string } },
           ],
         }),
+        ...(submissionTypeId && {
+          submissionTypeId: submissionTypeId as string,
+        }),
       },
       skip: skip,
       take: limit,
@@ -28,7 +31,13 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
         Submissions: {
           include: { Product: { include: { ProductType: true } } },
         },
-        Visit: true,
+        Visit: {
+          include: {
+            VisitCategory: true,
+            VisitStatus: true,
+            VisitPurpose: true,
+          },
+        },
       },
     });
 
@@ -42,6 +51,9 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
             { nik: { contains: search as string } },
             { id: { contains: search as string } },
           ],
+        }),
+        ...(submissionTypeId && {
+          submissionTypeId: submissionTypeId as string,
         }),
       },
     });

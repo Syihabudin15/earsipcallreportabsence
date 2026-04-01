@@ -128,6 +128,7 @@ export interface IProductType {
   created_at: Date;
   updated_at: Date;
   ProductTypeFile: IProductTypeFile[];
+  Product: IProduct[];
 }
 export interface IProductTypeFile {
   id: string;
@@ -156,6 +157,7 @@ export interface IProduct {
   updated_at: Date;
   ProductType: IProductType;
   productTypeId: string;
+  Submission: ISubmission[];
 }
 export interface ISubmission {
   id: string;
@@ -188,6 +190,7 @@ export interface IVisitCategory {
   status: boolean;
   created_at: Date;
   updated_at: Date;
+  Visit: IVisit[];
 }
 
 export interface IVisitStatus {
@@ -209,14 +212,13 @@ export interface IVisitPurpose {
 
 export interface IVisit {
   id: string;
-  date: string;
+  date: Date;
   value: number;
-  purpose: string;
   summary?: string;
   coments?: IComments[];
-  date_action?: string;
+  date_action?: Date;
   geo?: string;
-  files?: string;
+  files?: IFileVisit[];
   next_action?: string;
   approve_status: EStatus;
 
@@ -233,4 +235,9 @@ export interface IVisit {
   visitCategoryId: string;
   visitStatusId: string;
   visitPurposeId: string;
+}
+
+export interface IFileVisit {
+  name: string;
+  url: string;
 }

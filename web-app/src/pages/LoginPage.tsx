@@ -236,9 +236,10 @@ function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-8 pt-8 border-t border-gray-100 text-center text-sm text-gray-500">
-            Keamanan informasi adalah prioritas kami. Pastikan Anda masuk dari
-            perangkat resmi perusahaan.
+          <div className="mt-6 pt-6 border-t border-gray-100 text-right text-sm text-gray-500">
+            <div>Version 1.00</div>
+            <div>Registered to:</div>
+            <div>PT. BPR Hasamitra Jawa Barat</div>
           </div>
         </div>
       </div>

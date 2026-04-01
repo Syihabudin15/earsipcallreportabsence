@@ -1,36 +1,67 @@
 import {} from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
+import moment from "moment";
 export const GET = async (req, res, next) => {
-    let { page = 1, limit = 50, search, productTypeId } = req.query;
+    let { page = 1, limit = 50, search, date } = req.query;
     page = Number(page);
     limit = Number(limit);
     const skip = (page - 1) * limit;
     try {
-        const data = await prisma.product.findMany({
+        const data = await prisma.user.findMany({
             where: {
                 status: true,
-                ...(search && { name: { contains: search } }),
-                ...(productTypeId && { productTypeId: productTypeId }),
+                ...(search && {
+                    OR: [
+                        { fullname: { contains: search } },
+                        { nik: { contains: search } },
+                        { nip: { contains: search } },
+                        { email: { contains: search } },
+                        { phone: { contains: search } },
+                        { id: { contains: search } },
+                    ],
+                }),
             },
             skip: skip,
             take: limit,
-            include: { ProductType: { include: { ProductTypeFile: true } } },
-            orderBy: { id: "asc" },
+            include: {
+                Absence: {
+                    include: { PermitAbsence: true },
+                    where: {
+                        ...(date && {
+                            check_in: {
+                                gte: moment(date)
+                                    .startOf("day")
+                                    .toDate(),
+                                lte: moment(date)
+                                    .endOf("day")
+                                    .toDate(),
+                            },
+                        }),
+                    },
+                },
+            },
         });
-        const total = await prisma.product.count({
+        const total = await prisma.user.count({
             where: {
                 status: true,
-                ...(search && { name: { contains: search } }),
-                ...(productTypeId && { productTypeId: productTypeId }),
+                ...(search && {
+                    OR: [
+                        { fullname: { contains: search } },
+                        { nik: { contains: search } },
+                        { nip: { contains: search } },
+                        { email: { contains: search } },
+                        { phone: { contains: search } },
+                        { id: { contains: search } },
+                    ],
+                }),
             },
         });
         return ResponseServer(res, 200, {
-            msg: "GET /product",
+            msg: "GET /absence",
             page,
             limit,
             search,
-            productTypeId,
             data,
             total,
         });
@@ -45,13 +76,9 @@ export const GET = async (req, res, next) => {
 export const POST = async (req, res, next) => {
     let body = req.body;
     try {
-        const genId = await generateId(body.productTypeId);
-        const { id, ProductType, ...saved } = body;
-        await prisma.product.create({
-            data: {
-                ...saved,
-                id: body.id && body.id !== "" ? body.id : genId,
-            },
+        const { id, ...saved } = body;
+        await prisma.absence.create({
+            data: { ...saved, check_in: new Date() },
         });
         return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
     }
@@ -71,16 +98,15 @@ export const PUT = async (req, res, next) => {
                 msg: "ID Not found",
                 params: req.params,
             });
-        const find = await prisma.product.findFirst({
+        const find = await prisma.absence.findFirst({
             where: { id: id },
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const { ProductType, ...saved } = body;
-        await prisma.product.update({
+        await prisma.absence.update({
             where: { id: find.id },
             data: {
-                ...saved,
+                ...body,
                 updated_at: new Date(),
             },
         });
@@ -98,14 +124,14 @@ export const DELETE = async (req, res, next) => {
     try {
         if (!id)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const find = await prisma.product.findFirst({
+        const find = await prisma.absence.findFirst({
             where: { id: id },
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        await prisma.product.update({
-            where: { id: find.id },
-            data: { status: false },
+        await prisma.$transaction(async (tx) => {
+            await tx.permitAbsence.deleteMany({ where: { absenceId: find.id } });
+            await tx.absence.delete({ where: { id: find.id } });
         });
         return ResponseServer(res, 200, { msg: "Data berhasil dihapus" });
     }
@@ -116,11 +142,3 @@ export const DELETE = async (req, res, next) => {
         });
     }
 };
-async function generateId(typeId) {
-    const prefix = "P";
-    const padLength = 2;
-    const lastRecord = await prisma.product.count({
-        where: { productTypeId: typeId },
-    });
-    return `${prefix}${typeId}${String(lastRecord + 1).padStart(padLength, "0")}`;
-}

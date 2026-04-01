@@ -18,6 +18,7 @@ import debiturRoute from "./modules/debitur/routes.js";
 import absConfigRoute from "./modules/absence_config/routes.js";
 import absenceRoute from "./modules/absence_config/routes.js";
 import fileRoute from "./modules/file/routes.js";
+import { MainDashboard } from "./modules/route.js";
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use(
 
 // ROOT APP
 app.use(express.json());
+app.use("/maindashboard", middleware, MainDashboard);
 app.use("/auth", authRoute);
 app.use("/role", middleware, roleRoute);
 app.use("/position", middleware, posRoute);

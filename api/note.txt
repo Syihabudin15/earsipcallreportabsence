@@ -1,3 +1,2 @@
 - CRUD Permit Absence         [x]
-- Model & CRUD Insentif               [x]
-- CRUD Permit Download & Delete
+- Model & CRUD Insentif       [x]

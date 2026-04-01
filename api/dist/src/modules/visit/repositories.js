@@ -3,43 +3,40 @@ import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 import moment from "moment";
 export const GET = async (req, res, next) => {
-    let { page = 1, limit = 50, search, productTypeId, productId, guarantee_status, is_active, backdate, submissionTypeId, } = req.query;
+    let { page = 1, limit = 50, search, visitCategoryId, visitStatusId, visitPurposeId, approve_status, submissionTypeId, backdate, } = req.query;
     page = Number(page);
     limit = Number(limit);
     const skip = (page - 1) * limit;
     try {
-        const data = await prisma.submission.findMany({
+        const data = await prisma.visit.findMany({
             where: {
                 status: true,
                 ...(search && {
                     OR: [
+                        { id: { contains: search } },
                         {
                             Debitur: {
                                 OR: [
                                     { fullname: { contains: search } },
-                                    { id: { contains: search } },
-                                    { nik: { contains: search } },
                                     { cif: { contains: search } },
+                                    { nik: { contains: search } },
+                                    { id: { contains: search } },
                                 ],
                             },
                         },
-                        { id: { contains: search } },
-                        { drawer_code: { contains: search } },
                     ],
                 }),
-                ...(submissionTypeId && {
-                    Debitur: { submissionTypeId: submissionTypeId },
+                ...(visitCategoryId && { visitCategoryId: visitCategoryId }),
+                ...(visitStatusId && { visitStatusId: visitStatusId }),
+                ...(visitPurposeId && { visitPurposeId: visitPurposeId }),
+                ...(approve_status && {
+                    approve_status: approve_status,
                 }),
-                ...(productTypeId && {
-                    Product: {
-                        productTypeId: productTypeId,
+                ...(submissionTypeId && {
+                    Debitur: {
+                        submissionTypeId: submissionTypeId,
                     },
                 }),
-                ...(productId && { productId: productId }),
-                ...(guarantee_status && {
-                    guarantee_status: guarantee_status === "true" ? true : false,
-                }),
-                ...(is_active && { is_active: is_active === "true" ? true : false }),
                 ...(backdate && {
                     created_at: {
                         gte: moment(backdate.split(",")[0])
@@ -51,57 +48,45 @@ export const GET = async (req, res, next) => {
                     },
                 }),
             },
+            include: {
+                Debitur: true,
+                VisitCategory: true,
+                VisitStatus: true,
+                VisitPurpose: true,
+                User: true,
+            },
             skip: skip,
             take: limit,
-            include: {
-                Debitur: { include: { SubmissionType: true } },
-                Product: {
-                    include: {
-                        ProductType: {
-                            include: {
-                                ProductTypeFile: true,
-                            },
-                        },
-                    },
-                },
-                User: true,
-                Files: true,
-                PermitFileDetail: true,
-            },
-            orderBy: { created_at: "desc" },
         });
-        const total = await prisma.submission.count({
+        const total = await prisma.visit.count({
             where: {
                 status: true,
                 ...(search && {
                     OR: [
+                        { id: { contains: search } },
                         {
                             Debitur: {
                                 OR: [
                                     { fullname: { contains: search } },
-                                    { id: { contains: search } },
-                                    { nik: { contains: search } },
                                     { cif: { contains: search } },
+                                    { nik: { contains: search } },
+                                    { id: { contains: search } },
                                 ],
                             },
                         },
-                        { id: { contains: search } },
-                        { drawer_code: { contains: search } },
                     ],
                 }),
-                ...(submissionTypeId && {
-                    Debitur: { submissionTypeId: submissionTypeId },
+                ...(visitCategoryId && { visitCategoryId: visitCategoryId }),
+                ...(visitStatusId && { visitStatusId: visitStatusId }),
+                ...(visitPurposeId && { visitPurposeId: visitPurposeId }),
+                ...(approve_status && {
+                    approve_status: approve_status,
                 }),
-                ...(productTypeId && {
-                    Product: {
-                        productTypeId: productTypeId,
+                ...(submissionTypeId && {
+                    Debitur: {
+                        submissionTypeId: submissionTypeId,
                     },
                 }),
-                ...(productId && { productId: productId }),
-                ...(guarantee_status && {
-                    guarantee_status: guarantee_status === "true" ? true : false,
-                }),
-                ...(is_active && { is_active: is_active === "true" ? true : false }),
                 ...(backdate && {
                     created_at: {
                         gte: moment(backdate.split(",")[0])
@@ -115,19 +100,14 @@ export const GET = async (req, res, next) => {
             },
         });
         return ResponseServer(res, 200, {
-            msg: "GET /submission",
+            msg: "GET /visit",
             page,
             limit,
             search,
-            productTypeId,
-            productId,
-            guarantee_status,
-            is_active,
-            backdate,
-            data: data.map((d) => ({
-                ...d,
-                activities: JSON.parse(d.activities || "[]"),
-                coments: JSON.parse(d.coments),
+            data: data.map((item) => ({
+                ...item,
+                files: JSON.parse(item.files || "[]"),
+                coments: JSON.parse(item.coments || "[]"),
             })),
             total,
         });
@@ -142,38 +122,25 @@ export const GET = async (req, res, next) => {
 export const POST = async (req, res, next) => {
     let body = req.body;
     try {
-        const { id, User, PermitFileDetail, Debitur, Product, Files, ...savedSub } = body;
+        const { id, VisitCategory, VisitStatus, VisitPurpose, User, Debitur, ...saved } = body;
         const genId = await generateId();
         const genDebId = await generateDebiturId();
         Debitur.id = Debitur.id ? Debitur.id : genDebId;
-        const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
         await prisma.$transaction(async (tx) => {
-            const deb = await tx.debitur.upsert({
+            const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
+            await tx.debitur.upsert({
                 where: { id: Debitur.id },
-                update: savedeb,
-                create: savedeb,
+                update: { ...savedeb },
+                create: { ...savedeb },
             });
-            const sub = await tx.submission.create({
+            await tx.visit.create({
                 data: {
-                    ...savedSub,
+                    ...saved,
+                    coments: JSON.stringify(saved.coments || []),
+                    files: JSON.stringify(saved.files || []),
                     id: body.id && body.id !== "" ? body.id : genId,
-                    debiturId: deb.id,
-                    coments: JSON.stringify(body.coments.filter((c) => c.comment)),
-                    activities: JSON.stringify(body.activities),
                 },
             });
-            for (const productTypeFile of Product.ProductType.ProductTypeFile) {
-                if (productTypeFile.Files) {
-                    await tx.files.createMany({
-                        data: productTypeFile.Files.map((f) => ({
-                            ...f,
-                            productTypeFileId: productTypeFile.id,
-                            submissionId: sub.id,
-                        })),
-                    });
-                }
-            }
-            return true;
         });
         return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
     }
@@ -193,39 +160,27 @@ export const PUT = async (req, res, next) => {
                 msg: "ID Not found",
                 params: req.params,
             });
-        const find = await prisma.submission.findFirst({
+        const find = await prisma.visit.findFirst({
             where: { id: id },
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const { User, PermitFileDetail, Debitur, Product, Files, ...savedSub } = body;
-        const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
+        const { VisitCategory, VisitStatus, VisitPurpose, User, Debitur, ...saved } = body;
         await prisma.$transaction(async (tx) => {
+            const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
             await tx.debitur.update({
                 where: { id: Debitur.id },
                 data: savedeb,
             });
-            await tx.submission.update({
-                where: { id: id },
+            await tx.visit.update({
+                where: { id: find.id },
                 data: {
-                    ...savedSub,
-                    coments: JSON.stringify(savedSub.coments),
-                    activities: JSON.stringify(savedSub.activities),
+                    ...saved,
+                    coments: JSON.stringify(body.coments || []),
+                    files: JSON.stringify(body.files || []),
+                    updated_at: new Date(),
                 },
             });
-            for (const productTypeFile of Product.ProductType.ProductTypeFile) {
-                if (productTypeFile.Files) {
-                    for (const files of productTypeFile.Files) {
-                        const { id: fileId, ...other } = files;
-                        await tx.files.upsert({
-                            where: { id: fileId },
-                            update: files,
-                            create: other,
-                        });
-                    }
-                }
-            }
-            return true;
         });
         return ResponseServer(res, 200, { msg: "Data berhasil dirubah" });
     }
@@ -241,12 +196,12 @@ export const DELETE = async (req, res, next) => {
     try {
         if (!id)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const find = await prisma.submission.findFirst({
+        const find = await prisma.visit.findFirst({
             where: { id: id },
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        await prisma.submission.update({
+        await prisma.visit.update({
             where: { id: find.id },
             data: { status: false },
         });
@@ -264,30 +219,20 @@ export const PATCH = async (req, res, next) => {
     try {
         if (!id)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const find = await prisma.submission.findFirst({
+        const find = await prisma.visit.findFirst({
             where: { id: id },
             include: {
                 Debitur: true,
-                Product: {
-                    include: {
-                        ProductType: {
-                            include: {
-                                ProductTypeFile: {
-                                    include: { Files: { where: { submissionId: id } } },
-                                },
-                            },
-                        },
-                    },
-                },
+                VisitCategory: true,
+                VisitStatus: true,
+                VisitPurpose: true,
                 User: true,
-                Files: true,
-                PermitFileDetail: true,
             },
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        find.coments = JSON.parse(find.coments);
-        find.activities = JSON.parse(find.activities);
+        find.coments = JSON.parse(find.coments || "[]");
+        find.files = JSON.parse(find.files || "[]");
         return ResponseServer(res, 200, { msg: "OK", data: find });
     }
     catch (err) {
@@ -298,9 +243,9 @@ export const PATCH = async (req, res, next) => {
     }
 };
 async function generateId() {
-    const prefix = "SID";
+    const prefix = "VID";
     const padLength = 4;
-    const lastRecord = await prisma.submission.count({});
+    const lastRecord = await prisma.visit.count({});
     return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
 }
 async function generateDebiturId() {
