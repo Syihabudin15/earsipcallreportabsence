@@ -12,7 +12,7 @@ import {
 import AppRouter from "./AppRouter";
 import { menus } from "../libs/list_app";
 import useContext from "../libs/context";
-import { Modal } from "antd";
+import { Modal, Dropdown } from "antd";
 import { Link } from "react-router-dom";
 
 const APP_COLOR = import.meta.env.VITE_APP_COLOR || "#F58220";
@@ -150,16 +150,7 @@ export default function MainLayout({
             })}
         </nav>
 
-        {/* LOGOUT BUTTON */}
-        <div className="absolute bottom-0 w-full p-4 border-t border-slate-100 bg-white">
-          <button
-            className={`flex items-center gap-3 px-4 py-3 w-full text-red-500 font-bold text-sm hover:bg-red-50 rounded-xl cursor-pointer transition-colors ${isCollapsed ? "justify-center" : ""}`}
-            onClick={() => setOpenLogout(true)}
-          >
-            <LogOut size={20} />
-            {!isCollapsed && <span>Keluar</span>}
-          </button>
-        </div>
+        {/* LOGOUT BUTTON REMOVED - MOVED TO HEADER */}
       </aside>
 
       {/* --- MAIN CONTENT AREA --- */}
@@ -181,19 +172,53 @@ export default function MainLayout({
               <Bell size={20} />
               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
-            <div className="flex items-center gap-3 border-l border-slate-200 pl-4 lg:pl-6">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-slate-800 leading-none">
-                  {user && user.fullname}
-                </p>
-                <p className="text-[10px] font-medium text-slate-400 mt-1 uppercase">
-                  {user && user.Position.name}
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
-                <User size={20} className="text-slate-400" />
-              </div>
-            </div>
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    label: (
+                      <div>
+                        <p className="font-bold text-slate-800">
+                          {user && user.fullname}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {user && user.Position.name}
+                        </p>
+                      </div>
+                    ),
+                    disabled: true,
+                    key: "profile",
+                  },
+                  {
+                    type: "divider",
+                  },
+                  {
+                    key: "logout",
+                    label: (
+                      <span className="text-red-600 font-semibold flex items-center gap-2">
+                        <LogOut size={16} /> Keluar
+                      </span>
+                    ),
+                    onClick: () => setOpenLogout(true),
+                  },
+                ],
+              }}
+              placement="bottomRight"
+            >
+              <button className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-50 hover:text-slate-800 rounded-xl transition-colors border-l border-slate-200 pl-4 lg:pl-6 cursor-pointer">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-bold text-slate-800 leading-none">
+                    {user && user.fullname}
+                  </p>
+                  <p className="text-[10px] font-medium text-slate-400 mt-1 uppercase">
+                    {user && user.Position.name}
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center hover:bg-slate-200 transition-colors">
+                  <User size={20} className="text-slate-400" />
+                </div>
+              </button>
+            </Dropdown>
           </div>
         </header>
 

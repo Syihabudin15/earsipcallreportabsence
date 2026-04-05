@@ -1,44 +1,62 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react"; // Tambahkan ini
+import { useEffect, useState } from "react";
+import { Spin } from "antd";
 import api from "../../libs/api";
 import DetailCallReport from "./DetailCallReport";
 
 export default function DetailVisit() {
   const { id } = useParams();
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!id) {
+      setError("ID tidak ditemukan");
+      setLoading(false);
+      return;
+    }
+
     api
       .request({
-        method: "PATCH", // Biasanya untuk ambil data awal pakai GET, bukan PATCH
+        method: "PATCH",
         url: `${import.meta.env.VITE_API_URL}/visit?id=${id}`,
       })
       .then((res) => {
         if (res.status === 200 || res.status === 201) {
           setData(res.data.data);
+          setError("");
         } else {
-          setError("Not Found ID");
+          setError("Data tidak ditemukan");
         }
       })
       .catch((err) => {
-        console.log(err);
-        setError("Internal Server Error");
+        console.error("Error fetching data:", err);
+        setError(err.message || "Gagal mengambil data");
       })
       .finally(() => {
         setLoading(false);
       });
-  }, [id]); // Effect berjalan saat ID berubah
+  }, [id]);
 
-  // Logika Render
-  if (loading) return <p>Loading...</p>;
-  if (error || !id || !data)
+  if (loading) {
     return (
-      <div>
-        <p>{error || "ID Not Found"}</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <Spin size="large" />
       </div>
     );
+  }
+
+  if (error || !id || !data) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-gray-800 mb-2">Error</p>
+          <p className="text-gray-600">{error || "Data tidak ditemukan"}</p>
+        </div>
+      </div>
+    );
+  }
 
   return <DetailCallReport data={data} />;
 }

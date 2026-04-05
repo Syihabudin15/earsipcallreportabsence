@@ -5,8 +5,10 @@ import {
   Popover,
   Select,
   Table,
-  Tag,
   type TableProps,
+  Card,
+  Row,
+  Col,
 } from "antd";
 import {
   Plus,
@@ -15,6 +17,10 @@ import {
   Filter,
   CalendarArrowUp,
   CalendarArrowDownIcon,
+  CheckCircle,
+  XCircle,
+  Clock,
+  FileText,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
@@ -50,6 +56,17 @@ export default function DataVisit() {
     submissionTypeId: "",
     backdate: "",
   });
+
+  // Calculate statistics from data
+  const stats = {
+    total: pageprops.total,
+    approved: pageprops.data.filter((v) => v.approve_status === "APPROVED")
+      .length,
+    rejected: pageprops.data.filter((v) => v.approve_status === "REJECTED")
+      .length,
+    pending: pageprops.data.filter((v) => v.approve_status === "PENDING")
+      .length,
+  };
   const [action, setAction] = useState<IActionPage<IVisit>>({
     upsert: false,
     delete: false,
@@ -218,12 +235,13 @@ export default function DataVisit() {
       title: "Hasil Kunjungan",
       key: "hasil",
       dataIndex: ["VisitStatus", "name"],
+      width: 250,
       render(value, record, _index) {
         return (
           <div>
             <div>{value}</div>
             <div className="text-xs opacity-80">
-              <CollapseText text={record.summary || ""} />
+              <CollapseText text={record.summary || ""} maxLength={40} />
             </div>
           </div>
         );
@@ -249,25 +267,48 @@ export default function DataVisit() {
       },
     },
     {
+      title: "Tindak Lanjut",
+      key: "next_action",
+      dataIndex: "next_action",
+      render(_value, record, _index) {
+        return <CollapseText text={record.next_action || ""} />;
+      },
+    },
+    {
       title: "Status",
       key: "status",
       dataIndex: "status",
       render(_value, record, _index) {
+        const statusConfig = {
+          APPROVED: {
+            color: "green",
+            label: "✅ DISETUJUI",
+            bgColor: "bg-green-100",
+            textColor: "text-green-700",
+          },
+          REJECTED: {
+            color: "red",
+            label: "❌ DITOLAK",
+            bgColor: "bg-red-100",
+            textColor: "text-red-700",
+          },
+          PENDING: {
+            color: "orange",
+            label: "⏳ MENUNGGU",
+            bgColor: "bg-orange-100",
+            textColor: "text-orange-700",
+          },
+        };
+        const config =
+          statusConfig[record.approve_status as keyof typeof statusConfig] ||
+          statusConfig.PENDING;
         return (
           <div className="flex justify-center">
-            <Tag
-              style={{ width: 80, textAlign: "center" }}
-              color={
-                record.approve_status === "APPROVED"
-                  ? "green"
-                  : record.approve_status === "REJECTED"
-                    ? "red"
-                    : "orange"
-              }
-              variant="solid"
+            <span
+              className={`${config.bgColor} ${config.textColor} px-3 py-1 rounded-full text-sm font-semibold`}
             >
-              {record.approve_status}
-            </Tag>
+              {config.label}
+            </span>
           </div>
         );
       },
@@ -325,11 +366,14 @@ export default function DataVisit() {
   ];
 
   const content = (
-    <div className="p-2 w-80">
+    <div className="p-4 w-96 max-h-96 overflow-y-auto space-y-4">
       <div className="flex flex-col w-full">
-        <p className="mb-1">Jenis Pemohon</p>
+        <label className="mb-2 font-semibold text-gray-700 flex items-center gap-2">
+          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+          Jenis Pemohon
+        </label>
         <Select
-          placeholder="Pilih jenis pemohon.."
+          placeholder="Pilih jenis pemohon..."
           className="w-full"
           options={subTypes.map((t) => ({ label: t.name, value: t.id }))}
           onChange={(val) =>
@@ -339,13 +383,16 @@ export default function DataVisit() {
           value={pageprops.submissionTypeId}
           optionFilterProp={"label"}
           showSearch
-          size="small"
+          size="large"
         />
       </div>
       <div className="flex flex-col w-full">
-        <p className="mb-1">Kategori Kunjungan</p>
+        <label className="mb-2 font-semibold text-gray-700 flex items-center gap-2">
+          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+          Kategori Kunjungan
+        </label>
         <Select
-          placeholder="Pilih kategori kunjungan.."
+          placeholder="Pilih kategori kunjungan..."
           className="w-full"
           options={visitCategories.map((t) => ({ label: t.name, value: t.id }))}
           onChange={(val) =>
@@ -355,13 +402,16 @@ export default function DataVisit() {
           value={pageprops.visitCategoryId}
           optionFilterProp={"label"}
           showSearch
-          size="small"
+          size="large"
         />
       </div>
       <div className="flex flex-col w-full">
-        <p className="mb-1">Tujuan Kunjungan</p>
+        <label className="mb-2 font-semibold text-gray-700 flex items-center gap-2">
+          <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+          Tujuan Kunjungan
+        </label>
         <Select
-          placeholder="Pilih tujuan kunjungan.."
+          placeholder="Pilih tujuan kunjungan..."
           className="w-full"
           options={visitPurposes.map((t) => ({ label: t.name, value: t.id }))}
           onChange={(val) =>
@@ -371,13 +421,16 @@ export default function DataVisit() {
           value={pageprops.visitPurposeId}
           optionFilterProp={"label"}
           showSearch
-          size="small"
+          size="large"
         />
       </div>
       <div className="flex flex-col w-full">
-        <p className="mb-1">Hasil Kunjungan</p>
+        <label className="mb-2 font-semibold text-gray-700 flex items-center gap-2">
+          <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+          Hasil Kunjungan
+        </label>
         <Select
-          placeholder="Pilih hasil kunjungan.."
+          placeholder="Pilih hasil kunjungan..."
           className="w-full"
           options={visitStatuses.map((t) => ({ label: t.name, value: t.id }))}
           onChange={(val) => setPageprops({ ...pageprops, visitStatusId: val })}
@@ -385,18 +438,21 @@ export default function DataVisit() {
           value={pageprops.visitStatusId}
           optionFilterProp={"label"}
           showSearch
-          size="small"
+          size="large"
         />
       </div>
       <div className="flex flex-col w-full">
-        <p className="mb-1">Status Kunjungan</p>
+        <label className="mb-2 font-semibold text-gray-700 flex items-center gap-2">
+          <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+          Status Kunjungan
+        </label>
         <Select
-          placeholder="Pilih status kunjungan.."
+          placeholder="Pilih status kunjungan..."
           className="w-full"
           options={[
-            { label: "PENDING", value: "PENDING" },
-            { label: "APPROVED", value: "APPROVED" },
-            { label: "REJECTED", value: "REJECTED" },
+            { label: "🟡 PENDING", value: "PENDING" },
+            { label: "✅ APPROVED", value: "APPROVED" },
+            { label: "❌ REJECTED", value: "REJECTED" },
           ]}
           onChange={(val) =>
             setPageprops({ ...pageprops, approve_status: val })
@@ -405,12 +461,15 @@ export default function DataVisit() {
           value={pageprops.approve_status}
           optionFilterProp={"label"}
           showSearch
-          size="small"
+          size="large"
         />
       </div>
 
       <div className="flex flex-col w-full">
-        <p className="mb-1">Periode</p>
+        <label className="mb-2 font-semibold text-gray-700 flex items-center gap-2">
+          <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+          Periode Tanggal
+        </label>
         <RangePicker
           value={
             pageprops.backdate && [
@@ -421,12 +480,13 @@ export default function DataVisit() {
           onChange={(_date, datestr) =>
             setPageprops({ ...pageprops, backdate: datestr })
           }
-          size="small"
+          size="large"
+          style={{ width: "100%" }}
         />
       </div>
-      <div className="flex justify-end mt-4">
+      <div className="flex justify-end gap-2 pt-4 border-t">
         <Button
-          size="small"
+          size="large"
           danger
           icon={<CloseOutlined />}
           onClick={() =>
@@ -437,59 +497,146 @@ export default function DataVisit() {
               visitPurposeId: "",
               approve_status: "",
               backdate: "",
+              submissionTypeId: "",
             })
           }
         >
-          Clear Filter
+          Reset Filter
         </Button>
       </div>
     </div>
   );
 
   return (
-    <div className="space-y-2">
-      {/* --- HEADER --- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-            Monitoring Kunjungan
-          </h1>
-          <p className="text-slate-500 text-sm">Monitoring data kunjungan.</p>
+    <div className="space-y-3 min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50 p-3 md:p-4">
+      {/* --- HEADER WITH GRADIENT --- */}
+      <div className="bg-linear-to-r from-blue-600 to-blue-700 rounded-2xl p-4 md:p-6 text-white shadow-lg">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold mb-1">
+              📋 Monitoring Kunjungan
+            </h1>
+            <p className="text-blue-100 text-sm md:text-base hidden md:block">
+              Pantau status persetujuan kunjungan
+            </p>
+          </div>
         </div>
       </div>
 
+      {/* --- STATISTICS CARDS --- */}
+      <Row gutter={[12, 12]}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card
+            className="shadow-sm border-l-4 border-l-blue-500 hover:shadow-md transition-shadow"
+            styles={{
+              body: { padding: "10px" },
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-gray-500 text-xs font-semibold">
+                  Total Kunjungan
+                </div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {stats.total}
+                </div>
+              </div>
+              <FileText className="text-blue-200" size={32} />
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card
+            className="shadow-sm border-l-4 border-l-green-500 hover:shadow-md transition-shadow"
+            styles={{ body: { padding: 10 } }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-gray-500 text-xs font-semibold">
+                  Disetujui
+                </div>
+                <div className="text-2xl font-bold text-green-600">
+                  {stats.approved}
+                </div>
+              </div>
+              <CheckCircle className="text-green-200" size={32} />
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card
+            className="shadow-sm border-l-4 border-l-orange-500 hover:shadow-md transition-shadow"
+            styles={{ body: { padding: "10px" } }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-gray-500 text-xs font-semibold">
+                  Menunggu
+                </div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {stats.pending}
+                </div>
+              </div>
+              <Clock className="text-orange-200" size={32} />
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card
+            className="shadow-sm border-l-4 border-l-red-500 hover:shadow-md transition-shadow"
+            styles={{ body: { padding: "10px" } }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-gray-500 text-xs font-semibold">
+                  Ditolak
+                </div>
+                <div className="text-2xl font-bold text-red-600">
+                  {stats.rejected}
+                </div>
+              </div>
+              <XCircle className="text-red-200" size={32} />
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
       {/* --- FILTER & SEARCH --- */}
-      <div className="bg-white p-2">
-        <div className="bg-white  flex flex-wrap items-center gap-4 mb-2">
-          <div className="flex-1 flex">
+      <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <div className="flex gap-2">
             {hasAccess(window.location.pathname, "write") && (
               <Link to={"/app/callreport/visit/upsert"}>
-                <Button icon={<Plus size={15} />} type="primary" size="small">
-                  New
+                <Button
+                  icon={<Plus size={14} />}
+                  type="primary"
+                  size="middle"
+                  className="flex items-center gap-1 text-sm"
+                >
+                  Tambah
                 </Button>
               </Link>
             )}
           </div>
-          <div className="flex-1 flex items-center justify-end gap-2">
+          <div className="flex-1 flex items-center gap-2 justify-end flex-wrap">
             <Input.Search
               type="text"
-              placeholder="Cari Nama Kategori/ID..."
-              className="w-full transition-all"
-              size="small"
-              width={200}
-              style={{ width: 200 }}
+              placeholder="Cari nama/ID/NIK..."
+              className="transition-all"
+              size="middle"
+              style={{ width: "auto", minWidth: 180 }}
               onChange={(e) =>
                 setPageprops({ ...pageprops, search: e.target.value })
               }
             />
             <Popover
               content={content}
-              title="Filter Data"
+              title="⚙️ Filter Data"
               trigger="click"
-              placement="left"
+              placement="topRight"
             >
               <Button
-                size="small"
+                size="middle"
                 type={
                   pageprops.submissionTypeId ||
                   pageprops.visitCategoryId ||
@@ -498,10 +645,12 @@ export default function DataVisit() {
                   pageprops.approve_status ||
                   pageprops.backdate
                     ? "primary"
-                    : undefined
+                    : "default"
                 }
+                icon={<Filter size={14} />}
+                className="flex items-center gap-1 text-sm"
               >
-                <Filter size={14} /> Filter
+                Filter
               </Button>
             </Popover>
           </div>
@@ -511,13 +660,13 @@ export default function DataVisit() {
           size="small"
           loading={loading}
           rowKey={"id"}
-          bordered
           scroll={{
             x: "max-content",
             y: window.innerWidth > 600 ? "53vh" : "65vh",
           }}
           columns={columns}
           dataSource={pageprops.data}
+          className="rounded-lg overflow-hidden"
           pagination={{
             current: pageprops.page,
             pageSize: pageprops.limit,
@@ -531,6 +680,8 @@ export default function DataVisit() {
             },
             pageSizeOptions: [50, 100, 500, 1000],
             size: "small",
+            showSizeChanger: true,
+            showQuickJumper: true,
           }}
         />
       </div>
@@ -559,175 +710,3 @@ export default function DataVisit() {
     </div>
   );
 }
-
-// const UpsertData = ({
-//   open,
-//   setOpen,
-//   record,
-//   getData,
-//   hook,
-// }: {
-//   open: boolean;
-//   setOpen: Function;
-//   record?: IVisitStatus;
-//   getData: Function;
-//   hook: HookAPI;
-// }) => {
-//   const [loading, setLoading] = useState(false);
-//   const [data, setData] = useState<IVisitStatus>(record || defaultData);
-
-//   const handleSubmit = async () => {
-//     if (!data.name) {
-//       hook.error({
-//         title: "ERROR",
-//         content: "Mohon lengkapi data terlebih dahulu!",
-//       });
-//       return;
-//     }
-//     setLoading(true);
-//     await api
-//       .request({
-//         url: import.meta.env.VITE_API_URL + "/visit_status?id=" + record?.id,
-//         method: record ? "PUT" : "POST",
-//         data: data,
-//         headers: { "Content-Type": "Application/json" },
-//       })
-//       .then(async (res) => {
-//         if (res.status === 201 || res.status === 200) {
-//           hook.success({
-//             title: "BERHASIL",
-//             content: res.data.msg,
-//           });
-//           setOpen(false);
-//           getData && (await getData());
-//         } else {
-//           hook.error({
-//             title: "ERROR",
-//             content: res.data.msg,
-//           });
-//         }
-//       })
-//       .catch((err) => {
-//         console.log(err);
-//         hook.error({
-//           title: "ERROR",
-//           content: err.message || "Internal Server Error",
-//         });
-//       });
-//     setLoading(false);
-//   };
-
-//   return (
-//     <Modal
-//       open={open}
-//       onCancel={() => setOpen(false)}
-//       title={`Upsert Data ${record ? record.name : ""}`}
-//       style={{ top: 10 }}
-//       width={800}
-//       onOk={handleSubmit}
-//       okButtonProps={{ loading: loading, disabled: !data.name }}
-//     >
-//       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-//         <div>
-//           <Text strong>ID:</Text>
-//           <Input
-//             placeholder="ID/Kosongkan untuk otomatis"
-//             value={data.id}
-//             onChange={(e) => setData({ ...data, id: e.target.value })}
-//             style={{ marginTop: "8px" }}
-//           />
-//         </div>
-//         <div>
-//           <Text strong>Nama Hasil/Status:</Text>
-//           <Input
-//             placeholder="Masukkan nama status..."
-//             value={data.name}
-//             onChange={(e) => setData({ ...data, name: e.target.value })}
-//             style={{ marginTop: "8px" }}
-//           />
-//         </div>
-
-//         <div>
-//           <Text strong>Keterangan:</Text>
-//           <Input.TextArea
-//             placeholder="Masukkan keterangan..."
-//             value={data.description}
-//             onChange={(e) => setData({ ...data, description: e.target.value })}
-//             style={{ marginTop: "8px" }}
-//           />
-//         </div>
-//       </div>
-//     </Modal>
-//   );
-// };
-
-// const defaultData: IVisitStatus = {
-//   id: "",
-//   name: "",
-//   description: "",
-//   status: true,
-//   created_at: new Date(),
-//   updated_at: new Date(),
-// };
-
-// const DeleteData = ({
-//   open,
-//   setOpen,
-//   record,
-//   getData,
-//   hook,
-// }: {
-//   open: boolean;
-//   setOpen: Function;
-//   record: IVisitStatus;
-//   getData: Function;
-//   hook: HookAPI;
-// }) => {
-//   const [loading, setLoading] = useState(false);
-
-//   const handleSubmit = async () => {
-//     setLoading(true);
-//     await api
-//       .request({
-//         url: import.meta.env.VITE_API_URL + "/visit_status?id=" + record?.id,
-//         method: "DELETE",
-//         headers: { "Content-Type": "Application/json" },
-//       })
-//       .then(async (res) => {
-//         if (res.status === 201 || res.status === 200) {
-//           hook.success({
-//             title: "BERHASIL",
-//             content: res.data.msg,
-//           });
-//           setOpen(false);
-//           getData && (await getData());
-//         } else {
-//           hook.error({
-//             title: "ERROR",
-//             content: res.data.msg,
-//           });
-//         }
-//       })
-//       .catch((err) => {
-//         console.log(err);
-//         hook.error({
-//           title: "ERROR",
-//           content: err.message || "Internal Server Error",
-//         });
-//       });
-//     setLoading(false);
-//   };
-//   return (
-//     <Modal
-//       open={open}
-//       title="Konfirmasi Hapus"
-//       onCancel={() => setOpen(false)}
-//       onOk={handleSubmit}
-//       okButtonProps={{ loading: loading }}
-//     >
-//       <div className="p-5">
-//         <p>Konfirmasi hapus data *{record.name}*?</p>
-//       </div>
-//     </Modal>
-//   );
-// };

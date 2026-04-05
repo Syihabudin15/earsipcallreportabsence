@@ -88,9 +88,9 @@ export default function DataProductType() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-            Data Jenis Produk
+            Data Kategori Berkas
           </h1>
-          <p className="text-slate-500 text-sm">Manajemen jenis/tipe produk.</p>
+          <p className="text-slate-500 text-sm">Manajemen kategori berkas.</p>
         </div>
       </div>
 

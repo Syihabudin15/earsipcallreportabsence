@@ -18,6 +18,8 @@ import DataVisit from "./creport/Visit";
 import UpsertVisit from "./creport/UpsertVisit";
 import UpdateVisit from "./creport/UpdateVisit";
 import DetailVisit from "./creport/DetailVisit";
+import DebiturCallReport from "./creport/Debitur";
+import UserManagement from "./app/User";
 
 function AppRouter() {
   const path = window.location.pathname;
@@ -30,6 +32,7 @@ function AppRouter() {
         <Route element={<ProtectedRoute path={path} />}>
           <Route path="/sub_type" element={<DataSubmissionType />} />
           <Route path="/debitur" element={<DataDebitur />} />
+          <Route path="/user" element={<UserManagement />} />
           <Route path="/role" element={<DataRole />} />
           <Route path="/position" element={<DataPosition />} />
           <Route path="/earsip/" element={<DashboardApp />} />
@@ -45,6 +48,7 @@ function AppRouter() {
             element={<UpdateSubmission />}
           />
           <Route path="/callreport/" element={<DashboardApp />} />
+          <Route path="/callreport/debitur" element={<DebiturCallReport />} />
           <Route path="/callreport/category" element={<DataVisitCategory />} />
           <Route path="/callreport/status" element={<DataVisitStatus />} />
           <Route path="/callreport/purpose" element={<DataVisitPurpose />} />

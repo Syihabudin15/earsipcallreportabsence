@@ -313,6 +313,31 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
   } | null>(null);
   const { user, hasAccess } = useContext((state: any) => state);
 
+  // Prevent keyboard shortcuts when preview is open
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent Ctrl+S, Ctrl+Shift+S, Ctrl+Shift+I, Ctrl+Shift+C
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === "s" ||
+          e.key === "S" ||
+          e.key === "i" ||
+          e.key === "I" ||
+          e.key === "c" ||
+          e.key === "C")
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    if (previewOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.removeEventListener("keydown", handleKeyDown);
+      };
+    }
+  }, [previewOpen]);
+
   // Fungsi untuk membuka preview PDF
   const handlePreview = async (
     url: string,
@@ -459,19 +484,30 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
                             }
                           ></Button>
                         </Tooltip>
-                        {user &&
-                          (file.allow_download.split(",").includes(user.id) ||
-                            hasAccess(
-                              "/app/earsip/submission",
-                              "download",
-                            )) && (
-                            <Tooltip title="Download PDF">
-                              <Button
-                                size="small"
-                                icon={<PrinterOutlined />}
-                              ></Button>
-                            </Tooltip>
-                          )}
+                        <Tooltip
+                          title={
+                            user &&
+                            (file.allow_download.split(",").includes(user.id) ||
+                              hasAccess("/app/earsip/submission", "download"))
+                              ? "Download PDF"
+                              : "Anda tidak memiliki akses untuk download file ini"
+                          }
+                        >
+                          <Button
+                            size="small"
+                            icon={<PrinterOutlined />}
+                            disabled={
+                              !user ||
+                              (!file.allow_download
+                                .split(",")
+                                .includes(user.id) &&
+                                !hasAccess(
+                                  "/app/earsip/submission",
+                                  "download",
+                                ))
+                            }
+                          ></Button>
+                        </Tooltip>
                       </div>
                     </div>
                   </Card>
@@ -504,7 +540,9 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
               alignItems: "center",
               background: "#f0f0f0",
             }}
-            onContextMenu={(e) => e.preventDefault()} // Mematikan klik kanan pada kontainer luar
+            onContextMenu={(e) => e.preventDefault()}
+            onDragStart={(e) => e.preventDefault()}
+            onDragOver={(e) => e.preventDefault()}
           >
             {currentFile.type === "video" ||
             currentFile.url.match(/\.(mp4|webm|ogg)$/i) ? (
@@ -512,10 +550,12 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
                 controls
                 controlsList="nodownload"
                 onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
                 style={{
                   width: "100%",
                   height: "100%",
                   backgroundColor: "#000",
+                  userSelect: "none",
                 }}
               >
                 <source src={currentFile.url} type="video/mp4" />
@@ -527,15 +567,19 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
                 src={currentFile.url}
                 alt={currentFile.name}
                 onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
+                onMouseDown={(e) => e.preventDefault()}
                 style={{
                   maxWidth: "100%",
                   maxHeight: "100%",
                   objectFit: "contain",
+                  userSelect: "none",
+                  pointerEvents: "none",
                 }}
               />
             ) : (
               <iframe
-                src={`${currentFile.url}#toolbar=0`}
+                src={`${currentFile.url}#toolbar=0&navpanes=0&scrollbar=0`}
                 width="100%"
                 height="100%"
                 style={{ border: "none" }}

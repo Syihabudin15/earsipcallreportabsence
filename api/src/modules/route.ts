@@ -16,7 +16,11 @@ export const MainDashboard = async (
       prisma.productType.findMany({
         where: { status: true },
         include: {
-          Product: { include: { Submission: true } },
+          Product: { include: { Submission: { where: { status: true } } } },
+          ProductTypeFile: {
+            include: { Files: { where: { submissionId: { not: null } } } },
+            where: { status: true },
+          },
         },
       }),
       prisma.visitCategory.findMany({

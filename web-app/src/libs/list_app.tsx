@@ -86,7 +86,7 @@ export const menus: IMenu[] = [
         need_access: true,
       },
       {
-        name: "Jenis/Tipe Produk",
+        name: "Kategori Berkas",
         path: "/app/earsip/product_type",
         icon: <Hash size={15} />,
         need_access: true,

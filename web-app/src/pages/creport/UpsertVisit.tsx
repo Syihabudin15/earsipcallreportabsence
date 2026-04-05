@@ -2,7 +2,6 @@ import { App, Button, Card, Col, Divider, Row, Spin } from "antd";
 import type {
   IComments,
   IDebitur,
-  IFileVisit,
   ISubType,
   IUser,
   IVisit,
@@ -10,12 +9,8 @@ import type {
   IVisitPurpose,
   IVisitStatus,
 } from "../../libs/interface";
-import {
-  IDRFormat,
-  IDRToNumber,
-  InputFileUploadVisit,
-  InputUtil,
-} from "../utils/utilForm";
+import { IDRFormat, IDRToNumber, InputUtil } from "../utils/utilForm";
+import { InputFileUploadVisitAuto } from "../utils/InputFileUploadVisitAuto";
 import { PlusCircleOutlined, SearchOutlined } from "@ant-design/icons";
 import { BookPlus, FolderOpen, MessageCircle, User } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -155,7 +150,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
       alert("Browser Anda tidak mendukung geolokasi.");
       return;
     }
-    getGeoLocation();
+    if (!record) getGeoLocation();
   }, []);
 
   return (
@@ -555,51 +550,19 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
           }
           style={{ marginTop: 15, marginBottom: 15 }}
         >
-          <Col xs={24} md={24}>
-            {data.files?.map((f, i) => (
-              <div key={i}>
-                <InputFileUploadVisit
-                  record={f}
-                  filetype="image"
-                  onchange={(val: IFileVisit) =>
-                    setData({
-                      ...data,
-                      files: data.files?.map((df, idf) => ({
-                        ...df,
-                        ...(idf === i && val),
-                      })),
-                    })
-                  }
-                  ondelete={() =>
-                    setData({
-                      ...data,
-                      files: data.files?.filter((_, idf) => idf !== i),
-                    })
-                  }
-                />
-              </div>
-            ))}
-          </Col>
-          <div className="flex justify-center my-4">
-            <Button
-              type="primary"
-              onClick={() =>
+          <Col xs={24} md={24} style={{ marginTop: 20, marginBottom: 20 }}>
+            <InputFileUploadVisitAuto
+              files={data.files || []}
+              onFilesChange={(updatedFiles) =>
                 setData({
                   ...data,
-                  files: [...(data.files || []), { name: "", url: "" }],
+                  files: updatedFiles,
                 })
               }
-              icon={<PlusCircleOutlined />}
-            >
-              Tambahkan File
-            </Button>
-          </div>
-          <Col
-            xs={24}
-            md={24}
-            style={{ marginTop: 20 }}
-            className="border rounded border-slate-300 p-1"
-          >
+              filetype="image/*"
+            />
+          </Col>
+          <Col xs={24} md={24} className="border rounded border-slate-300 p-1">
             <div className="flex justify-end p-2">
               <Button type="primary" onClick={() => getGeoLocation()}>
                 Refresh Maps
@@ -641,12 +604,7 @@ const defaultData: IVisit = {
   summary: "",
   date_action: new Date(),
   geo: "",
-  files: [
-    {
-      name: "",
-      url: "",
-    },
-  ],
+  files: [],
   next_action: "",
   approve_status: "PENDING",
   coments: [],
