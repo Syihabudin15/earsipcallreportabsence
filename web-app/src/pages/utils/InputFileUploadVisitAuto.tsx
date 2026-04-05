@@ -1,5 +1,6 @@
 import { DeleteOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import { Button, Card, Image, Modal } from "antd";
+import imageCompression from "browser-image-compression";
 import type { IFileVisit } from "../../libs/interface";
 import { useState, useRef } from "react";
 import api from "../../libs/api";
@@ -41,8 +42,14 @@ export const InputFileUploadVisitAuto = ({
   const handleUpload = async (file: File) => {
     setLoading(true);
     try {
+      const options = {
+        maxSizeMB: 1, // Maksimal hasil jadi 1MB
+        maxWidthOrHeight: 1280, // Resolusi cukup untuk web/laporan
+        useWebWorker: true,
+      };
+      const compressedFile = await imageCompression(file, options);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", compressedFile, compressedFile.name);
 
       const res = await api.request({
         url: `${import.meta.env.VITE_API_URL}/file`,
