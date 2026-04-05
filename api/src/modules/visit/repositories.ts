@@ -151,7 +151,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
     await prisma.$transaction(async (tx) => {
       const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
 
-      await tx.debitur.upsert({
+      const deb = await tx.debitur.upsert({
         where: { id: Debitur.id },
         update: { ...savedeb },
         create: { ...savedeb },
@@ -162,6 +162,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
           coments: JSON.stringify(saved.coments || []),
           files: JSON.stringify(saved.files || []),
           id: body.id && body.id !== "" ? body.id : genId,
+          debiturId: deb.id,
         },
       });
     });
@@ -200,7 +201,7 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
     await prisma.$transaction(async (tx) => {
       const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
 
-      await tx.debitur.update({
+      const deb = await tx.debitur.update({
         where: { id: Debitur.id as string },
         data: savedeb,
       });
@@ -211,6 +212,7 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
           coments: JSON.stringify(body.coments || []),
           files: JSON.stringify(body.files || []),
           updated_at: new Date(),
+          debiturId: deb.id,
         },
       });
     });
