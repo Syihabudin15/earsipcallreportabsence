@@ -136,3 +136,127 @@ export const DELETE = async (
     });
   }
 };
+
+export const SELF_ATTEND = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { method } = req.body;
+  const userId = (req as any).user?.id; // Assuming user is set by auth middleware
+
+  if (!userId) {
+    return ResponseServer(res, 401, { msg: "Unauthorized" });
+  }
+
+  try {
+    // Check if already attended today
+    const today = moment().startOf("day").toDate();
+    const tomorrow = moment().endOf("day").toDate();
+
+    const existingAbsence = await prisma.absence.findFirst({
+      where: {
+        userId,
+        check_in: {
+          gte: today,
+          lte: tomorrow,
+        },
+      },
+    });
+
+    if (existingAbsence) {
+      return ResponseServer(res, 400, { msg: "Sudah absen hari ini" });
+    }
+
+    // Create absence
+    await prisma.absence.create({
+      data: {
+        method,
+        check_in: new Date(),
+        userId,
+        absence_status: "HADIR",
+      },
+    });
+
+    return ResponseServer(res, 200, { msg: "Absen berhasil" });
+  } catch (err) {
+    console.log(err);
+    return ResponseServer(res, 500, {
+      msg: (err as any).message || "Internal Server Error",
+    });
+  }
+};
+
+export const REPORT = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { type, month, year, userId } = req.query; // type: 'daily' or 'monthly'
+
+  try {
+    let startDate, endDate;
+
+    if (type === "monthly") {
+      startDate = moment(`${year}-${month}-01`).startOf("month").toDate();
+      endDate = moment(`${year}-${month}-01`).endOf("month").toDate();
+    } else {
+      // Daily report for current month
+      startDate = moment().startOf("month").toDate();
+      endDate = moment().endOf("month").toDate();
+    }
+
+    const absences = await prisma.absence.findMany({
+      where: {
+        status: true,
+        check_in: {
+          gte: startDate,
+          lte: endDate,
+        },
+        ...(userId && { userId: userId as string }),
+      },
+      include: { User: true },
+      orderBy: { check_in: "asc" },
+    });
+
+    // Group by user and calculate summary
+    const report = absences.reduce((acc: any, absence) => {
+      const userId = absence.userId;
+      if (!acc[userId]) {
+        acc[userId] = {
+          user: absence.User,
+          totalDays: 0,
+          presentDays: 0,
+          lateDays: 0,
+          absentDays: 0,
+          details: [],
+        };
+      }
+
+      acc[userId].totalDays += 1;
+      if (absence.absence_status === "HADIR") {
+        acc[userId].presentDays += 1;
+      } else if (absence.absence_status === "TERLAMBAT") {
+        acc[userId].lateDays += 1;
+      } else {
+        acc[userId].absentDays += 1;
+      }
+
+      acc[userId].details.push(absence);
+      return acc;
+    }, {});
+
+    return ResponseServer(res, 200, {
+      msg: "Report absensi",
+      type,
+      month,
+      year,
+      data: Object.values(report),
+    });
+  } catch (err) {
+    console.log(err);
+    return ResponseServer(res, 500, {
+      msg: (err as any).message || "Internal Server Error",
+    });
+  }
+};

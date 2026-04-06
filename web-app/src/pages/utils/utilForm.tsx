@@ -1,5 +1,5 @@
 import { DeleteOutlined, PlusCircleOutlined } from "@ant-design/icons";
-import { Button, Input, Select, Upload, type UploadProps } from "antd";
+import { Button, Input, Select, Upload, Tooltip, type UploadProps } from "antd";
 import type { IFile, IFileVisit } from "../../libs/interface";
 import { useState } from "react";
 import api from "../../libs/api";
@@ -116,11 +116,13 @@ export const InputFileUpload = ({
   onchange,
   ondelete,
   filetype,
+  canDelete = true,
 }: {
   record: IFile;
   onchange: Function;
   ondelete: Function;
   filetype: string;
+  canDelete?: boolean;
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -166,20 +168,29 @@ export const InputFileUpload = ({
   };
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 items-center">
       <Input
         size="small"
         value={record.name}
         onChange={(e) => onchange({ ...record, name: e.target.value })}
       />
       {record.url ? (
-        <Button
-          size="small"
-          icon={<DeleteOutlined />}
-          danger
-          onClick={() => ondelete()}
-          loading={loading}
-        ></Button>
+        <Tooltip
+          title={
+            canDelete
+              ? "Hapus file"
+              : "Perlu membuat permohonan penghapusan file terlebih dahulu"
+          }
+        >
+          <Button
+            size="small"
+            icon={<DeleteOutlined />}
+            danger
+            onClick={() => ondelete()}
+            loading={loading}
+            disabled={!canDelete}
+          ></Button>
+        </Tooltip>
       ) : (
         <Upload {...props}>
           <Button

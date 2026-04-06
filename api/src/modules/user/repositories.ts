@@ -186,6 +186,33 @@ export const PATCH = async (
   }
 };
 
+export const UPDATE_FACE = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { face } = req.body;
+  const userId = (req as any).user?.id; // Assuming user is set by auth middleware
+
+  if (!userId) {
+    return ResponseServer(res, 401, { msg: "Unauthorized" });
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { face, updated_at: new Date() },
+    });
+
+    return ResponseServer(res, 200, { msg: "Face data berhasil diupdate" });
+  } catch (err) {
+    console.log(err);
+    return ResponseServer(res, 500, {
+      msg: (err as any).message || "Internal Server Error",
+    });
+  }
+};
+
 async function generateId() {
   const prefix = "USR";
   const padLength = 3;

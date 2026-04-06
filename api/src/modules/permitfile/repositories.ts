@@ -4,6 +4,7 @@ import prisma from "../../libs/prisma.js";
 import moment from "moment";
 import type { EPermitStatus } from "@prisma/client";
 import strict from "node:assert/strict";
+import { decode } from "../../libs/auth.js";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
   let {
@@ -135,7 +136,16 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
   let body = req.body;
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.replace("Bearer ", "");
+
   try {
+    // Decode user dari token
+    const decodedUser = await decode(token);
+    if (!decodedUser) {
+      return ResponseServer(res, 401, { msg: "Unauthorized" });
+    }
+
     const {
       id,
       PermitFileDetail = [],
@@ -155,6 +165,36 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
           permitFileId: pfile.id,
         })),
       });
+
+      // Log permit request activity to submissions
+      for (const pfd of PermitFileDetail) {
+        const submission = await tx.submission.findFirst({
+          where: { id: pfd.submissionId },
+        });
+
+        if (submission) {
+          let activities = [];
+          try {
+            activities = JSON.parse(submission.activities || "[]");
+          } catch (e) {
+            activities = [];
+          }
+
+          activities.push({
+            name: decodedUser.fullname || decodedUser.username || "Unknown",
+            date: new Date(),
+            activities: `Request ${savedSub.action} Permit${savedSub.description ? `: ${savedSub.description}` : ""}`,
+          });
+
+          await tx.submission.update({
+            where: { id: submission.id },
+            data: {
+              activities: JSON.stringify(activities),
+            },
+          });
+        }
+      }
+
       return true;
     });
 
@@ -257,8 +297,92 @@ export const PATCH = async (
     if (!id) return ResponseServer(res, 404, { msg: "Not found data" });
     const find = await prisma.permitFile.findFirst({
       where: { id: id as string },
+      include: {
+        PermitFileDetail: {
+          include: { Submission: { include: { Files: true } } },
+        },
+      },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
+
+    // If approving a DOWNLOAD permit, update allow_download field for all files
+    if (action === "APPROVED" && find.action === "DOWNLOAD") {
+      const requesterUserId = find.requesterId;
+      for (const detail of find.PermitFileDetail) {
+        for (const file of detail.Submission?.Files || []) {
+          const currentAllowDownload = file.allow_download
+            .split(",")
+            .map((id) => id.trim())
+            .filter((id) => id);
+
+          // Add requester to allow_download if not already there
+          if (!currentAllowDownload.includes(requesterUserId)) {
+            currentAllowDownload.push(requesterUserId);
+          }
+
+          await prisma.files.update({
+            where: { id: file.id },
+            data: {
+              allow_download: currentAllowDownload.join(","),
+            },
+          });
+
+          // Log download permit approval activity to submission
+          let activities = [];
+          try {
+            activities = JSON.parse(detail.Submission?.activities || "[]");
+          } catch (e) {
+            activities = [];
+          }
+
+          activities.push({
+            name: `${userId || "Admin"} (via DOWNLOAD Permit Approval)`,
+            date: new Date(),
+            activities: `Approved Download File: ${file.name}`,
+          });
+
+          await prisma.submission.update({
+            where: { id: detail.Submission!.id },
+            data: {
+              activities: JSON.stringify(activities),
+            },
+          });
+        }
+      }
+    }
+
+    // If approving a DELETE permit, automatically delete all requested files
+    if (action === "APPROVED" && find.action === "DELETE") {
+      for (const detail of find.PermitFileDetail) {
+        for (const file of detail.Submission?.Files || []) {
+          // Delete file from database
+          await prisma.files.delete({
+            where: { id: file.id },
+          });
+
+          // Log delete activity to submission
+          let activities = [];
+          try {
+            activities = JSON.parse(detail.Submission?.activities || "[]");
+          } catch (e) {
+            activities = [];
+          }
+
+          activities.push({
+            name: `${userId || "Admin"} (via DELETE Permit Approval)`,
+            date: new Date(),
+            activities: `Delete File: ${file.name}`,
+          });
+
+          await prisma.submission.update({
+            where: { id: detail.Submission!.id },
+            data: {
+              activities: JSON.stringify(activities),
+            },
+          });
+        }
+      }
+    }
 
     await prisma.permitFile.update({
       where: { id: id as string },

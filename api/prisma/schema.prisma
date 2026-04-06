@@ -386,7 +386,7 @@ model GuestBook {
 
   GbookType    GBookType     @relation(fields: [gBookTypeId], references: [id], onUpdate: Cascade)
   gBookTypeId  String
-  participants Participant[]
+  Participants Participant[]
 }
 
 model Participant {

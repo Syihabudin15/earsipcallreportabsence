@@ -8,12 +8,14 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
+  Settings,
 } from "lucide-react";
 import AppRouter from "./AppRouter";
 import { menus } from "../libs/list_app";
 import useContext from "../libs/context";
 import { Modal, Dropdown } from "antd";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import FloatingAbsenceButton from "../components/FloatingAbsenceButton";
 
 const APP_COLOR = import.meta.env.VITE_APP_COLOR || "#F58220";
 
@@ -26,6 +28,7 @@ export default function MainLayout({
   const [isCollapsed, setCollapsed] = useState(false); // State untuk collapse di desktop
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const [openLogout, setOpenLogout] = useState(false);
+  const navigate = useNavigate();
   const { user, getMenu, logout } = useContext((state: any) => state);
 
   const toggleSubMenu = (name: string) => {
@@ -187,7 +190,19 @@ export default function MainLayout({
                       </div>
                     ),
                     disabled: true,
-                    key: "profile",
+                    key: "profile-header",
+                  },
+                  {
+                    type: "divider",
+                  },
+                  {
+                    key: "edit-profile",
+                    label: (
+                      <span className="flex items-center gap-2">
+                        <User size={16} /> Profil
+                      </span>
+                    ),
+                    onClick: () => navigate("/profile"),
                   },
                   {
                     type: "divider",
@@ -230,6 +245,9 @@ export default function MainLayout({
           </div>
         </main>
       </div>
+
+      {/* Floating Absence Button */}
+      <FloatingAbsenceButton />
 
       <Modal
         title="Konfirmasi Logout"

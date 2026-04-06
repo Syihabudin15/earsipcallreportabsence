@@ -30,6 +30,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
   const [users, setUsers] = useState<IUser[]>([]);
   const [search, setSearch] = useState("");
   const [activities, setActivities] = useState<IActivities[]>([]);
+  const [hasApprovedDeletePermit, setHasApprovedDeletePermit] = useState(false);
   const { user, hasAccess } = useContext((state: any) => state);
   const [data, setData] = useState(
     record || {
@@ -64,6 +65,26 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
         .then((res) => setUsers(res.data.data));
     })();
   }, []);
+
+  // Check if submission has approved DELETE permit
+  useEffect(() => {
+    if (record?.id) {
+      api
+        .request({
+          method: "GET",
+          url: `${import.meta.env.VITE_API_URL}/permitfile?action=DELETE&permit_status=APPROVED`,
+        })
+        .then((res) => {
+          const hasPermit = res.data.data.some((permit: any) =>
+            permit.PermitFileDetail?.some(
+              (detail: any) => detail.submissionId === record.id,
+            ),
+          );
+          setHasApprovedDeletePermit(hasPermit);
+        })
+        .catch(() => setHasApprovedDeletePermit(false));
+    }
+  }, [record?.id]);
 
   const handleSubmit = async () => {
     if (activities)
@@ -629,6 +650,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
                         (file, ind) => (
                           <InputFileUpload
                             filetype={p.type}
+                            canDelete={!record || hasApprovedDeletePermit}
                             ondelete={() => {
                               const updatedProductTypeFile =
                                 data.Product.ProductType.ProductTypeFile.map(

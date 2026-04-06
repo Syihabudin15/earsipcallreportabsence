@@ -30,6 +30,7 @@ import type {
 } from "../../libs/interface";
 import api from "../../libs/api";
 import { IDRFormat } from "../utils/utilForm";
+import DashboardAbsenceWidget from "../../components/DashboardAbsenceWidget";
 
 const Dashboard = () => {
   const [data, setData] = useState<{
@@ -246,6 +247,11 @@ const Dashboard = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* --- ABSENCE WIDGET --- */}
+      <div className="mb-8">
+        <DashboardAbsenceWidget />
       </div>
 
       {/* --- CHARTS SECTION --- */}

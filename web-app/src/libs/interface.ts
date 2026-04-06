@@ -127,6 +127,9 @@ export interface IPermitFile {
   updated_at: Date;
 }
 export interface IUser {
+  updated_at: Date;
+  created_at: Date;
+  status: boolean;
   id: string;
   fullname: string;
   nik: string | null;

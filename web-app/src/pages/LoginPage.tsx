@@ -33,14 +33,16 @@ function LoginPage() {
       })
       .then((res) => {
         if (res.status === 200) {
-          login(res.data.data, res.data.token);
+          login(res.data.data, res.data.accessToken, res.data.refreshToken);
           window.location.replace("/app");
         } else {
           setErr(res.data.msg);
         }
       })
       .catch((err) => {
-        setErr(err.message || "Internal Server Error");
+        setErr(
+          err.response?.data?.msg || err.message || "Internal Server Error",
+        );
       });
     setLoading(false);
   };

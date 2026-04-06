@@ -20,10 +20,17 @@ import UpdateVisit from "./creport/UpdateVisit";
 import DetailVisit from "./creport/DetailVisit";
 import DebiturCallReport from "./creport/Debitur";
 import UserManagement from "./app/User";
+import UserProfile from "./app/UserProfile";
+import LogActivities from "./app/LogActivities";
 import DebiturEArsip from "./earsip/Debitur";
 import DataPermitFile from "./earsip/PermitFile";
 import DataAbsence from "./absensi/Absence";
 import DataGuestBook from "./absensi/GuestBook";
+import AbsenceReport from "./absensi/AbsenceReport";
+import SelfAbsence from "./absensi/SelfAbsence";
+import AbsenceConfig from "./absensi/AbsenceConfig";
+import PermitAbsence from "./absensi/PermitAbsence";
+import AttendanceKiosk from "./absensi/AttendanceKiosk";
 
 function AppRouter() {
   const path = window.location.pathname;
@@ -37,6 +44,8 @@ function AppRouter() {
           <Route path="/sub_type" element={<DataSubmissionType />} />
           <Route path="/debitur" element={<DataDebitur />} />
           <Route path="/user" element={<UserManagement />} />
+          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/log-activities" element={<LogActivities />} />
           <Route path="/role" element={<DataRole />} />
           <Route path="/position" element={<DataPosition />} />
 
@@ -69,8 +78,15 @@ function AppRouter() {
             element={<UpdateVisit />}
           />
           <Route path="/callreport/visit/:id" element={<DetailVisit />} />
+
+          {/* ABSENSI */}
           <Route path="/absensi" element={<DataAbsence />} />
           <Route path="/absensi/guestbook" element={<DataGuestBook />} />
+          <Route path="/absensi/report" element={<AbsenceReport />} />
+          <Route path="/absensi/absence_config" element={<AbsenceConfig />} />
+          <Route path="/absensi/permit_absence" element={<PermitAbsence />} />
+          <Route path="/absensi/attendance" element={<SelfAbsence />} />
+          <Route path="/absensi/kiosk" element={<AttendanceKiosk />} />
         </Route>
 
         {/* 404 Page (Opsional) */}

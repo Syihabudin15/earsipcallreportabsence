@@ -8,13 +8,12 @@ import {
   Tag,
   type TableProps,
 } from "antd";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
   IActionPage,
   IPageProps,
   IPermitFile,
-  IUser,
 } from "../../libs/interface";
 import api from "../../libs/api";
 import useContext from "../../libs/context";

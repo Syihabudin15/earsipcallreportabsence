@@ -15,7 +15,7 @@
     "antd": "^6.3.2",
     "axios": "^1.13.6",
     "browser-image-compression": "^2.0.2",
-    "dayjs": "^1.11.20",
+    "face-api.js": "^0.22.2",
     "lucide-react": "^0.577.0",
     "moment": "^2.30.1",
     "pdf-lib": "^1.17.1",

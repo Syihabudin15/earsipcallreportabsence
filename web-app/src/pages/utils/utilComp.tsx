@@ -453,15 +453,40 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
     setPreviewOpen(true);
   };
 
-  const handleDownload = (url: string, fileName: string) => {
-    // Membuat elemen link sementara
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName; // Memberi nama file saat didownload
-    link.target = "_blank"; // Opsional: buka di tab baru jika browser tidak mendukung download langsung
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = async (
+    url: string,
+    fileName: string,
+    fileId?: string,
+    isOneTimeDownload?: boolean,
+  ) => {
+    try {
+      // Membuat elemen link sementara untuk download
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Mark as downloaded (remove user from allow_download) jika one-time download
+      if (isOneTimeDownload && fileId) {
+        await api
+          .request({
+            url: `${import.meta.env.VITE_API_URL}/file?id=${fileId}`,
+            method: "PATCH",
+          })
+          .then(() => {
+            // Silently update - user sudah selesai download
+          })
+          .catch((err) => {
+            console.error("Failed to mark download:", err);
+            // Continue anyway - download already happened
+          });
+      }
+    } catch (err) {
+      console.error("Download error:", err);
+    }
   };
 
   const productFiles =
@@ -584,7 +609,8 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
                           title={
                             user &&
                             (file.allow_download.split(",").includes(user.id) ||
-                              hasAccess("/app/earsip/submission", "download"))
+                              hasAccess("/app/earsip/submission", "download") ||
+                              record.userId === user.id)
                               ? "Download PDF"
                               : "Anda tidak memiliki akses untuk download file ini"
                           }
@@ -592,7 +618,24 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
                           <Button
                             size="small"
                             icon={<PrinterOutlined />}
-                            onClick={() => handleDownload(file.url, file.name)}
+                            onClick={() => {
+                              // Determine if this is a one-time download (from permit)
+                              const isOneTimeDownload =
+                                file.allow_download
+                                  .split(",")
+                                  .includes(user?.id || "") &&
+                                record.userId !== user?.id &&
+                                !hasAccess(
+                                  "/app/earsip/submission",
+                                  "download",
+                                );
+                              handleDownload(
+                                file.url,
+                                file.name,
+                                file.id,
+                                isOneTimeDownload,
+                              );
+                            }}
                             disabled={
                               !user ||
                               (!file.allow_download
@@ -601,7 +644,8 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
                                 !hasAccess(
                                   "/app/earsip/submission",
                                   "download",
-                                ))
+                                ) &&
+                                record.userId !== user.id)
                             }
                           ></Button>
                         </Tooltip>

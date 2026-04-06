@@ -39,7 +39,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
           { description: { contains: search as string } },
           { GbookType: { name: { contains: search as string } } },
           {
-            participants: {
+            Participants: {
               some: { name: { contains: search as string } },
             },
           },
@@ -54,7 +54,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       orderBy: { date: "desc" },
       include: {
         GbookType: true,
-        participants: true,
+        Participants: true,
       },
     });
 
@@ -86,7 +86,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
     await prisma.guestBook.create({
       data: {
         ...saved,
-        ...(Participants && { participants: { create: Participants } }),
+        ...(Participants && { Participants: { create: Participants } }),
       },
     });
     return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });

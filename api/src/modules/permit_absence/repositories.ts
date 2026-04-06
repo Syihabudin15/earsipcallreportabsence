@@ -107,11 +107,17 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
   let body = req.body;
   try {
-    const { id, ...saved } = body;
-    await prisma.absence.create({
-      data: { ...saved, check_in: new Date() },
+    const data = await prisma.permitAbsence.create({
+      data: {
+        ...body,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
     });
-    return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
+    return ResponseServer(res, 200, {
+      msg: "Data berhasil ditambahkan",
+      data,
+    });
   } catch (err) {
     console.log(err);
     return ResponseServer(res, 500, {
@@ -130,12 +136,12 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
         msg: "ID Not found",
         params: req.params,
       });
-    const find = await prisma.absence.findFirst({
+    const find = await prisma.permitAbsence.findFirst({
       where: { id: id as string },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
-    await prisma.absence.update({
+    await prisma.permitAbsence.update({
       where: { id: find.id },
       data: {
         ...body,
@@ -161,14 +167,13 @@ export const DELETE = async (
 
   try {
     if (!id) return ResponseServer(res, 404, { msg: "Not found data" });
-    const find = await prisma.absence.findFirst({
+    const find = await prisma.permitAbsence.findFirst({
       where: { id: id as string },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
-    await prisma.$transaction(async (tx) => {
-      await tx.permitAbsence.deleteMany({ where: { absenceId: find.id } });
-      await tx.absence.delete({ where: { id: find.id } });
+    await prisma.permitAbsence.delete({
+      where: { id: find.id },
     });
 
     return ResponseServer(res, 200, { msg: "Data berhasil dihapus" });

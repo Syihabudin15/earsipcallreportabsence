@@ -66,6 +66,12 @@ export const menus: IMenu[] = [
     icon: <SquareDashedKanbanIcon size={20} />,
     need_access: false,
   },
+  {
+    name: "Profile",
+    path: "/profile",
+    icon: <User size={20} />,
+    need_access: false,
+  },
 
   {
     name: "E-Arsip",
@@ -163,7 +169,7 @@ export const menus: IMenu[] = [
   },
   {
     name: "Absensi & Buku Tamu",
-    path: "/app/absensi",
+    path: "/absensi",
     icon: <ClipboardPlus size={20} />,
     need_access: true,
     children: [
@@ -175,37 +181,43 @@ export const menus: IMenu[] = [
       },
       {
         name: "Konfigurasi",
-        path: "/app/absensi/config",
+        path: "/absensi/absence_config",
         icon: <Hash size={15} />,
         need_access: true,
       },
       {
         name: "Buku Tamu",
-        path: "/app/absensi/guestbook",
+        path: "/absensi/guestbook",
         icon: <Hash size={15} />,
         need_access: true,
       },
       {
         name: "Daily Report",
-        path: "/app/absensi/daily",
+        path: "/absensi/report?type=daily",
         icon: <Hash size={15} />,
         need_access: true,
       },
       {
         name: "Monthly Report",
-        path: "/app/absensi/monthly",
+        path: "/absensi/report?type=monthly",
         icon: <Hash size={15} />,
         need_access: true,
       },
       {
         name: "Izin Absen",
-        path: "/app/absensi/permit",
+        path: "/absensi/permit_absence",
         icon: <Hash size={15} />,
         need_access: true,
       },
       {
-        name: "Insentif",
-        path: "/app/absensi/insentive",
+        name: "Absensi Mandiri",
+        path: "/absensi/attendance",
+        icon: <Hash size={15} />,
+        need_access: true,
+      },
+      {
+        name: "Kiosk Absensi",
+        path: "/absensi/kiosk",
         icon: <Hash size={15} />,
         need_access: true,
       },
@@ -239,6 +251,12 @@ export const menus: IMenu[] = [
     name: "User",
     path: "/app/user",
     icon: <User size={20} />,
+    need_access: true,
+  },
+  {
+    name: "Log Aktivitas",
+    path: "/log-activities",
+    icon: <FileText size={20} />,
     need_access: true,
   },
 ];

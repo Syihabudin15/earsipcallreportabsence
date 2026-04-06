@@ -21,6 +21,8 @@ import permitFileRoute from "./modules/permitfile/routes.js";
 import guestBookRoute from "./modules/guestbook/routes.js";
 import gbookTypeRoute from "./modules/gbook_type/routes.js";
 import fileRoute from "./modules/file/routes.js";
+import permitAbsenceRoute from "./modules/permit_absence/routes.js";
+import logActivitiesRoute from "./modules/log-activities/routes.js";
 import { MainDashboard } from "./modules/route.js";
 
 const app = express();
@@ -64,6 +66,8 @@ app.use("/visit", middleware, visitRoute);
 // ABSENSI
 app.use("/absence_config", middleware, absConfigRoute);
 app.use("/absence", middleware, absenceRoute);
+app.use("/permit_absence", middleware, permitAbsenceRoute);
+app.use("/log-activities", middleware, logActivitiesRoute);
 
 const PORT = process.env.APP_PORT || 5000;
 app.listen(PORT, () => {
