@@ -74,6 +74,57 @@ export interface IAbsence {
   created_at: Date;
   updated_at: Date;
   userId: string;
+  User?: IUser;
+}
+export interface IGuestBookType {
+  id: string;
+  name: string;
+  description: string;
+  status: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+export interface IParticipant {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  comment: string | null;
+  guestBookId: string;
+}
+export interface IGuestBook {
+  id: string;
+  name: string;
+  date: Date;
+  status_come: "AKANDATANG" | "TELAHDATANG";
+  description: string | null;
+  status: boolean;
+  created_at: Date;
+  updated_at: Date;
+  gBookTypeId: string;
+  GbookType: IGuestBookType;
+  participants: IParticipant[];
+}
+export interface IPermitFileDetail {
+  id: string;
+  submissionId: string;
+  permitFileId: string;
+  Submission?: ISubmission;
+}
+export interface IPermitFile {
+  id: string;
+  action: string;
+  description: string | null;
+  permit_status: "PENDING" | "APPROVED" | "REJECTED";
+  process_at: Date | null;
+  requesterId: string;
+  approverId: string | null;
+  Requester?: IUser;
+  Approver?: IUser;
+  PermitFileDetail: IPermitFileDetail[];
+  status: boolean;
+  created_at: Date;
+  updated_at: Date;
 }
 export interface IUser {
   id: string;

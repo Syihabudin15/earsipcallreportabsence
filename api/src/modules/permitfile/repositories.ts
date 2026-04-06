@@ -136,7 +136,13 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
   let body = req.body;
   try {
-    const { id, PermitFileDetail, Requester, Approver, ...savedSub } = body;
+    const {
+      id,
+      PermitFileDetail = [],
+      Requester,
+      Approver,
+      ...savedSub
+    } = body;
     const genId = await generateId();
 
     await prisma.$transaction(async (tx) => {
@@ -145,7 +151,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
       });
       await tx.permitFileDetail.createMany({
         data: PermitFileDetail.map((pfd: any) => ({
-          ...pfd,
+          submissionId: pfd.submissionId,
           permitFileId: pfile.id,
         })),
       });
@@ -178,7 +184,7 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
 
     const {
       id: idPermit,
-      PermitFileDetail,
+      PermitFileDetail = [],
       Requester,
       Approver,
       ...savedSub
@@ -192,12 +198,14 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
       await tx.permitFileDetail.deleteMany({
         where: { permitFileId: saved.id },
       });
-      await tx.permitFileDetail.createMany({
-        data: PermitFileDetail.map((pfd: any) => ({
-          ...pfd,
-          permitFileId: pfd.id,
-        })),
-      });
+      if (PermitFileDetail.length > 0) {
+        await tx.permitFileDetail.createMany({
+          data: PermitFileDetail.map((pfd: any) => ({
+            submissionId: pfd.submissionId,
+            permitFileId: saved.id,
+          })),
+        });
+      }
       return true;
     });
 
@@ -251,19 +259,19 @@ export const PATCH = async (
       where: { id: id as string },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
-    if (action === "APPROVED") {
-      switch (find.action) {
-      }
-    } else {
-      await prisma.permitFile.update({
-        where: { id: id as string },
-        data: {
-          permit_status: action as EPermitStatus,
-          approverId: userId as string,
-          process_at: new Date(),
-        },
-      });
-    }
+
+    await prisma.permitFile.update({
+      where: { id: id as string },
+      data: {
+        permit_status: action as EPermitStatus,
+        approverId: userId as string,
+        process_at: new Date(),
+      },
+    });
+
+    return ResponseServer(res, 200, {
+      msg: `Permohonan berhasil ${action === "APPROVED" ? "disetujui" : "ditolak"}`,
+    });
   } catch (err) {
     console.log(err);
     return ResponseServer(res, 500, {
@@ -275,6 +283,6 @@ export const PATCH = async (
 async function generateId() {
   const prefix = "P";
   const padLength = 2;
-  const lastRecord = await prisma.submission.count({});
+  const lastRecord = await prisma.permitFile.count({});
   return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
 }

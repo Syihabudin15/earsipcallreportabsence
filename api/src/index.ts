@@ -16,7 +16,10 @@ import visitPurposeRoute from "./modules/visit_purpose/routes.js";
 import visitRoute from "./modules/visit/routes.js";
 import debiturRoute from "./modules/debitur/routes.js";
 import absConfigRoute from "./modules/absence_config/routes.js";
-import absenceRoute from "./modules/absence_config/routes.js";
+import absenceRoute from "./modules/absence/routes.js";
+import permitFileRoute from "./modules/permitfile/routes.js";
+import guestBookRoute from "./modules/guestbook/routes.js";
+import gbookTypeRoute from "./modules/gbook_type/routes.js";
 import fileRoute from "./modules/file/routes.js";
 import { MainDashboard } from "./modules/route.js";
 
@@ -48,6 +51,9 @@ app.use("/sub_type", middleware, subTypeRoute);
 app.use("/producttype", middleware, productTypeRoute);
 app.use("/product", middleware, productRoute);
 app.use("/submission", middleware, submissionRoute);
+app.use("/permitfile", middleware, permitFileRoute);
+app.use("/guestbook", middleware, guestBookRoute);
+app.use("/gbook_type", middleware, gbookTypeRoute);
 
 // CALLREPORT
 app.use("/visit_category", middleware, visitCategoryRoute);

@@ -2,9 +2,18 @@ import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 import moment from "moment";
+import type { EGBookStatus } from "@prisma/client";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
-  let { page = 1, limit = 50, search, date } = req.query;
+  let {
+    page = 1,
+    limit = 50,
+    search,
+    date,
+    status_come,
+    gBookTypeId,
+  } = req.query;
+
   page = Number(page);
   limit = Number(limit);
   const skip = (page - 1) * limit;
@@ -12,8 +21,10 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const where: any = {
       status: true,
+      ...(status_come && { status_come: status_come as EGBookStatus }),
+      ...(gBookTypeId && { gBookTypeId: gBookTypeId as string }),
       ...(date && {
-        check_in: {
+        date: {
           gte: moment(date as string)
             .startOf("day")
             .toDate(),
@@ -24,32 +35,39 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       }),
       ...(search && {
         OR: [
-          { method: { contains: search as string } },
-          { absence_status: { contains: search as string } },
+          { name: { contains: search as string } },
           { description: { contains: search as string } },
-          { User: { fullname: { contains: search as string } } },
-          { User: { nik: { contains: search as string } } },
-          { User: { email: { contains: search as string } } },
-          { User: { phone: { contains: search as string } } },
+          { GbookType: { name: { contains: search as string } } },
+          {
+            participants: {
+              some: { name: { contains: search as string } },
+            },
+          },
         ],
       }),
     };
 
-    const data = await prisma.absence.findMany({
+    const data = await prisma.guestBook.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { check_in: "desc" },
-      include: { User: true, PermitAbsence: true },
+      orderBy: { date: "desc" },
+      include: {
+        GbookType: true,
+        participants: true,
+      },
     });
 
-    const total = await prisma.absence.count({ where });
+    const total = await prisma.guestBook.count({ where });
+
     return ResponseServer(res, 200, {
-      msg: "GET /absence",
+      msg: "GET /guestbook",
       page,
       limit,
       search,
       date,
+      status_come,
+      gBookTypeId,
       data,
       total,
     });
@@ -62,11 +80,14 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
-  let body = req.body;
+  const body = req.body;
   try {
-    const { id, ...saved } = body;
-    await prisma.absence.create({
-      data: { ...saved, check_in: new Date() },
+    const { id, Participants, ...saved } = body;
+    await prisma.guestBook.create({
+      data: {
+        ...saved,
+        ...(Participants && { participants: { create: Participants } }),
+      },
     });
     return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
   } catch (err) {
@@ -79,7 +100,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
 
 export const PUT = async (req: Request, res: Response, next: NextFunction) => {
   let { id } = req.query;
-  let body = req.body;
+  const body = req.body;
 
   try {
     if (!id)
@@ -87,18 +108,30 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
         msg: "ID Not found",
         params: req.params,
       });
-    const find = await prisma.absence.findFirst({
+
+    const find = await prisma.guestBook.findFirst({
       where: { id: id as string },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
-    await prisma.absence.update({
+    const { Participants, ...saved } = body;
+
+    await prisma.guestBook.update({
       where: { id: find.id },
-      data: {
-        ...body,
-        updated_at: new Date(),
-      },
+      data: { ...saved, updated_at: new Date() },
     });
+
+    if (Participants) {
+      await prisma.participant.deleteMany({ where: { guestBookId: find.id } });
+      if (Participants.length > 0) {
+        await prisma.participant.createMany({
+          data: Participants.map((participant: any) => ({
+            ...participant,
+            guestBookId: find.id,
+          })),
+        });
+      }
+    }
 
     return ResponseServer(res, 200, { msg: "Data berhasil dirubah" });
   } catch (err) {
@@ -118,14 +151,14 @@ export const DELETE = async (
 
   try {
     if (!id) return ResponseServer(res, 404, { msg: "Not found data" });
-    const find = await prisma.absence.findFirst({
+    const find = await prisma.guestBook.findFirst({
       where: { id: id as string },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
-    await prisma.$transaction(async (tx) => {
-      await tx.permitAbsence.deleteMany({ where: { absenceId: find.id } });
-      await tx.absence.delete({ where: { id: find.id } });
+    await prisma.guestBook.update({
+      where: { id: find.id },
+      data: { status: false, updated_at: new Date() },
     });
 
     return ResponseServer(res, 200, { msg: "Data berhasil dihapus" });

@@ -21,6 +21,9 @@ import DetailVisit from "./creport/DetailVisit";
 import DebiturCallReport from "./creport/Debitur";
 import UserManagement from "./app/User";
 import DebiturEArsip from "./earsip/Debitur";
+import DataPermitFile from "./earsip/PermitFile";
+import DataAbsence from "./absensi/Absence";
+import DataGuestBook from "./absensi/GuestBook";
 
 function AppRouter() {
   const path = window.location.pathname;
@@ -51,6 +54,7 @@ function AppRouter() {
             element={<UpdateSubmission />}
           />
           <Route path="/earsip/debitur" element={<DebiturEArsip />} />
+          <Route path="/earsip/permitfile" element={<DataPermitFile />} />
 
           {/* CALLREPORT */}
           <Route path="/callreport/" element={<DashboardApp />} />
@@ -65,6 +69,8 @@ function AppRouter() {
             element={<UpdateVisit />}
           />
           <Route path="/callreport/visit/:id" element={<DetailVisit />} />
+          <Route path="/absensi" element={<DataAbsence />} />
+          <Route path="/absensi/guestbook" element={<DataGuestBook />} />
         </Route>
 
         {/* 404 Page (Opsional) */}

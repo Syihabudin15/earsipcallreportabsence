@@ -1,55 +1,38 @@
 import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
-import moment from "moment";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
-  let { page = 1, limit = 50, search, date } = req.query;
+  let { page = 1, limit = 50, search } = req.query;
   page = Number(page);
   limit = Number(limit);
   const skip = (page - 1) * limit;
 
   try {
-    const where: any = {
+    const where = {
       status: true,
-      ...(date && {
-        check_in: {
-          gte: moment(date as string)
-            .startOf("day")
-            .toDate(),
-          lte: moment(date as string)
-            .endOf("day")
-            .toDate(),
-        },
-      }),
       ...(search && {
         OR: [
-          { method: { contains: search as string } },
-          { absence_status: { contains: search as string } },
+          { name: { contains: search as string } },
           { description: { contains: search as string } },
-          { User: { fullname: { contains: search as string } } },
-          { User: { nik: { contains: search as string } } },
-          { User: { email: { contains: search as string } } },
-          { User: { phone: { contains: search as string } } },
         ],
       }),
     };
 
-    const data = await prisma.absence.findMany({
+    const data = await prisma.gBookType.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { check_in: "desc" },
-      include: { User: true, PermitAbsence: true },
+      orderBy: { created_at: "desc" },
     });
 
-    const total = await prisma.absence.count({ where });
+    const total = await prisma.gBookType.count({ where });
+
     return ResponseServer(res, 200, {
-      msg: "GET /absence",
+      msg: "GET /gbook_type",
       page,
       limit,
       search,
-      date,
       data,
       total,
     });
@@ -62,11 +45,11 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
-  let body = req.body;
+  const body = req.body;
+
   try {
-    const { id, ...saved } = body;
-    await prisma.absence.create({
-      data: { ...saved, check_in: new Date() },
+    await prisma.gBookType.create({
+      data: { ...body },
     });
     return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
   } catch (err) {
@@ -79,7 +62,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
 
 export const PUT = async (req: Request, res: Response, next: NextFunction) => {
   let { id } = req.query;
-  let body = req.body;
+  const body = req.body;
 
   try {
     if (!id)
@@ -87,17 +70,15 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
         msg: "ID Not found",
         params: req.params,
       });
-    const find = await prisma.absence.findFirst({
+
+    const find = await prisma.gBookType.findFirst({
       where: { id: id as string },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
-    await prisma.absence.update({
+    await prisma.gBookType.update({
       where: { id: find.id },
-      data: {
-        ...body,
-        updated_at: new Date(),
-      },
+      data: { ...body, updated_at: new Date() },
     });
 
     return ResponseServer(res, 200, { msg: "Data berhasil dirubah" });
@@ -118,14 +99,14 @@ export const DELETE = async (
 
   try {
     if (!id) return ResponseServer(res, 404, { msg: "Not found data" });
-    const find = await prisma.absence.findFirst({
+    const find = await prisma.gBookType.findFirst({
       where: { id: id as string },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
-    await prisma.$transaction(async (tx) => {
-      await tx.permitAbsence.deleteMany({ where: { absenceId: find.id } });
-      await tx.absence.delete({ where: { id: find.id } });
+    await prisma.gBookType.update({
+      where: { id: find.id },
+      data: { status: false, updated_at: new Date() },
     });
 
     return ResponseServer(res, 200, { msg: "Data berhasil dihapus" });

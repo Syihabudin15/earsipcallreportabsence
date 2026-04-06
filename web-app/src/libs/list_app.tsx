@@ -103,18 +103,18 @@ export const menus: IMenu[] = [
         icon: <FormInput size={15} />,
         need_access: true,
       },
-      // {
-      //   name: "Permohonan Download",
-      //   path: "/app/earsip/download",
-      //   icon: <FormInput size={15} />,
-      //   need_access: true,
-      // },
-      // {
-      //   name: "Permohonan Hapus",
-      //   path: "/app/earsip/delete",
-      //   icon: <FormInput size={15} />,
-      //   need_access: true,
-      // },
+      {
+        name: "Permohonan Download",
+        path: "/app/earsip/permitfile?type=DOWNLOAD",
+        icon: <FormInput size={15} />,
+        need_access: true,
+      },
+      {
+        name: "Permohonan Hapus",
+        path: "/app/earsip/permitfile?type=DELETE",
+        icon: <FormInput size={15} />,
+        need_access: true,
+      },
     ],
   },
   {
@@ -176,6 +176,12 @@ export const menus: IMenu[] = [
       {
         name: "Konfigurasi",
         path: "/app/absensi/config",
+        icon: <Hash size={15} />,
+        need_access: true,
+      },
+      {
+        name: "Buku Tamu",
+        path: "/app/absensi/guestbook",
         icon: <Hash size={15} />,
         need_access: true,
       },
