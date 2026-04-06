@@ -27,6 +27,7 @@ export interface IMenu {
 // UTIL MODEL
 export interface IPermission {
   path: string;
+  name: string;
   access: string[];
 }
 

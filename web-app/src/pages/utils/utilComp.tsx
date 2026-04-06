@@ -13,8 +13,9 @@ import {
   Descriptions,
   Divider,
   Empty,
-  List,
   Modal,
+  Row,
+  Col,
   Space,
   Tag,
   Tooltip,
@@ -35,9 +36,9 @@ import moment from "moment";
 import { BookPlus, MessageSquare } from "lucide-react";
 import Title from "antd/es/typography/Title";
 const { Text } = Typography;
-const { Panel } = Collapse;
 import { PDFDocument } from "pdf-lib";
 import useContext from "../../libs/context";
+import api from "../../libs/api";
 
 export const CollapseText = ({
   text,
@@ -164,7 +165,7 @@ export const DetailSubmission = ({
             </Title>
 
             <Space
-              direction="vertical"
+              orientation="vertical"
               size={4}
               style={{ width: "100%", marginTop: 8 }}
             >
@@ -512,152 +513,140 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
   if (productFiles.length === 0)
     return <Empty description="Tidak ada kategori dokumen" />;
 
+  // Convert productFiles to Collapse items format
+  const collapseItems = productFiles.map(
+    (category: IProductTypeFile, idx: number) => ({
+      key: idx.toString(),
+      label: (
+        <Space>
+          <FolderOpenFilled style={{ color: "#faad14" }} />
+          <Text strong>{category.name}</Text>
+          <Badge
+            count={category.Files?.length || 0}
+            showZero
+            color="#0958d9"
+            size="small"
+          />
+        </Space>
+      ),
+      children: (
+        <Row gutter={[12, 12]}>
+          {category.Files?.map((file: IFile) => (
+            <Col key={file.id} xs={24} sm={12}>
+              <Card size="small" hoverable styles={{ body: { padding: 12 } }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    {/* Avatar / Icon */}
+                    <Avatar
+                      shape="square"
+                      icon={<FilePdfOutlined />}
+                      style={{
+                        backgroundColor: "#fff1f0",
+                        color: "#ff4d4f",
+                        marginRight: 12,
+                        flexShrink: 0,
+                      }}
+                    />
+
+                    {/* Nama File */}
+                    <Text
+                      ellipsis={{ tooltip: file.name }}
+                      style={{ fontSize: "13px", fontWeight: 500 }}
+                    >
+                      {file.name}
+                    </Text>
+                  </div>
+
+                  <div className="flex gap-1">
+                    <Tooltip title="Preview PDF">
+                      <Button
+                        size="small"
+                        icon={<EyeOutlined />}
+                        onClick={() =>
+                          handlePreview(
+                            file.url,
+                            file.name,
+                            category.type,
+                            file.name === "Semua File"
+                              ? category.id
+                              : undefined,
+                          )
+                        }
+                      ></Button>
+                    </Tooltip>
+                    <Tooltip
+                      title={
+                        user &&
+                        (file.allow_download.split(",").includes(user.id) ||
+                          hasAccess("/app/earsip/submission", "download") ||
+                          record.userId === user.id)
+                          ? "Download PDF"
+                          : "Anda tidak memiliki akses untuk download file ini"
+                      }
+                    >
+                      <Button
+                        size="small"
+                        icon={<PrinterOutlined />}
+                        onClick={() => {
+                          // Determine if this is a one-time download (from permit)
+                          const isOneTimeDownload =
+                            file.allow_download
+                              .split(",")
+                              .includes(user?.id || "") &&
+                            record.userId !== user?.id &&
+                            !hasAccess("/app/earsip/submission", "download");
+                          handleDownload(
+                            file.url,
+                            file.name,
+                            file.id,
+                            isOneTimeDownload,
+                          );
+                        }}
+                        disabled={
+                          !user ||
+                          (!file.allow_download.split(",").includes(user.id) &&
+                            !hasAccess("/app/earsip/submission", "download") &&
+                            record.userId !== user.id)
+                        }
+                      ></Button>
+                    </Tooltip>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      ),
+      style: {
+        marginBottom: 10,
+        background: "#fafafa",
+        borderRadius: "8px",
+      },
+    }),
+  );
+
   return (
     <div style={{ marginTop: 16 }}>
       <Collapse
-        defaultActiveKey={[0]}
+        defaultActiveKey={["0"]}
         expandIconPlacement="start"
         ghost
         className="archive-collapse"
-      >
-        {productFiles.map((category: IProductTypeFile, idx: number) => (
-          <Panel
-            header={
-              <Space>
-                <FolderOpenFilled style={{ color: "#faad14" }} />
-                <Text strong>{category.name}</Text>
-                <Badge
-                  count={category.Files?.length || 0}
-                  showZero
-                  color="#0958d9"
-                  size="small"
-                />
-              </Space>
-            }
-            key={idx}
-            style={{
-              marginBottom: 10,
-              background: "#fafafa",
-              borderRadius: "8px",
-            }}
-          >
-            <List
-              grid={{ gutter: 12, column: 2 }}
-              dataSource={category.Files}
-              renderItem={(file: IFile) => (
-                <List.Item style={{ marginBottom: 8 }}>
-                  <Card
-                    size="small"
-                    hoverable
-                    styles={{ body: { padding: 12 } }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          flex: 1,
-                          minWidth: 0,
-                        }}
-                      >
-                        {/* Avatar / Icon */}
-                        <Avatar
-                          shape="square"
-                          icon={<FilePdfOutlined />}
-                          style={{
-                            backgroundColor: "#fff1f0",
-                            color: "#ff4d4f",
-                            marginRight: 12,
-                            flexShrink: 0,
-                          }}
-                        />
-
-                        {/* Nama File */}
-                        <Text
-                          ellipsis={{ tooltip: file.name }}
-                          style={{ fontSize: "13px", fontWeight: 500 }}
-                        >
-                          {file.name}
-                        </Text>
-                      </div>
-
-                      <div className="flex gap-1">
-                        <Tooltip title="Preview PDF">
-                          <Button
-                            // type="link" // Gunakan link agar lebih hemat ruang
-                            size="small"
-                            icon={<EyeOutlined />}
-                            onClick={() =>
-                              handlePreview(
-                                file.url,
-                                file.name,
-                                category.type,
-                                file.name === "Semua File"
-                                  ? category.id
-                                  : undefined,
-                              )
-                            }
-                          ></Button>
-                        </Tooltip>
-                        <Tooltip
-                          title={
-                            user &&
-                            (file.allow_download.split(",").includes(user.id) ||
-                              hasAccess("/app/earsip/submission", "download") ||
-                              record.userId === user.id)
-                              ? "Download PDF"
-                              : "Anda tidak memiliki akses untuk download file ini"
-                          }
-                        >
-                          <Button
-                            size="small"
-                            icon={<PrinterOutlined />}
-                            onClick={() => {
-                              // Determine if this is a one-time download (from permit)
-                              const isOneTimeDownload =
-                                file.allow_download
-                                  .split(",")
-                                  .includes(user?.id || "") &&
-                                record.userId !== user?.id &&
-                                !hasAccess(
-                                  "/app/earsip/submission",
-                                  "download",
-                                );
-                              handleDownload(
-                                file.url,
-                                file.name,
-                                file.id,
-                                isOneTimeDownload,
-                              );
-                            }}
-                            disabled={
-                              !user ||
-                              (!file.allow_download
-                                .split(",")
-                                .includes(user.id) &&
-                                !hasAccess(
-                                  "/app/earsip/submission",
-                                  "download",
-                                ) &&
-                                record.userId !== user.id)
-                            }
-                          ></Button>
-                        </Tooltip>
-                      </div>
-                    </div>
-                  </Card>
-                </List.Item>
-              )}
-            />
-          </Panel>
-        ))}
-      </Collapse>
+        items={collapseItems}
+      />
 
       {/* Modal untuk Preview PDF */}
       <Modal

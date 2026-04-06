@@ -20,7 +20,7 @@ import {
   PlusOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
-import { api } from "../../libs/api";
+import api from "../../libs/api";
 import dayjs from "dayjs";
 
 const { Option } = Select;
@@ -110,7 +110,10 @@ const PermitAbsenceAbsensi: React.FC = () => {
       Object.keys(values).forEach((key) => {
         if (key !== "file") {
           if (values[key] instanceof dayjs) {
-            formData.append(key, values[key].format("YYYY-MM-DD HH:mm:ss"));
+            formData.append(
+              key,
+              (values[key] as any).format("YYYY-MM-DD HH:mm:ss"),
+            );
           } else {
             formData.append(key, values[key]);
           }

@@ -31,8 +31,8 @@ const FloatingAbsenceButton: React.FC = () => {
         placement="right"
         onClose={() => setIsOpen(false)}
         open={isOpen}
-        width={400}
-        bodyStyle={{ padding: 0 }}
+        size="large"
+        styles={{ body: { padding: 0 } }}
       >
         <div className="h-full overflow-y-auto">
           <SelfAbsence />

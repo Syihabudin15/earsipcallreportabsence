@@ -3,7 +3,20 @@ import type { IPermission, IUser } from "./interface";
 import { menus } from "./list_app";
 import { MenuPermission } from "./helper";
 
-const useContext = create((set, get) => ({
+interface ContextState {
+  user: IUser | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  lastActivity: number;
+  login: (userData: IUser, accessToken: string, refreshToken: string) => void;
+  logout: () => void;
+  updateTokens: (accessToken: string, refreshToken?: string) => void;
+  updateActivity: () => void;
+  hasAccess: (path: string, access: string) => boolean;
+  getMenu: () => any;
+}
+
+const useContext = create<ContextState>((set, get) => ({
   user: localStorage.getItem("user")
     ? (JSON.parse(localStorage.getItem("user") || "{}") as IUser)
     : null,

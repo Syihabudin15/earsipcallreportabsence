@@ -14,7 +14,7 @@ import {
   Spin,
 } from "antd";
 import { SaveOutlined, ReloadOutlined } from "@ant-design/icons";
-import { api } from "../../libs/api";
+import api from "../../libs/api";
 
 const { Title, Text } = Typography;
 

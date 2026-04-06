@@ -12,7 +12,7 @@ const DashboardAbsenceWidget: React.FC = () => {
     <>
       <Card
         className="shadow-md hover:shadow-lg transition-all duration-300"
-        bodyStyle={{ padding: "24px" }}
+        styles={{ body: { padding: "24px" } }}
       >
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -75,8 +75,8 @@ const DashboardAbsenceWidget: React.FC = () => {
         placement="right"
         onClose={() => setIsDrawerOpen(false)}
         open={isDrawerOpen}
-        width={400}
-        bodyStyle={{ padding: 0 }}
+        size="large"
+        styles={{ body: { padding: 0 } }}
       >
         <div className="h-full overflow-y-auto">
           <SelfAbsence />

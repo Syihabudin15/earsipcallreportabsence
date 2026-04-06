@@ -321,7 +321,7 @@ export default function DataAbsence() {
         cancelText="Batal"
         confirmLoading={loading}
       >
-        <Space direction="vertical" className="w-full">
+        <Space orientation="vertical" className="w-full">
           <Select
             placeholder="Pilih pengguna"
             value={form.userId}

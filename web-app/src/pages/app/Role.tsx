@@ -1,15 +1,22 @@
 import {
   App,
   Button,
-  Checkbox,
   Input,
   Modal,
   Table,
   Typography,
   type TableProps,
+  Row,
+  Col,
+  Card,
+  Space,
+  Tabs,
+  Badge,
+  Segmented,
+  Tooltip,
 } from "antd";
-import { Plus, Edit, Trash } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Plus, Edit, Trash, ArrowLeft, CheckCircle } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
 import type {
   IActionPage,
   IPageProps,
@@ -31,6 +38,8 @@ export default function DataRole() {
     total: 0,
     search: "",
   });
+  const [showUpsert, setShowUpsert] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<IRole | undefined>();
   const [action, setAction] = useState<IActionPage<IRole>>({
     upsert: false,
     delete: false,
@@ -70,6 +79,21 @@ export default function DataRole() {
     return () => clearTimeout(timeout);
   }, [pageprops.page, pageprops.limit, pageprops.search]);
 
+  // If showing upsert, render as full page
+  if (showUpsert) {
+    return (
+      <UpsertPage
+        record={editingRecord}
+        onBack={() => {
+          setShowUpsert(false);
+          setEditingRecord(undefined);
+          getData();
+        }}
+      />
+    );
+  }
+
+  // List view
   const columns: TableProps<IRole>["columns"] = [
     {
       title: "ID",
@@ -115,7 +139,10 @@ export default function DataRole() {
                 icon={<Edit size={15} />}
                 size="small"
                 type="primary"
-                onClick={() => setAction({ ...action, upsert: true, record })}
+                onClick={() => {
+                  setEditingRecord(record);
+                  setShowUpsert(true);
+                }}
               ></Button>
             )}
             {hasAccess(window.location.pathname, "delete") && (
@@ -149,7 +176,10 @@ export default function DataRole() {
           <div className="flex-1 flex">
             {hasAccess(window.location.pathname, "write") && (
               <Button
-                onClick={() => setAction({ ...action, upsert: true })}
+                onClick={() => {
+                  setEditingRecord(undefined);
+                  setShowUpsert(true);
+                }}
                 icon={<Plus size={15} />}
                 type="primary"
                 size="small"
@@ -200,16 +230,6 @@ export default function DataRole() {
           }}
         />
       </div>
-      <UpsertData
-        open={action.upsert}
-        setOpen={(val: boolean) =>
-          setAction({ ...action, upsert: val, record: undefined })
-        }
-        record={action.record}
-        getData={getData}
-        hook={modal}
-        key={action.record ? "upsert" + action.record.id : "upsert"}
-      />
       {action.delete && action.record && (
         <DeleteData
           open={action.delete}
@@ -226,17 +246,24 @@ export default function DataRole() {
   );
 }
 
-const UpsertData = ({
-  open,
-  setOpen,
+const UpsertPage = ({
   record,
-  getData,
+  onBack,
+}: {
+  record?: IRole;
+  onBack: () => void;
+}) => {
+  const { modal } = App.useApp();
+  return <UpsertData record={record} onBack={onBack} hook={modal} />;
+};
+
+const UpsertData = ({
+  record,
+  onBack,
   hook,
 }: {
-  open: boolean;
-  setOpen: Function;
   record?: IRole;
-  getData: Function;
+  onBack: () => void;
   hook: HookAPI;
 }) => {
   const [loading, setLoading] = useState(false);
@@ -275,8 +302,7 @@ const UpsertData = ({
             title: "BERHASIL",
             content: res.data.msg,
           });
-          setOpen(false);
-          getData && (await getData());
+          onBack();
         } else {
           hook.error({
             title: "ERROR",
@@ -294,110 +320,489 @@ const UpsertData = ({
     setLoading(false);
   };
 
-  const columns: TableProps<IPermission>["columns"] = [
-    {
-      title: "Menu",
-      key: "menu",
-      dataIndex: "name",
-    },
-    {
-      title: "Path",
-      key: "path",
-      dataIndex: "path",
-    },
-    {
-      title: "Hak Akses",
-      dataIndex: "access",
-      key: "access",
-      className: "text-xs",
-      onHeaderCell: () => {
-        return {
-          ["style"]: {
-            textAlign: "center",
-            fontSize: 12,
-          },
-        };
+  // Group permissions by application
+  const getGroupedPermissions = () => {
+    const groups: {
+      [key: string]: {
+        title: string;
+        color: string;
+        icon: string;
+        items: IPermission[];
+      };
+    } = {
+      earsip: {
+        title: "📁 E-Arsip",
+        color: "#0958d9",
+        icon: "📁",
+        items: [],
       },
-      render(_value, record, _index) {
-        return (
-          <>
-            <Checkbox.Group
-              options={[
-                "read",
-                "write",
-                "update",
-                "delete",
-                "proses",
-                "download",
-              ]}
-              value={record.access}
-              onChange={(e) => {
-                setUsermenu((prev: IPermission[]) => {
-                  const filter = prev.map((p) => {
-                    if (p.path === record.path) {
-                      p.access = e;
-                    }
-                    return p;
-                  });
-                  return filter;
-                });
-              }}
-            />
-          </>
-        );
+      callreport: {
+        title: "📞 Call Report",
+        color: "#13c2c2",
+        icon: "📞",
+        items: [],
       },
-    },
-  ];
+      absensi: {
+        title: "✓ Absensi",
+        color: "#52c41a",
+        icon: "✓",
+        items: [],
+      },
+      aplikasi: {
+        title: "⚙️ Aplikasi",
+        color: "#fa541c",
+        icon: "⚙️",
+        items: [],
+      },
+    };
+
+    usermenu.forEach((item) => {
+      if (item.path.includes("earsip")) {
+        groups.earsip.items.push(item);
+      } else if (
+        item.path.includes("callreport") ||
+        item.path.includes("creport")
+      ) {
+        groups.callreport.items.push(item);
+      } else if (
+        item.path.includes("absence") ||
+        item.path.includes("absensi") ||
+        item.path.includes("absence_config")
+      ) {
+        groups.absensi.items.push(item);
+      } else {
+        groups.aplikasi.items.push(item);
+      }
+    });
+
+    return Object.entries(groups)
+      .filter(([_, group]) => group.items.length > 0)
+      .map(([key, group]) => ({
+        key,
+        ...group,
+      }));
+  };
+
+  const groupedPermissions = getGroupedPermissions();
+
+  // Function untuk toggle individual access
+  const toggleAccess = useCallback((path: string, accessType: string) => {
+    setUsermenu((prev) => {
+      return prev.map((p) => {
+        if (p.path === path) {
+          const newAccess = p.access.includes(accessType)
+            ? p.access.filter((a) => a !== accessType)
+            : [...p.access, accessType];
+          return { ...p, access: newAccess };
+        }
+        return p;
+      });
+    });
+  }, []);
 
   return (
-    <Modal
-      open={open}
-      onCancel={() => setOpen(false)}
-      title={`Upsert Data ${record ? record.name : ""}`}
-      style={{ top: 10 }}
-      width={1000}
-      onOk={handleSubmit}
-      okButtonProps={{ loading: loading, disabled: !data.id || !data.name }}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "16px",
+        maxHeight: "100vh",
+        overflow: "hidden",
+      }}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      {/* Header Section */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "16px",
+          borderBottom: "1px solid #f0f0f0",
+          background: "#fff",
+        }}
+      >
         <div>
-          <Text strong>ID:</Text>
-          <Input
-            placeholder="ID/Kosongkan untuk otomatis"
-            value={data.id}
-            onChange={(e) => setData({ ...data, id: e.target.value })}
-            style={{ marginTop: "8px" }}
-          />
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "24px",
+              fontWeight: "700",
+              color: "#0958d9",
+            }}
+          >
+            {record ? `✎ ${record.name}` : "✚ Buat Role"}
+          </h1>
+          <p style={{ margin: "4px 0 0 0", color: "#999", fontSize: "12px" }}>
+            {record ? "Edit hak akses" : "Tambah role baru"}
+          </p>
         </div>
-        <div>
-          <Text strong>Nama Role:</Text>
-          <Input
-            placeholder="Masukkan nama..."
-            value={data.name}
-            onChange={(e) => setData({ ...data, name: e.target.value })}
-            style={{ marginTop: "8px" }}
-          />
-        </div>
+        <Space>
+          <Button onClick={onBack} icon={<ArrowLeft size={16} />}>
+            Kembali
+          </Button>
+          <Button
+            type="primary"
+            onClick={handleSubmit}
+            loading={loading}
+            disabled={!data.name}
+            icon={<CheckCircle size={16} />}
+          >
+            Simpan
+          </Button>
+        </Space>
+      </div>
 
-        <div>
-          <Text strong>Permissions:</Text>
-          <div>
-            <Table
-              rowKey={"path"}
-              columns={columns}
-              dataSource={usermenu}
-              size="small"
-              pagination={false}
-              scroll={{
-                x: "max-content",
-                y: window.innerWidth > 600 ? "45vh" : "60vh",
-              }}
-              bordered
+      {/* Main Content - Scrollable */}
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <Card
+            size="small"
+            style={{
+              border: "1px solid #e8e8e8",
+            }}
+            title={
+              <span
+                style={{
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  color: "#0958d9",
+                }}
+              >
+                📋 Info Dasar
+              </span>
+            }
+          >
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12}>
+                <div>
+                  <Text
+                    strong
+                    style={{
+                      fontSize: "12px",
+                      display: "block",
+                      marginBottom: "8px",
+                      color: "#0958d9",
+                    }}
+                  >
+                    ID Role
+                  </Text>
+                  <Input
+                    placeholder="Auto"
+                    value={data.id}
+                    onChange={(e) => setData({ ...data, id: e.target.value })}
+                    size="small"
+                  />
+                </div>
+              </Col>
+              <Col xs={24} sm={12}>
+                <div>
+                  <Text
+                    strong
+                    style={{
+                      fontSize: "12px",
+                      display: "block",
+                      marginBottom: "8px",
+                      color: "#0958d9",
+                    }}
+                  >
+                    Nama Role <span style={{ color: "red" }}>*</span>
+                  </Text>
+                  <Input
+                    placeholder="Misal: Admin, Manager"
+                    value={data.name}
+                    onChange={(e) => setData({ ...data, name: e.target.value })}
+                    size="small"
+                    status={!data.name ? "warning" : ""}
+                  />
+                </div>
+              </Col>
+              <Col xs={24}>
+                <div>
+                  <Text
+                    strong
+                    style={{
+                      fontSize: "12px",
+                      display: "block",
+                      marginBottom: "8px",
+                      color: "#0958d9",
+                    }}
+                  >
+                    🔐 Akses Data
+                  </Text>
+                  <Segmented
+                    value={data.data_status || "ALL"}
+                    onChange={(value) =>
+                      setData({ ...data, data_status: value as "ALL" | "USER" })
+                    }
+                    options={[
+                      { label: "Semua Data", value: "ALL" },
+                      { label: "Data Pribadi", value: "USER" },
+                    ]}
+                    block
+                  />
+                </div>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Permission Card */}
+          <Card
+            size="small"
+            style={{
+              border: "1px solid #e8e8e8",
+            }}
+            title={
+              <span
+                style={{
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  color: "#fa541c",
+                }}
+              >
+                🔑 Hak Akses
+              </span>
+            }
+          >
+            <Tabs
+              items={groupedPermissions.map((group) => ({
+                key: group.key,
+                label: (
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <span>{group.title.split(" ")[0]}</span>
+                    <Badge
+                      count={
+                        group.items.filter((i) => i.access.length > 0).length
+                      }
+                      style={{
+                        backgroundColor: group.color,
+                        fontSize: "10px",
+                        fontWeight: 700,
+                      }}
+                    />
+                  </span>
+                ),
+                children: (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px",
+                      paddingTop: "8px",
+                    }}
+                  >
+                    {group.items.map((item) => {
+                      const accessPercentage = (item.access.length / 6) * 100;
+                      return (
+                        <div
+                          key={item.path}
+                          style={{
+                            padding: "10px",
+                            background: "#fafafa",
+                            border: "1px solid #eee",
+                            borderRadius: "4px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              marginBottom: "10px",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-start",
+                            }}
+                          >
+                            <div>
+                              <div
+                                style={{
+                                  fontSize: "12px",
+                                  fontWeight: 600,
+                                  color: "#333",
+                                }}
+                              >
+                                {item.name}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "10px",
+                                  color: "#999",
+                                  marginTop: "2px",
+                                }}
+                              >
+                                {item.path}
+                              </div>
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                color: group.color,
+                              }}
+                            >
+                              {item.access.length}/6
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              height: "3px",
+                              background: "#eee",
+                              borderRadius: "1px",
+                              marginBottom: "10px",
+                              overflow: "hidden",
+                            }}
+                          >
+                            <div
+                              style={{
+                                height: "100%",
+                                background: group.color,
+                                width: `${accessPercentage}%`,
+                              }}
+                            />
+                          </div>
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(3, 1fr)",
+                              gap: "6px",
+                            }}
+                          >
+                            {[
+                              { label: "Baca", value: "read", icon: "👁️" },
+                              { label: "Tulis", value: "write", icon: "✍️" },
+                              { label: "Update", value: "update", icon: "🔄" },
+                              { label: "Hapus", value: "delete", icon: "🗑️" },
+                              { label: "Proses", value: "proses", icon: "⚡" },
+                              {
+                                label: "Download",
+                                value: "download",
+                                icon: "⬇️",
+                              },
+                            ].map((access) => (
+                              <Tooltip
+                                key={access.value}
+                                title={`Toggle ${access.label}`}
+                              >
+                                <Button
+                                  size="small"
+                                  type={
+                                    item.access.includes(access.value)
+                                      ? "primary"
+                                      : "default"
+                                  }
+                                  onClick={() =>
+                                    toggleAccess(item.path, access.value)
+                                  }
+                                  style={{
+                                    fontWeight: 600,
+                                    fontSize: "11px",
+                                    background: item.access.includes(
+                                      access.value,
+                                    )
+                                      ? group.color
+                                      : undefined,
+                                    borderColor: item.access.includes(
+                                      access.value,
+                                    )
+                                      ? group.color
+                                      : "#d9d9d9",
+                                    color: item.access.includes(access.value)
+                                      ? "white"
+                                      : "#666",
+                                    border: "1px solid",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  {access.icon} {access.label}
+                                </Button>
+                              </Tooltip>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ),
+              }))}
             />
-          </div>
+          </Card>
+
+          {/* Access Summary */}
+          <Card
+            size="small"
+            style={{
+              border: "1px solid #e8e8e8",
+            }}
+            title={
+              <span
+                style={{
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  color: "#0958d9",
+                }}
+              >
+                📊 Ringkasan
+              </span>
+            }
+          >
+            <Row gutter={[12, 12]}>
+              {groupedPermissions.map((group) => {
+                const accessCount = group.items.filter(
+                  (i) => i.access.length > 0,
+                ).length;
+                const percentage = Math.round(
+                  (accessCount / group.items.length) * 100,
+                );
+                return (
+                  <Col key={group.key} xs={12} sm={6}>
+                    <div
+                      style={{
+                        padding: "10px",
+                        background: "#f9f9f9",
+                        border: "1px solid #eee",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          color: group.color,
+                          fontWeight: 700,
+                          fontSize: "12px",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        {group.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "18px",
+                          fontWeight: 700,
+                          color: group.color,
+                        }}
+                      >
+                        {accessCount}/{group.items.length}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "10px",
+                          color: "#999",
+                          marginTop: "4px",
+                        }}
+                      >
+                        {percentage}%
+                      </div>
+                    </div>
+                  </Col>
+                );
+              })}
+            </Row>
+          </Card>
         </div>
       </div>
-    </Modal>
+    </div>
   );
 };
 
@@ -418,7 +823,6 @@ const defaultMenu: IPermission[] = menus
       };
     }
   });
-
 function MergeMenu(allmenus: IPermission[], usermenus: IPermission[]) {
   const mergedMenu = allmenus.map((item) => {
     const found = usermenus.find((r) => r.path === item.path);

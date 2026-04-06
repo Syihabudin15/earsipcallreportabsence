@@ -46,7 +46,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       where,
       skip,
       take: limit,
-      orderBy: { created_at: "desc" },
+      orderBy: { created_at: "asc" },
       include: { User: true },
     });
 

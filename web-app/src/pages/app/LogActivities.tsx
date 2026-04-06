@@ -144,14 +144,16 @@ export default function LogActivities() {
       </div>
 
       <div className="bg-white p-4 rounded-xl border border-slate-200">
-        <Space className="mb-4 flex-wrap">
+        <Space className="mb-4 flex-wrap" size="small">
           <Input.Search
+            size="small"
             placeholder="Cari aktivitas atau user..."
             allowClear
             onSearch={(value) => setPageProps({ ...pageProps, search: value })}
             style={{ minWidth: 250 }}
           />
           <RangePicker
+            size="small"
             onChange={(dates) =>
               setPageProps({
                 ...pageProps,
@@ -160,6 +162,7 @@ export default function LogActivities() {
             }
           />
           <Button
+            size="small"
             onClick={() =>
               setPageProps({ ...pageProps, search: "", dateRange: null })
             }
@@ -169,6 +172,7 @@ export default function LogActivities() {
         </Space>
 
         <Table
+          size="small"
           columns={columns}
           dataSource={logs}
           loading={loading}

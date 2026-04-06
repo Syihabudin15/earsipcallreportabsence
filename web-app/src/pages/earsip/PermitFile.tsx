@@ -354,7 +354,7 @@ export default function DataPermitFile() {
         cancelText="Batal"
         confirmLoading={loading}
       >
-        <Space direction="vertical" className="w-full">
+        <Space orientation="vertical" className="w-full">
           <Select
             value={form.action}
             onChange={(value) => setForm({ ...form, action: value })}

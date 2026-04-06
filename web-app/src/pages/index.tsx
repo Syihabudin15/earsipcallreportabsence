@@ -8,14 +8,13 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
-  Settings,
 } from "lucide-react";
 import AppRouter from "./AppRouter";
 import { menus } from "../libs/list_app";
 import useContext from "../libs/context";
 import { Modal, Dropdown } from "antd";
 import { Link, useNavigate } from "react-router-dom";
-import FloatingAbsenceButton from "../components/FloatingAbsenceButton";
+import HeaderAbsenceButton from "../components/HeaderAbsenceButton";
 
 const APP_COLOR = import.meta.env.VITE_APP_COLOR || "#F58220";
 
@@ -175,6 +174,7 @@ export default function MainLayout({
               <Bell size={20} />
               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
+            <HeaderAbsenceButton />
             <Dropdown
               menu={{
                 items: [
@@ -202,7 +202,7 @@ export default function MainLayout({
                         <User size={16} /> Profil
                       </span>
                     ),
-                    onClick: () => navigate("/profile"),
+                    onClick: () => navigate("/app/profile"),
                   },
                   {
                     type: "divider",
@@ -245,9 +245,6 @@ export default function MainLayout({
           </div>
         </main>
       </div>
-
-      {/* Floating Absence Button */}
-      <FloatingAbsenceButton />
 
       <Modal
         title="Konfirmasi Logout"

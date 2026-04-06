@@ -1,44 +1,96 @@
-import { Button, Card, message, Modal, Space, Typography } from "antd";
+import { Button, Card, Modal, Space, Typography, App, Tag } from "antd";
 import { useEffect, useRef, useState } from "react";
 import useContext from "../../libs/context";
 import api from "../../libs/api";
 import * as faceapi from "face-api.js";
+import { Clock, LogOut } from "lucide-react";
 
 const { Title, Text } = Typography;
 
 export default function SelfAbsence() {
+  const { message } = App.useApp();
   const { user, modal } = useContext((state: any) => state);
+
+  // State management
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [faceRegistered, setFaceRegistered] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [absenceMethod, setAbsenceMethod] = useState<string>(""); // FACE or BUTTON from DB
+  const [checkedIn, setCheckedIn] = useState(false);
+  const [checkedOut, setCheckedOut] = useState(false);
+  const [todayAttendance, setTodayAttendance] = useState<any>(null);
+
+  // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
   useEffect(() => {
-    // Check if user has face data
-    if (user?.face) {
-      setFaceRegistered(true);
-    }
-
-    // Load face-api models from CDN
-    const loadModels = async () => {
+    // Initialize: Load user's attendance method and check today's status
+    const initializeAttendance = async () => {
       try {
-        await faceapi.nets.tinyFaceDetector.loadFromUri(
-          "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights",
-        );
-        await faceapi.nets.faceLandmark68Net.loadFromUri(
-          "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights",
-        );
-        await faceapi.nets.faceRecognitionNet.loadFromUri(
-          "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights",
-        );
-        setModelsLoaded(true);
+        setInitialLoading(true);
+
+        // Check user's face registration and fetch today's attendance status
+        if (user?.face) {
+          setFaceRegistered(true);
+        }
+
+        // Fetch today's attendance status
+        const response = await api.request({
+          url: `${import.meta.env.VITE_API_URL}/absence/self/today`,
+          method: "GET",
+        });
+
+        if (response?.data?.data) {
+          const {
+            user: userData,
+            attendance,
+            checked_in,
+            checked_out,
+          } = response.data.data;
+
+          // Set the user's preferred absence method
+          if (userData?.absen_method) {
+            setAbsenceMethod(userData.absen_method);
+          }
+
+          // Set attendance status
+          setCheckedIn(checked_in);
+          setCheckedOut(checked_out);
+          setTodayAttendance(attendance);
+        }
       } catch (error) {
-        console.error("Error loading face models:", error);
+        console.error("Error initializing attendance:", error);
+      } finally {
+        setInitialLoading(false);
       }
     };
+
+    initializeAttendance();
+
+    // Load face-api models from local public folder
+    const loadModels = async () => {
+      try {
+        const localModelUrl = "/models/";
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(localModelUrl),
+          faceapi.nets.faceLandmark68Net.loadFromUri(localModelUrl),
+          faceapi.nets.faceRecognitionNet.loadFromUri(localModelUrl),
+        ]);
+        setModelsLoaded(true);
+        console.log("Face models loaded successfully from local storage");
+      } catch (error) {
+        console.warn(
+          "Face recognition models could not be loaded. CORS or network issue detected.",
+          error,
+        );
+        setModelsLoaded(false);
+      }
+    };
+
     loadModels();
   }, [user]);
 
@@ -100,13 +152,11 @@ export default function SelfAbsence() {
     setLoading(true);
     try {
       await startCamera();
-      // Wait for camera to start
       setTimeout(async () => {
         const faceDescriptor = await captureFace();
         if (faceDescriptor) {
           const faceData = Array.from(faceDescriptor);
 
-          // Save face data to user
           await api.request({
             url: `${import.meta.env.VITE_API_URL}/user/face`,
             method: "PUT",
@@ -125,22 +175,32 @@ export default function SelfAbsence() {
     }
   };
 
-  const attendWithButton = async () => {
+  const attendWithButton = async (type: "CHECK_IN" | "CHECK_OUT") => {
     setLoading(true);
     try {
-      await api.request({
+      const response = await api.request({
         url: `${import.meta.env.VITE_API_URL}/absence/self`,
         method: "POST",
-        data: { method: "BUTTON" },
+        data: { method: "BUTTON", type },
       });
-      message.success("Absen berhasil melalui tombol");
-    } catch (error) {
-      message.error("Gagal absen");
+
+      if (type === "CHECK_IN") {
+        setCheckedIn(true);
+        setTodayAttendance(response?.data?.data);
+        message.success("Check-in berhasil");
+      } else {
+        setCheckedOut(true);
+        setTodayAttendance(response?.data?.data);
+        message.success("Check-out berhasil");
+      }
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.msg || "Gagal melakukan absensi";
+      message.error(errorMsg);
     }
     setLoading(false);
   };
 
-  const attendWithFace = async () => {
+  const attendWithFace = async (type: "CHECK_IN" | "CHECK_OUT") => {
     if (!faceRegistered) {
       message.error("Daftarkan wajah terlebih dahulu");
       return;
@@ -154,7 +214,6 @@ export default function SelfAbsence() {
     setLoading(true);
     try {
       await startCamera();
-      // Wait for camera
       setTimeout(async () => {
         const faceDescriptor = await captureFace();
         if (faceDescriptor) {
@@ -165,13 +224,21 @@ export default function SelfAbsence() {
           );
 
           if (distance < 0.6) {
-            // Threshold for face match
-            await api.request({
+            const response = await api.request({
               url: `${import.meta.env.VITE_API_URL}/absence/self`,
               method: "POST",
-              data: { method: "FACE" },
+              data: { method: "FACE", type },
             });
-            message.success("Absen berhasil melalui face recognition");
+
+            if (type === "CHECK_IN") {
+              setCheckedIn(true);
+              setTodayAttendance(response?.data?.data);
+              message.success("Check-in dengan face recognition berhasil");
+            } else {
+              setCheckedOut(true);
+              setTodayAttendance(response?.data?.data);
+              message.success("Check-out dengan face recognition berhasil");
+            }
           } else {
             message.error("Wajah tidak cocok");
           }
@@ -179,11 +246,24 @@ export default function SelfAbsence() {
         stopCamera();
         setLoading(false);
       }, 2000);
-    } catch (error) {
-      message.error("Gagal absen dengan face recognition");
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.msg || "Gagal melakukan absensi";
+      message.error(errorMsg);
       setLoading(false);
     }
   };
+
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <div className="text-center">
+            <Text>Loading...</Text>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -193,8 +273,74 @@ export default function SelfAbsence() {
           <Text>Selamat datang, {user?.fullname}</Text>
         </div>
 
-        <Space direction="vertical" className="w-full" size="large">
-          {!faceRegistered && (
+        {/* Attendance Status */}
+        {checkedIn && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: "12px",
+              backgroundColor: "#f6ffed",
+              border: "1px solid #b7eb8f",
+              borderRadius: "4px",
+            }}
+          >
+            <Text type="success" style={{ fontSize: "12px" }}>
+              ✓ Sudah check-in hari ini
+              {todayAttendance?.check_in &&
+                ` pada ${new Date(todayAttendance.check_in).toLocaleTimeString("id-ID")}`}
+            </Text>
+          </div>
+        )}
+
+        {checkedIn && checkedOut && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: "12px",
+              backgroundColor: "#e6f7ff",
+              border: "1px solid #91d5ff",
+              borderRadius: "4px",
+            }}
+          >
+            <Text type="success" style={{ fontSize: "12px" }}>
+              ✓ Sudah check-out hari ini
+              {todayAttendance?.check_out &&
+                ` pada ${new Date(todayAttendance.check_out).toLocaleTimeString("id-ID")}`}
+            </Text>
+          </div>
+        )}
+
+        {/* Warning when face recognition is disabled */}
+        {absenceMethod === "FACE" && !modelsLoaded && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: "12px",
+              backgroundColor: "#fff7e6",
+              border: "1px solid #ffd591",
+              borderRadius: "4px",
+            }}
+          >
+            <Text type="warning" style={{ fontSize: "12px" }}>
+              ℹ️ Face recognition is temporarily unavailable. Please use
+              button-based attendance.
+            </Text>
+          </div>
+        )}
+
+        {/* Absence Method Tag */}
+        {absenceMethod && (
+          <div style={{ marginBottom: 16, textAlign: "center" }}>
+            <Tag color={absenceMethod === "FACE" ? "blue" : "green"}>
+              Metode Absensi:{" "}
+              {absenceMethod === "FACE" ? "Face Recognition" : "Tombol"}
+            </Tag>
+          </div>
+        )}
+
+        <Space orientation="vertical" className="w-full" size="large">
+          {/* Face Registration - only if method is FACE */}
+          {absenceMethod === "FACE" && modelsLoaded && !faceRegistered && (
             <Button
               type="primary"
               block
@@ -205,24 +351,60 @@ export default function SelfAbsence() {
             </Button>
           )}
 
-          <Button
-            type="primary"
-            block
-            loading={loading}
-            onClick={attendWithButton}
-          >
-            Absen dengan Tombol
-          </Button>
+          {/* CHECK-IN Button */}
+          {!checkedIn && (
+            <>
+              {absenceMethod === "FACE" && modelsLoaded && faceRegistered ? (
+                <Button
+                  type="primary"
+                  block
+                  loading={loading}
+                  onClick={() => attendWithFace("CHECK_IN")}
+                  icon={<Clock size={16} />}
+                >
+                  Check-In (Face Recognition)
+                </Button>
+              ) : (
+                <Button
+                  type="primary"
+                  block
+                  loading={loading}
+                  onClick={() => attendWithButton("CHECK_IN")}
+                  icon={<Clock size={16} />}
+                >
+                  Check-In
+                </Button>
+              )}
+            </>
+          )}
 
-          {faceRegistered && (
-            <Button
-              type="primary"
-              block
-              loading={loading}
-              onClick={attendWithFace}
-            >
-              Absen dengan Face Recognition
-            </Button>
+          {/* CHECK-OUT Button */}
+          {checkedIn && !checkedOut && (
+            <>
+              {absenceMethod === "FACE" && modelsLoaded && faceRegistered ? (
+                <Button
+                  type="default"
+                  block
+                  loading={loading}
+                  onClick={() => attendWithFace("CHECK_OUT")}
+                  icon={<LogOut size={16} />}
+                  danger
+                >
+                  Check-Out (Face Recognition)
+                </Button>
+              ) : (
+                <Button
+                  type="default"
+                  block
+                  loading={loading}
+                  onClick={() => attendWithButton("CHECK_OUT")}
+                  icon={<LogOut size={16} />}
+                  danger
+                >
+                  Check-Out
+                </Button>
+              )}
+            </>
           )}
         </Space>
 

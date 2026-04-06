@@ -394,7 +394,7 @@ export default function UserManagement() {
         <Col xs={24} sm={12} lg={6}>
           <Card
             className="shadow-sm border-l-4 border-l-blue-500 hover:shadow-md transition-shadow"
-            bodyStyle={{ padding: "10px" }}
+            styles={{ body: { padding: "10px" } }}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -412,7 +412,7 @@ export default function UserManagement() {
         <Col xs={24} sm={12} lg={6}>
           <Card
             className="shadow-sm border-l-4 border-l-green-500 hover:shadow-md transition-shadow"
-            bodyStyle={{ padding: "10px" }}
+            styles={{ body: { padding: "10px" } }}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -509,7 +509,7 @@ export default function UserManagement() {
         onCancel={handleCloseModal}
         footer={null}
         width={800}
-        bodyStyle={{ padding: "24px" }}
+        styles={{ body: { padding: "24px" } }}
       >
         <Form
           form={form}

@@ -23,16 +23,28 @@ export const middleware = async (
     if (!user) return ResponseServer(res, 401, { msg: "User not found" });
 
     (req as any).user = user;
+    (req as any).userId = user.id;
 
-    // Log activity for API calls (exclude auth endpoints to avoid spam)
-    if (!req.path.includes("/auth/")) {
-      await logActivity(
-        user.id,
-        `API_${req.method}`,
-        `${req.method} ${req.path}`,
-        req,
-      );
-    }
+    // Intercept response to capture status
+    const originalJson = res.json;
+    let statusCode = res.statusCode;
+
+    res.json = function (body: any) {
+      statusCode = res.statusCode;
+
+      // Log activity for API calls (exclude auth endpoints to avoid spam)
+      if (!req.path.includes("/auth/")) {
+        logActivity(
+          user.id,
+          req.path,
+          req.method,
+          statusCode >= 200 && statusCode < 300 ? "SUCCESS" : "FAILURE",
+          req,
+        ).catch((error) => console.error("Failed to log activity:", error));
+      }
+
+      return originalJson.call(this, body);
+    };
 
     next();
   } catch (error) {
@@ -44,7 +56,8 @@ export const middleware = async (
 async function logActivity(
   userId: string,
   action: string,
-  description: string,
+  method: string,
+  status: string,
   req: Request,
 ) {
   try {
@@ -52,11 +65,11 @@ async function logActivity(
       data: {
         userId,
         action,
-        method: "API",
-        status: "SUCCESS",
+        method,
+        status,
         ip: req.ip || req.connection.remoteAddress || "",
         userAgent: req.get("User-Agent") || "",
-        payload: description,
+        payload: "",
       },
     });
   } catch (error) {

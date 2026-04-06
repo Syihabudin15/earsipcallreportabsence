@@ -9,11 +9,27 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
   page = Number(page);
   limit = Number(limit);
   const skip = (page - 1) * limit;
+  const currentUserId = (req as any).user?.id;
 
   try {
+    // Check if current user's role has data_status restriction
+    let userIdFilter: any = undefined;
+    if (currentUserId) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: currentUserId },
+        include: { Role: true },
+      });
+
+      if (currentUser?.Role?.data_status === "USER") {
+        // If role is USER, can only see own data
+        userIdFilter = currentUserId;
+      }
+    }
+
     const data = await prisma.user.findMany({
       where: {
         status: true,
+        ...(userIdFilter && { id: userIdFilter }),
         ...(search && { name: { contains: search as string } }),
         ...(roleId && { roleId: roleId as string }),
         ...(positionId && { positionId: positionId as string }),
@@ -38,6 +54,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     const total = await prisma.user.count({
       where: {
         status: true,
+        ...(userIdFilter && { id: userIdFilter }),
         ...(search && { name: { contains: search as string } }),
         ...(roleId && { roleId: roleId as string }),
         ...(positionId && { positionId: positionId as string }),

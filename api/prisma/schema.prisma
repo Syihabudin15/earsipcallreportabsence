@@ -228,15 +228,17 @@ model PermitFileDetail {
 }
 
 model LogActivities {
-  id        String  @id @default(uuid())
-  action    String
-  method    String
-  status    String
-  ip        String
-  userAgent String
-  payload   String?
-  User      User    @relation(fields: [userId], references: [id], onUpdate: Cascade)
-  userId    String
+  id         String   @id @default(uuid())
+  action     String
+  method     String
+  status     String
+  ip         String
+  userAgent  String
+  payload    String?
+  User       User     @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  userId     String
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
 }
 
 model VisitCategory {

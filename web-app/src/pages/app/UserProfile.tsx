@@ -136,7 +136,7 @@ export default function UserProfile() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Photo Section */}
         <Card className="text-center shadow-sm">
-          <Space direction="vertical" size="large" className="w-full">
+          <Space orientation="vertical" size="large" className="w-full">
             <Avatar
               size={120}
               src={userData?.photo}

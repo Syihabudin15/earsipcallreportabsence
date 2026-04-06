@@ -56,9 +56,11 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
     const genId = await generateId();
     await prisma.role.create({
       data: {
-        ...body,
         id: body.id && body.id !== "" ? body.id : genId,
-        permission: JSON.stringify(body.permission),
+        name: body.name,
+        data_status: body.data_status || "ALL",
+        status: body.status !== undefined ? body.status : true,
+        permission: JSON.stringify(body.permission || []),
       },
     });
     return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
@@ -86,7 +88,9 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
     await prisma.role.update({
       where: { id: find.id },
       data: {
-        ...body,
+        name: body.name,
+        data_status: body.data_status || "ALL",
+        status: body.status !== undefined ? body.status : true,
         permission: JSON.stringify(body.permission),
         updated_at: new Date(),
       },

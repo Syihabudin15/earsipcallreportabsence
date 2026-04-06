@@ -8,10 +8,25 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
   page = Number(page);
   limit = Number(limit);
   const skip = (page - 1) * limit;
+  const currentUserId = (req as any).user?.id;
 
   try {
+    // Check if current user's role has data_status restriction
+    let userIdFilter: any = undefined;
+    if (currentUserId) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: currentUserId },
+        include: { Role: true },
+      });
+
+      if (currentUser?.Role?.data_status === "USER") {
+        // If role is USER, can only see own absence data
+        userIdFilter = currentUserId;
+      }
+    }
+
     const where: any = {
-      status: true,
+      ...(userIdFilter && { userId: userIdFilter }),
       ...(date && {
         check_in: {
           gte: moment(date as string)
@@ -137,24 +152,33 @@ export const DELETE = async (
   }
 };
 
-export const SELF_ATTEND = async (
+export const SELF_TODAY = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
-  const { method } = req.body;
-  const userId = (req as any).user?.id; // Assuming user is set by auth middleware
+  const userId = (req as any).user?.id;
 
   if (!userId) {
     return ResponseServer(res, 401, { msg: "Unauthorized" });
   }
 
   try {
-    // Check if already attended today
     const today = moment().startOf("day").toDate();
     const tomorrow = moment().endOf("day").toDate();
 
-    const existingAbsence = await prisma.absence.findFirst({
+    // Get user with absen_method
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        fullname: true,
+        absen_method: true,
+      },
+    });
+
+    // Get today's attendance
+    const todayAbsence = await prisma.absence.findFirst({
       where: {
         userId,
         check_in: {
@@ -164,21 +188,94 @@ export const SELF_ATTEND = async (
       },
     });
 
-    if (existingAbsence) {
-      return ResponseServer(res, 400, { msg: "Sudah absen hari ini" });
-    }
-
-    // Create absence
-    await prisma.absence.create({
+    return ResponseServer(res, 200, {
       data: {
-        method,
-        check_in: new Date(),
+        user,
+        attendance: todayAbsence,
+        checked_in: !!todayAbsence,
+        checked_out: !!todayAbsence?.check_out,
+      },
+    });
+  } catch (err) {
+    console.log(err);
+    return ResponseServer(res, 500, {
+      msg: (err as any).message || "Internal Server Error",
+    });
+  }
+};
+
+export const SELF_ATTEND = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { method, type = "CHECK_IN" } = req.body; // type: CHECK_IN or CHECK_OUT
+  const userId = (req as any).user?.id; // Assuming user is set by auth middleware
+
+  if (!userId) {
+    return ResponseServer(res, 401, { msg: "Unauthorized" });
+  }
+
+  try {
+    // Get today's date range
+    const today = moment().startOf("day").toDate();
+    const tomorrow = moment().endOf("day").toDate();
+
+    // Check if user has attendance record today
+    let todayAbsence = await prisma.absence.findFirst({
+      where: {
         userId,
-        absence_status: "HADIR",
+        check_in: {
+          gte: today,
+          lte: tomorrow,
+        },
       },
     });
 
-    return ResponseServer(res, 200, { msg: "Absen berhasil" });
+    if (type === "CHECK_IN") {
+      // Check-In: Create new record if not exists
+      if (todayAbsence) {
+        return ResponseServer(res, 400, {
+          msg: "Sudah check-in hari ini",
+          data: todayAbsence,
+        });
+      }
+
+      const newAbsence = await prisma.absence.create({
+        data: {
+          method,
+          check_in: new Date(),
+          userId,
+          absence_status: "HADIR",
+        },
+      });
+
+      return ResponseServer(res, 200, {
+        msg: "Check-in berhasil",
+        data: newAbsence,
+      });
+    } else if (type === "CHECK_OUT") {
+      // Check-Out: Update existing record
+      if (!todayAbsence) {
+        return ResponseServer(res, 400, {
+          msg: "Belum check-in hari ini",
+        });
+      }
+
+      const updatedAbsence = await prisma.absence.update({
+        where: { id: todayAbsence.id },
+        data: {
+          check_out: new Date(),
+        },
+      });
+
+      return ResponseServer(res, 200, {
+        msg: "Check-out berhasil",
+        data: updatedAbsence,
+      });
+    }
+
+    return ResponseServer(res, 400, { msg: "Invalid type" });
   } catch (err) {
     console.log(err);
     return ResponseServer(res, 500, {

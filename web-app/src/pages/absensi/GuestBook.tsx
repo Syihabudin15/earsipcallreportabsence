@@ -349,7 +349,7 @@ export default function DataGuestBook() {
         confirmLoading={loading}
         width={760}
       >
-        <Space direction="vertical" className="w-full">
+        <Space orientation="vertical" className="w-full">
           <Input
             placeholder="Nama tamu"
             value={form.name || ""}

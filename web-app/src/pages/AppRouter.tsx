@@ -40,11 +40,11 @@ function AppRouter() {
     <main className="bg-slate-50">
       <Routes>
         <Route path="/" element={<DashboardApp />} />
+        <Route path="/profile" element={<UserProfile />} />
         <Route element={<ProtectedRoute path={path} />}>
           <Route path="/sub_type" element={<DataSubmissionType />} />
           <Route path="/debitur" element={<DataDebitur />} />
           <Route path="/user" element={<UserManagement />} />
-          <Route path="/profile" element={<UserProfile />} />
           <Route path="/log-activities" element={<LogActivities />} />
           <Route path="/role" element={<DataRole />} />
           <Route path="/position" element={<DataPosition />} />
