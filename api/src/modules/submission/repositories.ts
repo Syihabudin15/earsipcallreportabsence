@@ -140,7 +140,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       data: data.map((d) => ({
         ...d,
         activities: JSON.parse(d.activities || "[]"),
-        coments: JSON.parse(d.coments),
+        coments: JSON.parse(d.coments || "[]"),
       })),
       total,
     });
@@ -230,14 +230,35 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
           activities: JSON.stringify(savedSub.activities),
         },
       });
+      const incomingFileIds = Product.ProductType.ProductTypeFile.flatMap(
+        (ptf: any) => (ptf.Files || []).map((f: any) => f.id),
+      ).filter((fileId: any) => fileId); // pastikan ID tidak null/undefined
+
+      // 2. Hapus file di database yang terkait dengan submission ini tapi TIDAK ADA di list kiriman frontend
+      await tx.files.deleteMany({
+        where: {
+          submissionId: id as string,
+          id: { notIn: incomingFileIds },
+        },
+      });
       for (const productTypeFile of Product.ProductType.ProductTypeFile) {
         if (productTypeFile.Files) {
-          for (const files of productTypeFile.Files) {
-            const { id: fileId, ...other } = files;
+          for (const file of productTypeFile.Files) {
+            const { id: fileId, ...fileData } = file;
+
             await tx.files.upsert({
-              where: { id: fileId },
-              update: files,
-              create: other,
+              where: { id: fileId || "" }, // Jika file baru, id biasanya kosong
+              update: {
+                ...fileData,
+                submissionId: id as string,
+                productTypeFileId: productTypeFile.id,
+              },
+              create: {
+                ...fileData,
+                id: fileId || undefined, // Biarkan prisma/db generate jika tidak ada
+                submissionId: id as string,
+                productTypeFileId: productTypeFile.id,
+              },
             });
           }
         }
@@ -312,8 +333,8 @@ export const PATCH = async (
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
-    find.coments = JSON.parse(find.coments);
-    find.activities = JSON.parse(find.activities);
+    find.coments = JSON.parse(find.coments || "[]");
+    find.activities = JSON.parse(find.activities || "[]");
     return ResponseServer(res, 200, { msg: "OK", data: find });
   } catch (err) {
     console.log(err);

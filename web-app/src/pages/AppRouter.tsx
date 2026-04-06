@@ -20,6 +20,7 @@ import UpdateVisit from "./creport/UpdateVisit";
 import DetailVisit from "./creport/DetailVisit";
 import DebiturCallReport from "./creport/Debitur";
 import UserManagement from "./app/User";
+import DebiturEArsip from "./earsip/Debitur";
 
 function AppRouter() {
   const path = window.location.pathname;
@@ -35,6 +36,8 @@ function AppRouter() {
           <Route path="/user" element={<UserManagement />} />
           <Route path="/role" element={<DataRole />} />
           <Route path="/position" element={<DataPosition />} />
+
+          {/* EARSIP */}
           <Route path="/earsip/" element={<DashboardApp />} />
           <Route path="/earsip/product_type" element={<DataProductType />} />
           <Route path="/earsip/product" element={<DataProduct />} />
@@ -47,6 +50,9 @@ function AppRouter() {
             path="/earsip/submission/upsert/:id"
             element={<UpdateSubmission />}
           />
+          <Route path="/earsip/debitur" element={<DebiturEArsip />} />
+
+          {/* CALLREPORT */}
           <Route path="/callreport/" element={<DashboardApp />} />
           <Route path="/callreport/debitur" element={<DebiturCallReport />} />
           <Route path="/callreport/category" element={<DataVisitCategory />} />

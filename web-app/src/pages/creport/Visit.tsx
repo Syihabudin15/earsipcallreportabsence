@@ -366,9 +366,9 @@ export default function DataVisit() {
   ];
 
   const content = (
-    <div className="p-4 w-96 max-h-96 overflow-y-auto space-y-4">
+    <div className="p-2 w-96 max-h-72 overflow-y-auto">
       <div className="flex flex-col w-full">
-        <label className="mb-2 font-semibold text-gray-700 flex items-center gap-2">
+        <label className="mb-1 font-semibold text-gray-700 flex items-center gap-2">
           <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
           Jenis Pemohon
         </label>
@@ -383,11 +383,11 @@ export default function DataVisit() {
           value={pageprops.submissionTypeId}
           optionFilterProp={"label"}
           showSearch
-          size="large"
+          size="small"
         />
       </div>
       <div className="flex flex-col w-full">
-        <label className="mb-2 font-semibold text-gray-700 flex items-center gap-2">
+        <label className="mb-1 font-semibold text-gray-700 flex items-center gap-2">
           <span className="w-2 h-2 bg-green-500 rounded-full"></span>
           Kategori Kunjungan
         </label>
@@ -402,11 +402,11 @@ export default function DataVisit() {
           value={pageprops.visitCategoryId}
           optionFilterProp={"label"}
           showSearch
-          size="large"
+          size="small"
         />
       </div>
       <div className="flex flex-col w-full">
-        <label className="mb-2 font-semibold text-gray-700 flex items-center gap-2">
+        <label className="mb-1 font-semibold text-gray-700 flex items-center gap-2">
           <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
           Tujuan Kunjungan
         </label>
@@ -421,11 +421,11 @@ export default function DataVisit() {
           value={pageprops.visitPurposeId}
           optionFilterProp={"label"}
           showSearch
-          size="large"
+          size="small"
         />
       </div>
       <div className="flex flex-col w-full">
-        <label className="mb-2 font-semibold text-gray-700 flex items-center gap-2">
+        <label className="mb-1 font-semibold text-gray-700 flex items-center gap-2">
           <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
           Hasil Kunjungan
         </label>
@@ -438,11 +438,11 @@ export default function DataVisit() {
           value={pageprops.visitStatusId}
           optionFilterProp={"label"}
           showSearch
-          size="large"
+          size="small"
         />
       </div>
       <div className="flex flex-col w-full">
-        <label className="mb-2 font-semibold text-gray-700 flex items-center gap-2">
+        <label className="mb-1 font-semibold text-gray-700 flex items-center gap-2">
           <span className="w-2 h-2 bg-red-500 rounded-full"></span>
           Status Kunjungan
         </label>
@@ -461,12 +461,12 @@ export default function DataVisit() {
           value={pageprops.approve_status}
           optionFilterProp={"label"}
           showSearch
-          size="large"
+          size="small"
         />
       </div>
 
       <div className="flex flex-col w-full">
-        <label className="mb-2 font-semibold text-gray-700 flex items-center gap-2">
+        <label className="mb-1 font-semibold text-gray-700 flex items-center gap-2">
           <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
           Periode Tanggal
         </label>
@@ -480,13 +480,13 @@ export default function DataVisit() {
           onChange={(_date, datestr) =>
             setPageprops({ ...pageprops, backdate: datestr })
           }
-          size="large"
+          size="small"
           style={{ width: "100%" }}
         />
       </div>
       <div className="flex justify-end gap-2 pt-4 border-t">
         <Button
-          size="large"
+          size="small"
           danger
           icon={<CloseOutlined />}
           onClick={() =>
@@ -508,24 +508,21 @@ export default function DataVisit() {
   );
 
   return (
-    <div className="space-y-3 min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50 p-3 md:p-4">
-      {/* --- HEADER WITH GRADIENT --- */}
-      <div className="bg-linear-to-r from-blue-600 to-blue-700 rounded-2xl p-4 md:p-6 text-white shadow-lg">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold mb-1">
-              📋 Monitoring Kunjungan
-            </h1>
-            <p className="text-blue-100 text-sm md:text-base hidden md:block">
-              Pantau status persetujuan kunjungan
-            </p>
-          </div>
+    <div className="space-y-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">
+            Data Kunjungan
+          </h1>
+          <p className="text-slate-500 text-sm">
+            Monitoring data kunjungan debitur
+          </p>
         </div>
       </div>
 
       {/* --- STATISTICS CARDS --- */}
       <Row gutter={[12, 12]}>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={12} sm={12} lg={6}>
           <Card
             className="shadow-sm border-l-4 border-l-blue-500 hover:shadow-md transition-shadow"
             styles={{
@@ -545,7 +542,7 @@ export default function DataVisit() {
             </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={12} sm={12} lg={6}>
           <Card
             className="shadow-sm border-l-4 border-l-green-500 hover:shadow-md transition-shadow"
             styles={{ body: { padding: 10 } }}
@@ -563,7 +560,7 @@ export default function DataVisit() {
             </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={12} sm={12} lg={6}>
           <Card
             className="shadow-sm border-l-4 border-l-orange-500 hover:shadow-md transition-shadow"
             styles={{ body: { padding: "10px" } }}
@@ -581,7 +578,7 @@ export default function DataVisit() {
             </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={12} sm={12} lg={6}>
           <Card
             className="shadow-sm border-l-4 border-l-red-500 hover:shadow-md transition-shadow"
             styles={{ body: { padding: "10px" } }}
@@ -602,15 +599,15 @@ export default function DataVisit() {
       </Row>
 
       {/* --- FILTER & SEARCH --- */}
-      <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
-        <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="bg-white p-2 rounded-lg shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
           <div className="flex gap-2">
             {hasAccess(window.location.pathname, "write") && (
               <Link to={"/app/callreport/visit/upsert"}>
                 <Button
                   icon={<Plus size={14} />}
                   type="primary"
-                  size="middle"
+                  size="small"
                   className="flex items-center gap-1 text-sm"
                 >
                   Tambah
@@ -623,7 +620,7 @@ export default function DataVisit() {
               type="text"
               placeholder="Cari nama/ID/NIK..."
               className="transition-all"
-              size="middle"
+              size="small"
               style={{ width: "auto", minWidth: 180 }}
               onChange={(e) =>
                 setPageprops({ ...pageprops, search: e.target.value })
@@ -636,7 +633,7 @@ export default function DataVisit() {
               placement="topRight"
             >
               <Button
-                size="middle"
+                size="small"
                 type={
                   pageprops.submissionTypeId ||
                   pageprops.visitCategoryId ||

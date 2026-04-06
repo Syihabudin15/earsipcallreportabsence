@@ -629,28 +629,30 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
                         (file, ind) => (
                           <InputFileUpload
                             filetype={p.type}
-                            ondelete={(val: IFile) => {
+                            ondelete={() => {
+                              const updatedProductTypeFile =
+                                data.Product.ProductType.ProductTypeFile.map(
+                                  (pdffile, pdfi) => {
+                                    if (pdfi === i) {
+                                      return {
+                                        ...pdffile,
+                                        // Gunakan filter untuk benar-benar menghapus file dari array
+                                        Files: pdffile.Files.filter(
+                                          (_pfile, pfilei) => pfilei !== ind,
+                                        ),
+                                      };
+                                    }
+                                    return pdffile;
+                                  },
+                                );
+
                               setData({
                                 ...data,
                                 Product: {
                                   ...data.Product,
                                   ProductType: {
                                     ...data.Product.ProductType,
-                                    ProductTypeFile:
-                                      data.Product.ProductType.ProductTypeFile.map(
-                                        (pdffile, pdfi) => ({
-                                          ...pdffile,
-                                          ...(pdfi === i && {
-                                            // Files: [...pdffile.Files, val],
-                                            Files: pdffile.Files.map(
-                                              (pfile, pfilei) => ({
-                                                ...pfile,
-                                                ...(pfilei === ind && val),
-                                              }),
-                                            ),
-                                          }),
-                                        }),
-                                      ),
+                                    ProductTypeFile: updatedProductTypeFile,
                                   },
                                 },
                               });

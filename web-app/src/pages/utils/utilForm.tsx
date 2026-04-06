@@ -177,7 +177,7 @@ export const InputFileUpload = ({
           size="small"
           icon={<DeleteOutlined />}
           danger
-          onClick={() => ondelete({ ...record, submissionId: null })}
+          onClick={() => ondelete()}
           loading={loading}
         ></Button>
       ) : (

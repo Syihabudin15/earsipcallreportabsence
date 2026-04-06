@@ -66,31 +66,40 @@ const Dashboard = () => {
 
   // Generate real growth chart data from visits
   const generateGrowthData = () => {
-    const days = [
-      "Senin",
-      "Selasa",
-      "Rabu",
-      "Kamis",
-      "Jumat",
-      "Sabtu",
-      "Minggu",
-    ];
     const allVisits = data.visitCategory.flatMap((d) => d.Visit) || [];
+    const allSubmissions =
+      data.productType.flatMap((pd) =>
+        pd.Product.flatMap((p) => p.Submission),
+      ) || [];
 
-    return days.map((day, idx) => {
-      const visitsPerDay = Math.ceil(allVisits.length / 7);
-      const startIdx = idx * visitsPerDay;
-      const endIdx = startIdx + visitsPerDay;
-      const dayVisits = allVisits.slice(startIdx, endIdx);
+    const now = new Date();
+    const weeks = [];
 
-      return {
-        day,
-        submissions: Math.ceil(totalSubmission / 7 + Math.random() * 5),
-        visits: dayVisits.length,
-        approved: dayVisits.filter((v: any) => v.approve_status === "APPROVED")
-          .length,
-      };
-    });
+    for (let i = 3; i >= 0; i--) {
+      // Tentukan rentang awal dan akhir minggu (7 hari per blok)
+      const start = new Date();
+      start.setDate(now.getDate() - (i + 1) * 7);
+      const end = new Date();
+      end.setDate(now.getDate() - i * 7);
+
+      // Filter data berdasarkan created_at (Pastikan backend mengirim field ini)
+      const weeklyVisits = allVisits.filter((v) => {
+        const d = new Date(v.created_at); // Sesuaikan nama field date dari DB Anda
+        return d >= start && d < end;
+      });
+
+      const weeklySubs = allSubmissions.filter((s) => {
+        const d = new Date(s.created_at); // Sesuaikan nama field date dari DB Anda
+        return d >= start && d < end;
+      });
+
+      weeks.push({
+        name: i === 0 ? "Minggu Ini" : `${i} Minggu Lalu`,
+        submissions: weeklySubs.length,
+        visits: weeklyVisits.length,
+      });
+    }
+    return weeks;
   };
 
   const chartData = generateGrowthData();
@@ -242,7 +251,7 @@ const Dashboard = () => {
       {/* --- CHARTS SECTION --- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Growth Chart */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        {/* <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
           <h3 className="font-bold text-slate-900 mb-1">Grafik Pertumbuhan</h3>
           <p className="text-xs text-slate-500 mb-4">7 Hari Terakhir</p>
           <ResponsiveContainer width="100%" height={300}>
@@ -280,6 +289,66 @@ const Dashboard = () => {
                 fill="#10b981"
                 radius={[8, 8, 0, 0]}
                 name="Disetujui"
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div> */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <h3 className="font-bold text-slate-900 mb-1">Grafik Pertumbuhan</h3>
+          <p className="text-xs text-slate-500 mb-4">4 Minggu Terakhir</p>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#e2e8f0"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="name" // Menggunakan 'name' dari array weeks
+                stroke="#64748b"
+                style={{ fontSize: "12px" }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                stroke="#64748b"
+                style={{ fontSize: "12px" }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <Tooltip
+                cursor={{ fill: "#f8fafc" }}
+                contentStyle={{
+                  backgroundColor: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                }}
+              />
+              <Legend
+                iconType="circle"
+                wrapperStyle={{ fontSize: "12px", paddingTop: "20px" }}
+              />
+              <Bar
+                dataKey="submissions"
+                fill="#3b82f6"
+                radius={[4, 4, 0, 0]}
+                name="Permohonan"
+                barSize={20}
+              />
+              <Bar
+                dataKey="visits"
+                fill="#f97316"
+                radius={[4, 4, 0, 0]}
+                name="Kunjungan"
+                barSize={20}
+              />
+              <Bar
+                dataKey="approved"
+                fill="#10b981"
+                radius={[4, 4, 0, 0]}
+                name="Disetujui"
+                barSize={20}
               />
             </BarChart>
           </ResponsiveContainer>

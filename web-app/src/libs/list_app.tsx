@@ -103,18 +103,18 @@ export const menus: IMenu[] = [
         icon: <FormInput size={15} />,
         need_access: true,
       },
-      {
-        name: "Permohonan Download",
-        path: "/app/earsip/download",
-        icon: <FormInput size={15} />,
-        need_access: true,
-      },
-      {
-        name: "Permohonan Hapus",
-        path: "/app/earsip/delete",
-        icon: <FormInput size={15} />,
-        need_access: true,
-      },
+      // {
+      //   name: "Permohonan Download",
+      //   path: "/app/earsip/download",
+      //   icon: <FormInput size={15} />,
+      //   need_access: true,
+      // },
+      // {
+      //   name: "Permohonan Hapus",
+      //   path: "/app/earsip/delete",
+      //   icon: <FormInput size={15} />,
+      //   need_access: true,
+      // },
     ],
   },
   {

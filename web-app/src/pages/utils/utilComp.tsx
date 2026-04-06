@@ -32,7 +32,7 @@ import {
 } from "@ant-design/icons";
 import { IDRFormat } from "./utilForm";
 import moment from "moment";
-import { BookPlus } from "lucide-react";
+import { BookPlus, MessageSquare } from "lucide-react";
 import Title from "antd/es/typography/Title";
 const { Text } = Typography;
 const { Panel } = Collapse;
@@ -136,93 +136,153 @@ export const DetailSubmission = ({
       style={{ top: 10 }}
     >
       <div style={{ padding: "10px 0" }}>
-        {/* ROW 1: STATUS UTAMA & JAMINAN */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1.5fr 1fr 1fr",
+            // Menggunakan repeat autofill agar kolom turun ke bawah saat ruang tidak cukup
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap: "16px",
             marginBottom: "20px",
           }}
         >
-          <Card size="small" className="bg-light">
+          {/* CARD 1: Nilai Permohonan */}
+          <Card
+            size="small"
+            className="bg-light"
+            style={{ height: "100%" }} // Memastikan tinggi sama
+          >
             <Text type="secondary">Total Nilai Permohonan (Value)</Text>
-            <Title level={3} style={{ margin: 0, color: "#0958d9" }}>
+            <Title
+              level={3}
+              style={{
+                margin: "4px 0",
+                color: "#0958d9",
+                fontSize: "clamp(18px, 5vw, 24px)",
+              }}
+            >
               Rp. {IDRFormat(record.value)}
             </Title>
-            <Space style={{ marginTop: 8 }}>
-              <Tag color="blue">{record.Product?.ProductType?.name}</Tag>
-              <Badge status="processing" text={record.Product?.name} />
-            </Space>
-            <div></div>
-            <Space style={{ marginTop: 8 }}>
-              <Tag color="blue">No Lemari/Laci : </Tag>
-              <Badge status="processing" text={record.drawer_code || "-"} />
+
+            <Space
+              direction="vertical"
+              size={4}
+              style={{ width: "100%", marginTop: 8 }}
+            >
+              <Space wrap>
+                <Tag color="blue">{record.Product?.ProductType?.name}</Tag>
+                <Badge status="processing" text={record.Product?.name} />
+              </Space>
+
+              <Space wrap>
+                <Tag color="blue">No Lemari/Laci : </Tag>
+                <Badge status="processing" text={record.drawer_code || "-"} />
+              </Space>
             </Space>
           </Card>
 
-          <Card
-            size="small"
-            title="Status Permohonan"
-            styles={{
-              header: {
-                fontSize: "12px",
-                background: record.is_active ? "#f6ffed" : "#fff7e6",
-              },
-            }}
-            style={{
-              border: record.is_active
-                ? "1px solid #b7eb8f"
-                : "1px solid #ffd591",
-            }}
+          {/* Wrapper untuk status agar di HP bisa bersebelahan atau menyesuaikan */}
+          <div
+            style={
+              {
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "16px",
+                // Jika di layar sangat kecil (dibawah 400px), buat status jadi tumpuk atas bawah
+                gridColumn: "span 1",
+                "@media (maxWidth: 400px)": {
+                  gridTemplateColumns: "1fr",
+                },
+              } as any
+            }
           >
-            <Space
-              direction="vertical"
-              align="center"
-              style={{ width: "100%" }}
+            {/* CARD 2: Status Permohonan */}
+            <Card
+              size="small"
+              title="Status Permohonan"
+              styles={{
+                header: {
+                  fontSize: "12px",
+                  textAlign: "center",
+                  background: record.is_active ? "#f6ffed" : "#fff7e6",
+                },
+              }}
+              style={{
+                border: record.is_active
+                  ? "1px solid #b7eb8f"
+                  : "1px solid #ffd591",
+              }}
             >
-              {record.is_active ? (
-                <Tag color="success" icon={<SafetyCertificateOutlined />}>
-                  AKTIF
-                </Tag>
-              ) : (
-                <Tag color="warning" icon={<HistoryOutlined />}>
-                  PENDING
-                </Tag>
-              )}
-            </Space>
-          </Card>
-          <Card
-            size="small"
-            title="Status Jaminan"
-            styles={{
-              header: {
-                fontSize: "12px",
-                background: record.guarantee_status ? "#f6ffed" : "#fff7e6",
-              },
-            }}
-            style={{
-              border: record.guarantee_status
-                ? "1px solid #b7eb8f"
-                : "1px solid #ffd591",
-            }}
-          >
-            <Space
-              orientation="vertical"
-              align="center"
-              style={{ width: "100%" }}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  padding: "8px 0",
+                }}
+              >
+                {record.is_active ? (
+                  <Tag
+                    color="success"
+                    icon={<SafetyCertificateOutlined />}
+                    style={{ margin: 0 }}
+                  >
+                    AKTIF
+                  </Tag>
+                ) : (
+                  <Tag
+                    color="warning"
+                    icon={<HistoryOutlined />}
+                    style={{ margin: 0 }}
+                  >
+                    PENDING
+                  </Tag>
+                )}
+              </div>
+            </Card>
+
+            {/* CARD 3: Status Jaminan */}
+            <Card
+              size="small"
+              title="Status Jaminan"
+              styles={{
+                header: {
+                  fontSize: "12px",
+                  textAlign: "center",
+                  background: record.guarantee_status ? "#f6ffed" : "#fff7e6",
+                },
+              }}
+              style={{
+                border: record.guarantee_status
+                  ? "1px solid #b7eb8f"
+                  : "1px solid #ffd591",
+              }}
             >
-              {record.guarantee_status ? (
-                <Tag color="success" icon={<SafetyCertificateOutlined />}>
-                  SELESAI
-                </Tag>
-              ) : (
-                <Tag color="warning" icon={<HistoryOutlined />}>
-                  PENDING
-                </Tag>
-              )}
-            </Space>
-          </Card>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  padding: "8px 0",
+                }}
+              >
+                {record.guarantee_status ? (
+                  <Tag
+                    color="success"
+                    icon={<SafetyCertificateOutlined />}
+                    style={{ margin: 0 }}
+                  >
+                    SELESAI
+                  </Tag>
+                ) : (
+                  <Tag
+                    color="warning"
+                    icon={<HistoryOutlined />}
+                    style={{ margin: 0 }}
+                  >
+                    PENDING
+                  </Tag>
+                )}
+              </div>
+            </Card>
+          </div>
         </div>
 
         {/* ROW 2: DETAIL DEBITUR & ACCOUNT */}
@@ -262,33 +322,68 @@ export const DetailSubmission = ({
           </div>
         </Divider>
         <Descriptions bordered size="small" column={{ xl: 2, xs: 1 }}>
-          <Descriptions.Item label="Nama Lengkap">
-            **{record.Debitur?.fullname}**
+          <Descriptions.Item label="Kategori Berkas">
+            **{record.Product.ProductType.name}**
           </Descriptions.Item>
-          <Descriptions.Item label="NIK / KTP">
-            {record.Debitur?.nik}
+          <Descriptions.Item label="Produk">
+            {record.Product.name}
           </Descriptions.Item>
-          <Descriptions.Item label="Nomor CIF">
-            `{record.Debitur?.cif || "-"}`
+          <Descriptions.Item label="Tanggal Permohonan">
+            `{moment(record.created_at).format("DD-MM-YYYY")}`
           </Descriptions.Item>
-          <Descriptions.Item label="Tempat, Tanggal Lahir">
-            {`${record.Debitur.birthplace}, ${moment(record.Debitur.birthdate).format("DD-MM-YYYY")}`}
+          <Descriptions.Item label="Nilai">
+            Rp. {IDRFormat(record.value)}
           </Descriptions.Item>
-          <Descriptions.Item label="Alamat">
-            {record.Debitur.address || "-"}
+          <Descriptions.Item label="Tujuan Penggunaan">
+            {record.purpose}
           </Descriptions.Item>
-          <Descriptions.Item label="No Telepon">
-            {record.Debitur.phone || "-"}
+          <Descriptions.Item label="No Rekening">
+            {record.account_number}
           </Descriptions.Item>
-          <Descriptions.Item label="Email">
-            {record.Debitur.email || "-"}
-          </Descriptions.Item>
-          <Descriptions.Item label="Jenis Pemohon">
-            {record.Debitur.SubmissionType.name}
+          <Descriptions.Item label="No Lemari">
+            {record.drawer_code}
           </Descriptions.Item>
         </Descriptions>
 
-        {/* ROW 3: DAFTAR FILE DIGITAL */}
+        <div style={{ marginTop: 16, textAlign: "right" }}>
+          {record.coments && record.coments.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-linear-to-r from-yellow-50 to-amber-50 p-6 border-b border-gray-100">
+                <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                  <MessageSquare size={20} className="text-yellow-600" />
+                  Komentar ({record.coments.length})
+                </h2>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {record.coments.map((comment, index) => (
+                  <div
+                    key={index}
+                    className="border-l-4 border-yellow-400 pl-4 py-2"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="font-semibold text-gray-900">
+                          {comment.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {comment.date
+                            ? moment(comment.date).format("DD MMMM YYYY HH:mm")
+                            : "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                      {comment.comment}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ROW 4: DAFTAR FILE DIGITAL */}
         <Divider titlePlacement="left" plain>
           <FilePdfOutlined /> Dokumen Elektronik (E-Files)
         </Divider>
@@ -351,21 +446,22 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
           (t: IProductTypeFile) => t.id === ptypefile,
         )?.Files.map((f: IFile) => f.url),
       );
-      console.log({ allFiles });
-      console.log({
-        url,
-        name,
-        type,
-        ptypefile,
-        urls: record.Product?.ProductType?.ProductTypeFile.find(
-          (t: IProductTypeFile) => t.name === ptypefile,
-        )?.Files.map((f: IFile) => f.url),
-      });
       setCurrentFile({ url: allFiles || "", name, type });
     } else {
       setCurrentFile({ url, name, type });
     }
     setPreviewOpen(true);
+  };
+
+  const handleDownload = (url: string, fileName: string) => {
+    // Membuat elemen link sementara
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName; // Memberi nama file saat didownload
+    link.target = "_blank"; // Opsional: buka di tab baru jika browser tidak mendukung download langsung
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const productFiles =
@@ -496,6 +592,7 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
                           <Button
                             size="small"
                             icon={<PrinterOutlined />}
+                            onClick={() => handleDownload(file.url, file.name)}
                             disabled={
                               !user ||
                               (!file.allow_download

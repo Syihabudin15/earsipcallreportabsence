@@ -2,6 +2,7 @@ import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 import moment from "moment";
+import type { UserCost } from "@prisma/client";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
   let { page = 1, limit = 50, search, roleId, positionId } = req.query;
@@ -71,7 +72,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
     });
     if (UserCost.length !== 0) {
       await prisma.userCost.createMany({
-        data: UserCost.map((p) => {
+        data: UserCost.map((p: UserCost) => {
           return { ...p, userId: saved.id };
         }),
       });

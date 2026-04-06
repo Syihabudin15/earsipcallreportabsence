@@ -12,16 +12,18 @@ import { useEffect, useState } from "react";
 import type {
   IDebitur,
   IPageProps,
+  ISubmission,
   ISubType,
-  IVisit,
 } from "../../libs/interface";
 import useContext from "../../libs/context";
 import moment from "moment";
 import { Link } from "react-router-dom";
 import { CloseOutlined } from "@ant-design/icons";
 import api from "../../libs/api";
+import { IDRFormat } from "../utils/utilForm";
+import { CollapseText } from "../utils/utilComp";
 
-export default function DebiturCallReport() {
+export default function DebiturEArsip() {
   const [loading, setLoading] = useState(false);
   const [pageprops, setPageprops] = useState<IPageProps<IDebitur>>({
     page: 1,
@@ -158,11 +160,11 @@ export default function DebiturCallReport() {
       },
     },
     {
-      title: "Jumlah Kunjungan",
+      title: "Jumlah Permohonan",
       key: "visitCount",
       dataIndex: "Visit",
       render(_value, record, _index) {
-        const visitCount = record.Visit ? record.Visit.length : 0;
+        const visitCount = record.Submissions ? record.Submissions.length : 0;
         return (
           <div className="flex items-center justify-center gap-1">
             <Calendar size={14} className="text-blue-600" />
@@ -189,9 +191,9 @@ export default function DebiturCallReport() {
   ];
 
   // Nested visits columns
-  const visitColumns: TableProps<IVisit>["columns"] = [
+  const visitColumns: TableProps<ISubmission>["columns"] = [
     {
-      title: "ID Kunjungan",
+      title: "ID Permohonan",
       key: "id",
       dataIndex: "id",
       render(value) {
@@ -199,40 +201,41 @@ export default function DebiturCallReport() {
       },
     },
     {
-      title: "Tanggal Rencana",
-      key: "date",
-      dataIndex: "date",
-      render(value) {
-        return (
-          <div className="text-xs flex items-center gap-1">
-            <Calendar size={12} />
-            {moment(value).format("DD/MM/YYYY")}
-          </div>
-        );
-      },
-    },
-    {
-      title: "Tanggal Aktual",
+      title: "Produk",
       key: "date_action",
-      dataIndex: "date_action",
-      render(value) {
+      dataIndex: ["Product", "ProductType", "name"],
+      render(_value, record, _index) {
         return (
-          <div className="text-xs flex items-center gap-1">
-            <Calendar size={12} />
-            {moment(value).format("DD/MM/YYYY")}
+          <div className="text-xs">
+            <div className="font-semibold">
+              {record.Product.ProductType.name}
+            </div>
+            <div className="opacity-80">@{record.Product.name}</div>
           </div>
         );
       },
     },
     {
-      title: "Jenis/Tujuan Kunjungan",
+      title: "No Rekening",
+      key: "rekening",
+      dataIndex: "rekening",
+      render(_value, record) {
+        return (
+          <span className="text-xs opacity-80">{record.account_number}</span>
+        );
+      },
+    },
+    {
+      title: "Nilai",
       key: "purpose",
       dataIndex: "VisitCategory",
       render(_value, record) {
         return (
           <div className="text-xs">
-            <div className="font-semibold">{record.VisitCategory?.name}</div>
-            <div className="opacity-80">@{record.VisitPurpose?.name}</div>
+            <div className="font-semibold">Rp. {IDRFormat(record.value)}</div>
+            <div className="opacity-80">
+              <CollapseText text={record.purpose || ""} />
+            </div>
           </div>
         );
       },
@@ -241,41 +244,51 @@ export default function DebiturCallReport() {
       title: "Status",
       key: "approve_status",
       dataIndex: "approve_status",
-      render(value) {
-        const statusConfig: any = {
-          APPROVED: { color: "green", label: "✅ DISETUJUI" },
-          REJECTED: { color: "red", label: "❌ DITOLAK" },
-          PENDING: { color: "orange", label: "⏳ MENUNGGU" },
-        };
-        const config = statusConfig[value] || statusConfig.PENDING;
+      render(_value, record) {
         return (
-          <span
-            className={`text-xs font-semibold px-2 py-1 rounded-full ${
-              config.color === "green"
-                ? "bg-green-100 text-green-700"
-                : config.color === "red"
-                  ? "bg-red-100 text-red-700"
-                  : "bg-orange-100 text-orange-700"
-            }`}
-          >
-            {config.label}
-          </span>
+          <div>
+            <div className="flex gap-2 items-center">
+              Permohonan{" "}
+              <span
+                className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                  record.is_active
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                {record.is_active ? "Aktif" : "Tidak Aktif"}
+              </span>
+            </div>
+            <div className="flex gap-2 items-center">
+              Jaminan{" "}
+              <span
+                className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                  record.guarantee_status
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                {record.guarantee_status ? "Aktif" : "Tidak Aktif"}
+              </span>
+            </div>
+          </div>
         );
       },
     },
     {
-      title: "Ringkasan",
-      key: "summary",
-      dataIndex: "summary",
-      render(value) {
-        const maxLength = 50;
-        const text = value || "";
+      title: "Tanggal",
+      key: "created_at",
+      dataIndex: "created_at",
+      render(_value, record) {
         return (
-          <span className="text-xs opacity-80">
-            {text.length > maxLength
-              ? `${text.substring(0, maxLength)}...`
-              : text}
-          </span>
+          <div className="text-xs">
+            <div className="font-semibold">
+              {moment(record.created_at).format("DD/MM/YYYY")}
+            </div>
+            <div className="opacity-80">
+              {moment(record.updated_at).format("DD/MM/YYYY")}
+            </div>
+          </div>
         );
       },
     },
@@ -325,7 +338,7 @@ export default function DebiturCallReport() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-            Data Debitur Kunjungan
+            Data Debitur EArsip
           </h1>
           <p className="text-slate-500 text-sm">Monitoring data debitur</p>
         </div>
@@ -390,18 +403,18 @@ export default function DebiturCallReport() {
           className="rounded-lg overflow-hidden"
           expandable={{
             expandedRowRender: (record) => {
-              const visits = record.Visit || [];
+              const visits = record.Submissions || [];
               if (visits.length === 0) {
                 return (
                   <div className="p-4 text-center text-gray-500">
-                    Tidak ada data kunjungan
+                    Tidak ada data permohonan
                   </div>
                 );
               }
               return (
-                <div className="bg-gray-50 rounded-lg ml-14">
+                <div className=" bg-gray-50 rounded-lg ml-14">
                   <h3 className="font-semibold text-gray-800 mb-3 text-sm">
-                    📋 Daftar Kunjungan ({visits.length} kunjungan)
+                    📋 Daftar Permohonan ({visits.length} permohonan)
                   </h3>
                   <Table
                     size="small"
@@ -416,7 +429,7 @@ export default function DebiturCallReport() {
               );
             },
             rowExpandable(record) {
-              return record.Visit && record.Visit.length > 0;
+              return record.Submissions && record.Submissions.length > 0;
             },
           }}
           pagination={{
