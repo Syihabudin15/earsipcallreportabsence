@@ -14,7 +14,7 @@ import { menus } from "../libs/list_app";
 import useContext from "../libs/context";
 import { Modal, Dropdown } from "antd";
 import { Link, useNavigate } from "react-router-dom";
-import HeaderAbsenceButton from "../components/HeaderAbsenceButton";
+// import HeaderAbsenceButton from "../components/HeaderAbsenceButton";
 
 const APP_COLOR = import.meta.env.VITE_APP_COLOR || "#F58220";
 
@@ -174,7 +174,7 @@ export default function MainLayout({
               <Bell size={20} />
               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
-            <HeaderAbsenceButton />
+            {/* <HeaderAbsenceButton /> */}
             <Dropdown
               menu={{
                 items: [

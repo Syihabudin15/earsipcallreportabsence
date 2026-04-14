@@ -1,6 +1,7 @@
 import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
+import type { ProductTypeFile } from "@prisma/client";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
   let { page = 1, limit = 50, search } = req.query;
@@ -16,7 +17,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       },
       skip: skip,
       take: limit,
-      include: { ProductTypeFile: true },
+      include: { ProductTypeFile: true, Product: true },
     });
 
     const total = await prisma.productType.count({
@@ -54,9 +55,17 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
     });
     if (ProductTypeFile.length !== 0) {
       await prisma.productTypeFile.createMany({
-        data: ProductTypeFile.map((p) => {
-          const { Files, ...pFile } = p;
+        data: ProductTypeFile.map((p: ProductTypeFile) => {
+          const { Files, ...pFile } = p as any;
           return { ...pFile, productTypeId: saved.id };
+        }),
+      });
+    }
+    if (Product.length !== 0) {
+      await prisma.product.createMany({
+        data: Product.map((p: typeof Product) => {
+          const { Submission, ...prod } = p;
+          return { ...prod, productTypeId: saved.id };
         }),
       });
     }
@@ -94,20 +103,21 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
     });
     if (savedProductType.length !== 0) {
       for (const p of ProductTypeFile) {
-        const find = await prisma.productTypeFile.findFirst({
-          where: { id: p.id },
-        });
         const { Files, ...pFiles } = p;
-        if (find) {
-          await prisma.productTypeFile.update({
-            where: { id: p.id },
-            data: { ...pFiles, productTypeId: saved.id },
-          });
-        } else {
-          await prisma.productTypeFile.create({
-            data: { ...pFiles, productTypeId: saved.id },
-          });
-        }
+        await prisma.productTypeFile.upsert({
+          where: { id: p.id },
+          update: { ...pFiles, productTypeId: saved.id },
+          create: { ...pFiles, productTypeId: saved.id },
+        });
+      }
+    }
+    if (Product.length !== 0) {
+      for (const p of Product) {
+        await prisma.product.upsert({
+          where: { id: p.id },
+          create: { ...p, productTypeId: saved.id },
+          update: { ...p, productTypeId: saved.id },
+        });
       }
     }
 
@@ -157,15 +167,13 @@ export const PATCH = async (
 
   if (!id) return ResponseServer(res, 404, { msg: "Not found data" });
   try {
-    const find = await prisma.productTypeFile.findFirst({
+    const find = await prisma.productType.findFirst({
       where: { id: id as string },
+      include: { ProductTypeFile: true, Product: true },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
-    await prisma.productTypeFile.update({
-      where: { id: id as string },
-      data: { status: false },
-    });
-    return ResponseServer(res, 200, { msg: "Data berhasil dihapus" });
+
+    return ResponseServer(res, 200, { msg: "OK", data: find });
   } catch (err) {
     console.log(err);
     return ResponseServer(res, 500, {

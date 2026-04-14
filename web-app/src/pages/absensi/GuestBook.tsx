@@ -16,7 +16,6 @@ import type {
   IGuestBook,
   IGuestBookType,
   IPageProps,
-  IParticipant,
 } from "../../libs/interface";
 import api from "../../libs/api";
 import useContext from "../../libs/context";
@@ -108,8 +107,20 @@ export default function DataGuestBook() {
 
   const handleSave = async () => {
     setLoading(true);
-    const participantData =
-      form.Participants?.filter((item) => item.name) || [];
+    const participantData = (form.Participants || [])
+      .filter((item) => item.name && item.name.trim())
+      .map((p) => {
+        // Track action for each participant
+        if (p.id && p.action === "delete") {
+          return { ...p, action: "delete" };
+        } else if (p.id && !p.action) {
+          return { ...p, action: "update" };
+        } else {
+          // New participant without id
+          const { id, ...data } = p;
+          return { ...data, action: "create" };
+        }
+      });
 
     try {
       if (action.record) {
@@ -210,7 +221,7 @@ export default function DataGuestBook() {
       title: "Peserta",
       key: "participants",
       render(_, record) {
-        return <span>{record.participants?.length || 0} orang</span>;
+        return <span>{record.Participants?.length || 0} orang</span>;
       },
     },
     {
@@ -231,7 +242,7 @@ export default function DataGuestBook() {
                     status_come: record.status_come,
                     description: record.description || "",
                     gBookTypeId: record.gBookTypeId,
-                    Participants: record.participants || [],
+                    Participants: record.Participants || [],
                   });
                 }}
               />
@@ -387,74 +398,120 @@ export default function DataGuestBook() {
           />
           <div>
             <div className="mb-2 font-semibold">Peserta</div>
-            {(form.Participants || []).map((participant, index) => (
-              <Space key={index} className="w-full mb-2" align="start">
-                <Input
-                  placeholder="Nama"
-                  value={participant.name}
-                  onChange={(e) => {
-                    const updated = [...(form.Participants || [])];
-                    updated[index] = {
-                      ...updated[index],
-                      name: e.target.value,
-                    };
-                    setForm({ ...form, Participants: updated });
-                  }}
-                  style={{ width: 240 }}
-                />
-                <Input
-                  placeholder="Phone"
-                  value={participant.phone}
-                  onChange={(e) => {
-                    const updated = [...(form.Participants || [])];
-                    updated[index] = {
-                      ...updated[index],
-                      phone: e.target.value,
-                    };
-                    setForm({ ...form, Participants: updated });
-                  }}
-                  style={{ width: 180 }}
-                />
-                <Input
-                  placeholder="Email"
-                  value={participant.email}
-                  onChange={(e) => {
-                    const updated = [...(form.Participants || [])];
-                    updated[index] = {
-                      ...updated[index],
-                      email: e.target.value,
-                    };
-                    setForm({ ...form, Participants: updated });
-                  }}
-                  style={{ width: 220 }}
-                />
-                <Input
-                  placeholder="Komentar"
-                  value={participant.comment}
-                  onChange={(e) => {
-                    const updated = [...(form.Participants || [])];
-                    updated[index] = {
-                      ...updated[index],
-                      comment: e.target.value,
-                    };
-                    setForm({ ...form, Participants: updated });
-                  }}
-                  style={{ width: 240 }}
-                />
-                <Button
-                  danger
-                  type="primary"
-                  size="small"
-                  onClick={() => {
-                    const updated = [...(form.Participants || [])];
-                    updated.splice(index, 1);
-                    setForm({ ...form, Participants: updated });
-                  }}
-                >
-                  Hapus
-                </Button>
-              </Space>
-            ))}
+            {(form.Participants || [])
+              .filter((p) => !p.action || p.action !== "delete")
+              .map((participant, index) => {
+                const actualIndex = (form.Participants || []).findIndex(
+                  (p) =>
+                    p.id === participant.id ||
+                    (p.name === participant.name && !p.id),
+                );
+                const isNew = !participant.id;
+
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      padding: "8px",
+                      marginBottom: "8px",
+                      backgroundColor: isNew ? "#fafafa" : "#fff",
+                      border: "1px solid #f0f0f0",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <Space className="w-full mb-2" align="start">
+                      {isNew && (
+                        <Tag color="green" style={{ marginRight: 0 }}>
+                          Baru
+                        </Tag>
+                      )}
+                      {!isNew && (
+                        <Tag color="blue" style={{ marginRight: 0 }}>
+                          Ada
+                        </Tag>
+                      )}
+                    </Space>
+                    <Space className="w-full mb-2" align="start" wrap>
+                      <Input
+                        placeholder="Nama"
+                        value={participant.name}
+                        onChange={(e) => {
+                          const updated = [...(form.Participants || [])];
+                          updated[actualIndex] = {
+                            ...updated[actualIndex],
+                            name: e.target.value,
+                          };
+                          setForm({ ...form, Participants: updated });
+                        }}
+                        style={{ width: 200 }}
+                        size="small"
+                      />
+                      <Input
+                        placeholder="Phone"
+                        value={participant.phone || ""}
+                        onChange={(e) => {
+                          const updated = [...(form.Participants || [])];
+                          updated[actualIndex] = {
+                            ...updated[actualIndex],
+                            phone: e.target.value,
+                          };
+                          setForm({ ...form, Participants: updated });
+                        }}
+                        style={{ width: 140 }}
+                        size="small"
+                      />
+                      <Input
+                        placeholder="Email"
+                        value={participant.email || ""}
+                        onChange={(e) => {
+                          const updated = [...(form.Participants || [])];
+                          updated[actualIndex] = {
+                            ...updated[actualIndex],
+                            email: e.target.value,
+                          };
+                          setForm({ ...form, Participants: updated });
+                        }}
+                        style={{ width: 180 }}
+                        size="small"
+                      />
+                      <Input
+                        placeholder="Komentar"
+                        value={participant.comment || ""}
+                        onChange={(e) => {
+                          const updated = [...(form.Participants || [])];
+                          updated[actualIndex] = {
+                            ...updated[actualIndex],
+                            comment: e.target.value,
+                          };
+                          setForm({ ...form, Participants: updated });
+                        }}
+                        style={{ width: 180 }}
+                        size="small"
+                      />
+                      <Button
+                        danger
+                        size="small"
+                        onClick={() => {
+                          const updated = [...(form.Participants || [])];
+                          if (participant.id) {
+                            // Mark existing participant as deleted
+                            updated[actualIndex] = {
+                              ...updated[actualIndex],
+                              action: "delete",
+                            };
+                          } else {
+                            // Remove new participant
+                            updated.splice(actualIndex, 1);
+                          }
+                          setForm({ ...form, Participants: updated });
+                        }}
+                      >
+                        Hapus
+                      </Button>
+                    </Space>
+                  </div>
+                );
+              })}
             <Button
               type="dashed"
               className="w-full"
@@ -463,7 +520,14 @@ export default function DataGuestBook() {
                   ...form,
                   Participants: [
                     ...(form.Participants || []),
-                    { name: "", phone: "", email: "", comment: "" },
+                    {
+                      name: "",
+                      phone: "",
+                      email: "",
+                      comment: "",
+                      id: "",
+                      guestBookId: "",
+                    } as any,
                   ],
                 })
               }

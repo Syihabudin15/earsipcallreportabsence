@@ -8,14 +8,22 @@ datasource db {
 }
 
 enum EDataStatus {
-  ALL
+  SEMUA
   USER
 }
 
 enum EPermitStatus {
   PENDING
-  APPROVED
-  REJECTED
+  DISETUJUI
+  DITOLAK
+  SELESAI
+}
+
+enum EGuaranteeStatus {
+  PENDING
+  DITERIMA
+  DIPINJAM
+  DIKEMBALIKAN
 }
 
 enum ENominalType {
@@ -24,8 +32,8 @@ enum ENominalType {
 }
 
 enum ECostType {
-  ALLOWANCE
-  DEDUCTION
+  PENAMBAHAN
+  PENGURANGAN
 }
 
 enum EAbsenceStatus {
@@ -34,6 +42,7 @@ enum EAbsenceStatus {
   CUTI
   PERDIN
   SAKIT
+  LEMBUR
 }
 
 enum EGBookStatus {
@@ -41,16 +50,21 @@ enum EGBookStatus {
   TELAHDATANG
 }
 
+enum EPayrollStatus {
+  DRAFT
+  DISETUJUI
+}
+
 model Role {
   id          String      @id @default(uuid())
   name        String
   permission  String      @db.Text
-  data_status EDataStatus @default(ALL)
+  data_status EDataStatus @default(SEMUA)
 
   status     Boolean  @default(true)
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
-  users      User[]
+  User       User[]
 }
 
 model Position {
@@ -79,20 +93,28 @@ model User {
   face         String? @db.Text
   photo        String?
 
-  status        Boolean         @default(true)
-  created_at    DateTime        @default(now())
-  updated_at    DateTime        @default(now())
-  Position      Position        @relation(fields: [positionId], references: [id], onUpdate: Cascade)
-  ReuestMade    PermitFile[]    @relation("RequesterRelation")
-  ApprovMade    PermitFile[]    @relation("ApproverRelation")
-  Submission    Submission[]
-  LogActivities LogActivities[]
-  Visit         Visit[]
-  UserCost      UserCost[]
-  Absence       Absence[]
-  Role          Role            @relation(fields: [roleId], references: [id], onUpdate: Cascade)
-  roleId        String
-  positionId    String
+  status             Boolean             @default(true)
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @default(now())
+  Position           Position            @relation(fields: [positionId], references: [id], onUpdate: Cascade)
+  Role               Role                @relation(fields: [roleId], references: [id], onUpdate: Cascade)
+  SubmissionCreated  Submission[]        @relation("SubmissionCreated")
+  CollateralCreated  CollateralLending[] @relation("CollateralCreated")
+  CollateralApprover CollateralLending[] @relation("CollateralApprover")
+  VisitApprover      Visit[]             @relation("VisitApprover")
+  InsentifApprover   Insentif[]          @relation("InsentifApprover")
+  ReuestMade         PermitFile[]        @relation("RequesterRelation")
+  ApprovMade         PermitFile[]        @relation("ApproverRelation")
+  PayrollApprover    Payroll[]           @relation("PayrollApprover")
+  Insentif           Insentif[]
+  Submission         Submission[]
+  LogActivities      LogActivities[]
+  Visit              Visit[]
+  UserCost           UserCost[]
+  Absence            Absence[]
+  Payroll            Payroll[]
+  roleId             String
+  positionId         String
 }
 
 model SubmissionType {
@@ -159,32 +181,77 @@ model Debitur {
   updated_at       DateTime       @default(now())
   SubmissionType   SubmissionType @relation(fields: [submissionTypeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   submissionTypeId String
-  Submissions      Submission[]
+  Submission       Submission[]
   Visit            Visit[]
 }
 
-model Submission {
-  id               String  @id @default(uuid())
-  purpose          String?
-  coments          String? @db.Text
-  account_number   String?
-  activities       String? @db.Text
-  value            Int
-  guarantee_status Boolean @default(false)
-  drawer_code      String
+model Mitra {
+  id          String  @id @default(uuid())
+  name        String
+  code        String?
+  phone       String?
+  email       String?
+  address     String?
+  pic         String?
+  no_contract String?
+  drawer_code String?
+  description String?
+  file        String?
 
-  is_active        Boolean            @default(true)
-  status           Boolean            @default(true)
-  created_at       DateTime           @default(now())
-  updated_at       DateTime           @default(now())
-  Debitur          Debitur            @relation(fields: [debiturId], references: [id], onUpdate: Cascade)
-  Product          Product            @relation(fields: [productId], references: [id], onUpdate: Cascade)
-  User             User               @relation(fields: [userId], references: [id], onUpdate: Cascade)
-  Files            Files[]
-  debiturId        String
-  productId        String
-  userId           String
-  PermitFileDetail PermitFileDetail[]
+  status     Boolean      @default(true)
+  created_at DateTime     @default(now())
+  updated_at DateTime     @default(now())
+  Submission Submission[]
+}
+
+model Submission {
+  id               String           @id @default(uuid())
+  purpose          String?
+  coments          String?          @db.Text
+  account_number   String?
+  activities       String?          @db.Text
+  value            Int
+  tenor            Int
+  drawer_code      String
+  approve_status   EPermitStatus    @default(PENDING)
+  guarantee_status EGuaranteeStatus @default(PENDING)
+
+  status            Boolean             @default(true)
+  created_at        DateTime            @default(now())
+  updated_at        DateTime            @default(now())
+  Debitur           Debitur             @relation(fields: [debiturId], references: [id], onUpdate: Cascade)
+  Product           Product             @relation(fields: [productId], references: [id], onUpdate: Cascade)
+  User              User                @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  Mitra             Mitra?              @relation(fields: [mitraId], references: [id], onUpdate: Cascade)
+  CreatedBy         User                @relation("SubmissionCreated", fields: [createdById], references: [id], onUpdate: Cascade)
+  createdById       String
+  debiturId         String
+  productId         String
+  userId            String
+  mitraId           String?
+  Files             Files[]
+  PermitFileDetail  PermitFileDetail[]
+  CollateralLending CollateralLending[]
+  Visit             Visit[]
+}
+
+model CollateralLending {
+  id          String    @id @default(uuid())
+  description String?   @db.Text
+  start_at    DateTime  @default(now())
+  end_at      DateTime?
+  file        String?
+  return_at   DateTime?
+
+  status       Boolean    @default(true)
+  created_at   DateTime   @default(now())
+  updated_at   DateTime   @default(now())
+  Submission   Submission @relation(fields: [submissionId], references: [id], onUpdate: Cascade)
+  CreatedBy    User       @relation("CollateralCreated", fields: [createdById], references: [id], onUpdate: Cascade)
+  ApproverBy   User?      @relation("CollateralApprover", fields: [approverById], references: [id], onUpdate: Cascade)
+  approverById String?
+  createdById  String
+  submissionId String
 }
 
 model Files {
@@ -227,20 +294,6 @@ model PermitFileDetail {
   permitFileId String
 }
 
-model LogActivities {
-  id         String   @id @default(uuid())
-  action     String
-  method     String
-  status     String
-  ip         String
-  userAgent  String
-  payload    String?
-  User       User     @relation(fields: [userId], references: [id], onUpdate: Cascade)
-  userId     String
-  created_at DateTime @default(now())
-  updated_at DateTime @default(now()) @updatedAt
-}
-
 model VisitCategory {
   id          String  @id @default(uuid())
   name        String
@@ -255,6 +308,7 @@ model VisitCategory {
 model VisitStatus {
   id          String  @id @default(uuid())
   name        String
+  color       String?
   description String?
 
   status     Boolean  @default(true)
@@ -275,16 +329,15 @@ model VisitPurpose {
 }
 
 model Visit {
-  id             String        @id @default(uuid())
-  date           DateTime
-  value          Int
-  summary        String?       @db.Text
-  coments        String?       @db.Text
-  date_action    DateTime?
-  geo            String?
-  files          String?       @db.Text
-  next_action    String?       @db.Text
-  approve_status EPermitStatus @default(PENDING)
+  id          String    @id @default(uuid())
+  value       Int
+  summary     String?   @db.Text
+  coments     String?   @db.Text
+  date_plan   DateTime
+  date_action DateTime?
+  geo         String?
+  files       String?   @db.Text
+  next_action String?   @db.Text
 
   status          Boolean       @default(true)
   created_at      DateTime      @default(now())
@@ -293,23 +346,28 @@ model Visit {
   User            User          @relation(fields: [userId], references: [id], onUpdate: Cascade)
   VisitCategory   VisitCategory @relation(fields: [visitCategoryId], references: [id], onUpdate: Cascade)
   VisitStatus     VisitStatus   @relation(fields: [visitStatusId], references: [id], onUpdate: Cascade)
+  VisitPurpose    VisitPurpose? @relation(fields: [visitPurposeId], references: [id])
+  Submission      Submission?   @relation(fields: [submissionId], references: [id], onUpdate: Cascade)
+  ApproverBy      User?         @relation("VisitApprover", fields: [approverById], references: [id], onUpdate: Cascade)
+  approverById    String?
+  submissionId    String?
   debiturId       String
   userId          String
   visitCategoryId String
   visitStatusId   String
-  VisitPurpose    VisitPurpose? @relation(fields: [visitPurposeId], references: [id])
   visitPurposeId  String?
 }
 
 model AbsenceConfig {
   id                   String  @id @default(uuid())
-  late_eduction        Int     @default(0)
+  late_deduction       Int     @default(0)
   fast_leave_deduction Int     @default(0)
   alpha_deduction      Int     @default(0)
   shift_start          Int     @default(0)
   shift_end            Int     @default(0)
   shift_tolerance      Int     @default(0)
   last_shift           Int?    @default(0)
+  geo_status           Boolean @default(false)
   geo_location         String?
   meter_tolerance      Int?    @default(0)
 
@@ -330,15 +388,20 @@ model UserCost {
 }
 
 model Absence {
-  id             String         @id @default(uuid())
-  method         String
-  check_in       DateTime? // jam masuk
-  check_out      DateTime? // jam pulang
-  geo_in         String?
-  geo_out        String?
-  absence_status EAbsenceStatus @default(HADIR)
-  description    String?
+  id                   String         @id @default(uuid())
+  method               String
+  check_in             DateTime? // jam masuk
+  check_out            DateTime? // jam pulang
+  geo_in_lat           Float?
+  geo_in_long          Float?
+  geo_out_lat          Float?
+  geo_out_long         Float?
+  late_deduction       Int            @default(0)
+  fast_leave_deduction Int            @default(0)
+  lemburan             Int            @default(0)
+  absence_status       EAbsenceStatus @default(HADIR)
 
+  status        Boolean         @default(false)
   created_at    DateTime        @default(now())
   updated_at    DateTime        @default(now())
   User          User            @relation(fields: [userId], references: [id], onUpdate: Cascade)
@@ -351,17 +414,84 @@ model PermitAbsence {
   type          EAbsenceStatus
   description   String?        @db.Text
   file          String?
-  absence_date  DateTime       @default(now())
+  start_date    DateTime?
   end_date      DateTime?
-  deduction     Int
-  allowance     Int
-  permis_status EPermitStatus  @default(PENDING)
+  permit_status EPermitStatus  @default(PENDING)
 
   status     Boolean  @default(false)
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
-  Absence    Absence? @relation(fields: [absenceId], references: [id], onUpdate: Cascade)
-  absenceId  String?
+  Absence    Absence  @relation(fields: [absenceId], references: [id], onUpdate: Cascade)
+  absenceId  String
+}
+
+model CostType {
+  id          String    @id @default(uuid())
+  name        String
+  type        ECostType
+  description String?
+
+  status     Boolean    @default(true)
+  created_at DateTime   @default(now())
+  updated_at DateTime   @default(now())
+  Insentif   Insentif[]
+}
+
+model Insentif {
+  id             String        @id @default(uuid())
+  name           String
+  date           DateTime
+  description    String?
+  nominal_type   ENominalType  @default(RUPIAH)
+  nominal        Float
+  approve_status EPermitStatus @default(PENDING)
+
+  status     Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+
+  User         User     @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  userId       String
+  ApproverBy   User?    @relation("InsentifApprover", fields: [approverById], references: [id], onUpdate: Cascade)
+  approverById String?
+  CostType     CostType @relation(fields: [costTypeId], references: [id], onUpdate: Cascade)
+  costTypeId   String
+}
+
+model Payroll {
+  id          String         @id @default(uuid())
+  month       Int // 1-12
+  year        Int // e.g., 2026
+  base_salary Int // Gaji pokok
+  allowance   Int            @default(0) // Tunjangan
+  insentif    Int            @default(0) // insentif tambahan
+  deduction   Int            @default(0) // Total potongan
+  status      EPayrollStatus @default(DRAFT)
+  notes       String?        @db.Text
+  approved_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+
+  User       User    @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  Approver   User?   @relation("PayrollApprover", fields: [approverId], references: [id], onUpdate: Cascade)
+  approverId String?
+  userId     String
+
+  PayrollDetail PayrollDetail[]
+
+  @@unique([userId, month, year])
+}
+
+model PayrollDetail {
+  id     String   @id @default(uuid())
+  name   String // e.g., "Tunjangan Makan", "Potongan BPJS TK", "Deduction Terlambat", "Bonus Insentif"
+  type   String // "ALLOWANCE", "DEDUCTION", "BONUS", "PENALTY"
+  amount Float
+  date   DateTime @default(now())
+
+  Payroll   Payroll @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  payrollId String
 }
 
 model GBookType {
@@ -372,7 +502,7 @@ model GBookType {
   status     Boolean     @default(true)
   created_at DateTime    @default(now())
   updated_at DateTime    @default(now())
-  guestBooks GuestBook[]
+  GuestBook  GuestBook[]
 }
 
 model GuestBook {
@@ -386,18 +516,30 @@ model GuestBook {
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
 
-  GbookType    GBookType     @relation(fields: [gBookTypeId], references: [id], onUpdate: Cascade)
-  gBookTypeId  String
-  Participants Participant[]
+  GbookType   GBookType     @relation(fields: [gBookTypeId], references: [id], onUpdate: Cascade)
+  gBookTypeId String
+  Participant Participant[]
 }
 
 model Participant {
-  id      String  @id @default(uuid())
-  name    String
-  phone   String?
-  email   String?
-  comment String?
+  id    String  @id @default(uuid())
+  name  String
+  phone String?
+  email String?
+  note  String?
 
   GuestBook   GuestBook @relation(fields: [guestBookId], references: [id], onUpdate: Cascade)
   guestBookId String
+}
+
+model LogActivities {
+  id         String   @id @default(uuid())
+  method     String
+  status     String
+  ip         String
+  userAgent  String
+  User       User     @relation(fields: [userId], references: [id], onUpdate: Cascade)
+  userId     String
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
 }

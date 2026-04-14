@@ -7,7 +7,6 @@ import { Button } from "antd";
 import DataPosition from "./app/Position";
 import DataSubmissionType from "./app/SubmissionType";
 import DataProductType from "./earsip/ProductType";
-import DataProduct from "./earsip/Product";
 import DataSubmission from "./earsip/Submission";
 import UpsertSubmission from "./earsip/UpsertSubmission";
 import UpdateSubmission from "./earsip/UpdateSubmission";
@@ -26,11 +25,16 @@ import DebiturEArsip from "./earsip/Debitur";
 import DataPermitFile from "./earsip/PermitFile";
 import DataAbsence from "./absensi/Absence";
 import DataGuestBook from "./absensi/GuestBook";
+import DataGbookType from "./absensi/GbookType";
 import AbsenceReport from "./absensi/AbsenceReport";
 import SelfAbsence from "./absensi/SelfAbsence";
 import AbsenceConfig from "./absensi/AbsenceConfig";
 import PermitAbsence from "./absensi/PermitAbsence";
 import AttendanceKiosk from "./absensi/AttendanceKiosk";
+import Payroll from "./absensi/Payroll";
+import UpsertProductType from "./earsip/UpsertProductType";
+import UpdateProductType from "./earsip/UpdateProductType";
+import DataMitra from "./app/Mitra";
 
 function AppRouter() {
   const path = window.location.pathname;
@@ -45,14 +49,22 @@ function AppRouter() {
           <Route path="/sub_type" element={<DataSubmissionType />} />
           <Route path="/debitur" element={<DataDebitur />} />
           <Route path="/user" element={<UserManagement />} />
-          <Route path="/log-activities" element={<LogActivities />} />
           <Route path="/role" element={<DataRole />} />
           <Route path="/position" element={<DataPosition />} />
+          <Route path="/mitra" element={<DataMitra />} />
+          <Route path="/log-activities" element={<LogActivities />} />
 
           {/* EARSIP */}
           <Route path="/earsip/" element={<DashboardApp />} />
           <Route path="/earsip/product_type" element={<DataProductType />} />
-          <Route path="/earsip/product" element={<DataProduct />} />
+          <Route
+            path="/earsip/product_type/upsert"
+            element={<UpsertProductType />}
+          />
+          <Route
+            path="/earsip/product_type/upsert/:id"
+            element={<UpdateProductType />}
+          />
           <Route path="/earsip/submission" element={<DataSubmission />} />
           <Route
             path="/earsip/submission/upsert"
@@ -82,9 +94,11 @@ function AppRouter() {
           {/* ABSENSI */}
           <Route path="/absensi" element={<DataAbsence />} />
           <Route path="/absensi/guestbook" element={<DataGuestBook />} />
+          <Route path="/absensi/gbook_type" element={<DataGbookType />} />
           <Route path="/absensi/report" element={<AbsenceReport />} />
           <Route path="/absensi/absence_config" element={<AbsenceConfig />} />
           <Route path="/absensi/permit_absence" element={<PermitAbsence />} />
+          <Route path="/absensi/payroll" element={<Payroll />} />
           <Route path="/absensi/attendance" element={<SelfAbsence />} />
           <Route path="/absensi/kiosk" element={<AttendanceKiosk />} />
         </Route>
@@ -126,7 +140,7 @@ function AppRouter() {
 }
 
 const ProtectedRoute = ({ path }: { path: string }) => {
-  const { user, hasAccess } = useContext((state: any) => state);
+  const { user, hasAccess } = useContext((state) => state);
   if (!user) return <Navigate to="/" replace />;
   if (!hasAccess(path, "read")) {
     return <Navigate to="/app/unauthorized" replace />;

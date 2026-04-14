@@ -27,17 +27,25 @@ export const InputUtil = ({
   options,
   prefix,
   suffix,
+  required = false,
+  placeholder,
+  layout,
 }: {
   label: string | React.ReactNode;
   value?: any;
   onchage?: Function;
   disabled?: boolean;
-  type: "text" | "number" | "option" | "area" | "date";
+  type: "text" | "number" | "option" | "area" | "date" | "password";
   options?: { label: string; value: any }[];
   prefix?: any;
   suffix?: any;
+  required?: boolean;
+  placeholder?: string;
+  layout?: "horizontal" | "vertical";
 }) => {
-  const handleType = (type: "text" | "number" | "option" | "area" | "date") => {
+  const handleType = (
+    type: "text" | "number" | "option" | "area" | "date" | "password",
+  ) => {
     switch (type) {
       case "number": {
         return (
@@ -49,6 +57,7 @@ export const InputUtil = ({
             disabled={disabled}
             prefix={prefix}
             suffix={suffix}
+            placeholder={placeholder}
           />
         );
       }
@@ -62,6 +71,20 @@ export const InputUtil = ({
             disabled={disabled}
             prefix={prefix}
             suffix={suffix}
+            placeholder={placeholder}
+          />
+        );
+      }
+      case "password": {
+        return (
+          <Input.Password
+            width={"100%"}
+            value={value}
+            onChange={(e) => onchage && onchage(e.target.value)}
+            disabled={disabled}
+            prefix={prefix}
+            suffix={suffix}
+            placeholder={placeholder}
           />
         );
       }
@@ -77,6 +100,7 @@ export const InputUtil = ({
             optionFilterProp={"label"}
             prefix={prefix}
             suffix={suffix}
+            placeholder={placeholder}
           />
         );
       }
@@ -86,6 +110,7 @@ export const InputUtil = ({
             value={value}
             onChange={(e) => onchage && onchage(String(e.target.value))}
             disabled={disabled}
+            placeholder={placeholder}
           />
         );
       }
@@ -98,16 +123,32 @@ export const InputUtil = ({
             disabled={disabled}
             prefix={prefix}
             suffix={suffix}
+            placeholder={placeholder}
           />
         );
       }
     }
   };
   return (
-    <div className="flex flex-col">
-      <p>{label}</p>
-      {handleType(type)}
-    </div>
+    <>
+      {layout === "horizontal" ? (
+        <div className="flex items-center gap-2">
+          <div style={{ width: "30%" }}>
+            <span>
+              {label} {required && <span className="text-red-500">*</span>}
+            </span>
+          </div>
+          <div style={{ flex: 1 }}>{handleType(type)}</div>
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          <p>
+            {label} {required && <span className="text-red-500">*</span>}
+          </p>
+          {handleType(type)}
+        </div>
+      )}
+    </>
   );
 };
 
@@ -211,11 +252,13 @@ export const InputFileUploadVisit = ({
   onchange,
   ondelete,
   filetype,
+  noname,
 }: {
   record: IFileVisit;
   onchange: Function;
   ondelete: Function;
   filetype: string;
+  noname?: boolean;
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -253,6 +296,7 @@ export const InputFileUploadVisit = ({
         size="small"
         value={record.name}
         onChange={(e) => onchange({ ...record, name: e.target.value })}
+        hidden={noname}
       />
       {record.url ? (
         <Button
@@ -268,7 +312,7 @@ export const InputFileUploadVisit = ({
             size="small"
             icon={<PlusCircleOutlined />}
             type="primary"
-            disabled={!record.name}
+            disabled={!record.name && !noname}
             loading={loading}
           ></Button>
         </Upload>

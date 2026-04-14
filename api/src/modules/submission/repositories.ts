@@ -2,6 +2,7 @@ import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 import moment from "moment";
+import type { EGuaranteeStatus, EPermitStatus, Prisma } from "@prisma/client";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
   let {
@@ -11,58 +12,68 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     productTypeId,
     productId,
     guarantee_status,
-    is_active,
+    approve_status,
     backdate,
     submissionTypeId,
+    mitraId,
   } = req.query;
   page = Number(page);
   limit = Number(limit);
   const skip = (page - 1) * limit;
 
   try {
-    const data = await prisma.submission.findMany({
-      where: {
-        status: true,
-        ...(search && {
-          OR: [
-            {
-              Debitur: {
-                OR: [
-                  { fullname: { contains: search as string } },
-                  { id: { contains: search as string } },
-                  { nik: { contains: search as string } },
-                  { cif: { contains: search as string } },
-                ],
-              },
+    const queryWhere: Prisma.SubmissionWhereInput = {
+      status: true,
+      ...(search && {
+        OR: [
+          {
+            Debitur: {
+              OR: [
+                { fullname: { contains: search as string } },
+                { id: { contains: search as string } },
+                { nik: { contains: search as string } },
+                { cif: { contains: search as string } },
+              ],
             },
-            { id: { contains: search as string } },
-            { drawer_code: { contains: search as string } },
-          ],
-        }),
-        ...(submissionTypeId && {
-          Debitur: { submissionTypeId: submissionTypeId as string },
-        }),
-        ...(productTypeId && {
-          Product: {
-            productTypeId: productTypeId as string,
           },
-        }),
-        ...(productId && { productId: productId as string }),
-        ...(guarantee_status && {
-          guarantee_status: guarantee_status === "true" ? true : false,
-        }),
-        ...(is_active && { is_active: is_active === "true" ? true : false }),
-        ...(backdate && {
-          created_at: {
-            gte: moment((backdate as string).split(",")[0])
-              .startOf("date")
-              .toDate(),
-            lte: moment((backdate as string).split(",")[1])
-              .endOf("day")
-              .toDate(),
-          },
-        }),
-      },
+          { id: { contains: search as string } },
+          { drawer_code: { contains: search as string } },
+          { account_number: { contains: search as string } },
+        ],
+      }),
+      ...(submissionTypeId && {
+        Debitur: { submissionTypeId: submissionTypeId as string },
+      }),
+      ...(productTypeId && {
+        Product: {
+          productTypeId: productTypeId as string,
+        },
+      }),
+      ...(productId && { productId: productId as string }),
+      ...(mitraId && { mitraId: mitraId as string }),
+      ...(approve_status && {
+        approve_status: approve_status as EPermitStatus,
+      }),
+      ...(guarantee_status && {
+        guarantee_status: guarantee_status as EGuaranteeStatus,
+      }),
+      ...(backdate && {
+        created_at: {
+          gte: moment((backdate as string).split(",")[0])
+            .startOf("date")
+            .toDate(),
+          lte: moment((backdate as string).split(",")[1])
+            .endOf("day")
+            .toDate(),
+        },
+      }),
+      ...(req.user?.Role.data_status === "USER"
+        ? { OR: [{ createdById: req.user.id }, { userId: req.user.id }] }
+        : {}),
+    };
+
+    const data = await prisma.submission.findMany({
+      where: queryWhere,
       skip: skip,
       take: limit,
       include: {
@@ -79,53 +90,14 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
         User: true,
         Files: true,
         PermitFileDetail: true,
+        Mitra: true,
+        CollateralLending: true,
       },
       orderBy: { created_at: "desc" },
     });
 
     const total = await prisma.submission.count({
-      where: {
-        status: true,
-        ...(search && {
-          OR: [
-            {
-              Debitur: {
-                OR: [
-                  { fullname: { contains: search as string } },
-                  { id: { contains: search as string } },
-                  { nik: { contains: search as string } },
-                  { cif: { contains: search as string } },
-                ],
-              },
-            },
-            { id: { contains: search as string } },
-            { drawer_code: { contains: search as string } },
-          ],
-        }),
-        ...(submissionTypeId && {
-          Debitur: { submissionTypeId: submissionTypeId as string },
-        }),
-        ...(productTypeId && {
-          Product: {
-            productTypeId: productTypeId as string,
-          },
-        }),
-        ...(productId && { productId: productId as string }),
-        ...(guarantee_status && {
-          guarantee_status: guarantee_status === "true" ? true : false,
-        }),
-        ...(is_active && { is_active: is_active === "true" ? true : false }),
-        ...(backdate && {
-          created_at: {
-            gte: moment((backdate as string).split(",")[0])
-              .startOf("date")
-              .toDate(),
-            lte: moment((backdate as string).split(",")[1])
-              .endOf("day")
-              .toDate(),
-          },
-        }),
-      },
+      where: queryWhere,
     });
     return ResponseServer(res, 200, {
       msg: "GET /submission",
@@ -135,7 +107,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       productTypeId,
       productId,
       guarantee_status,
-      is_active,
+      approve_status,
       backdate,
       data: data.map((d) => ({
         ...d,
@@ -155,12 +127,22 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
   let body = req.body;
   try {
-    const { id, User, PermitFileDetail, Debitur, Product, Files, ...savedSub } =
-      body;
+    const {
+      id,
+      User,
+      PermitFileDetail,
+      Debitur,
+      Product,
+      Files,
+      Mitra,
+      CollateralLending,
+      CreatedBy,
+      ...savedSub
+    } = body;
     const genId = await generateId();
     const genDebId = await generateDebiturId();
     Debitur.id = Debitur.id ? Debitur.id : genDebId;
-    const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
+    const { SubmissionType, Visit, Submission, ...savedeb } = Debitur;
     await prisma.$transaction(async (tx) => {
       const deb = await tx.debitur.upsert({
         where: { id: Debitur.id },
@@ -174,6 +156,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
           debiturId: deb.id,
           coments: JSON.stringify(body.coments.filter((c: any) => c.comment)),
           activities: JSON.stringify(body.activities),
+          createdById: req.user?.id,
         },
       });
       for (const productTypeFile of Product.ProductType.ProductTypeFile) {
@@ -213,9 +196,18 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
-    const { User, PermitFileDetail, Debitur, Product, Files, ...savedSub } =
-      body;
-    const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
+    const {
+      User,
+      PermitFileDetail,
+      Debitur,
+      Product,
+      Files,
+      Mitra,
+      CollateralLending,
+      CreatedBy,
+      ...savedSub
+    } = body;
+    const { SubmissionType, Visit, Submission, ...savedeb } = Debitur;
 
     await prisma.$transaction(async (tx) => {
       await tx.debitur.update({
@@ -329,6 +321,7 @@ export const PATCH = async (
         User: true,
         Files: true,
         PermitFileDetail: true,
+        Mitra: true,
       },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });

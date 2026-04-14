@@ -5,10 +5,11 @@ import express from "express";
 import roleRoute from "./modules/role/routes.js";
 import posRoute from "./modules/position/routes.js";
 import userRoute from "./modules/user/routes.js";
+import profileRoute from "./modules/profile/routes.js";
 import authRoute from "./modules/auth/routes.js";
 import subTypeRoute from "./modules/sub_type/routes.js";
 import productTypeRoute from "./modules/product_type/routes.js";
-import productRoute from "./modules/product/routes.js";
+import mitraRoute from "./modules/mitra/routes.js";
 import submissionRoute from "./modules/submission/routes.js";
 import visitCategoryRoute from "./modules/visit_category/routes.js";
 import visitStatusRoute from "./modules/visit_status/routes.js";
@@ -23,7 +24,22 @@ import gbookTypeRoute from "./modules/gbook_type/routes.js";
 import fileRoute from "./modules/file/routes.js";
 import permitAbsenceRoute from "./modules/permit_absence/routes.js";
 import logActivitiesRoute from "./modules/log-activities/routes.js";
+import payrollRoute from "./modules/payroll/routes.js";
+import participantRoute from "./modules/participant/routes.js";
 import { MainDashboard } from "./modules/route.js";
+import type { Role, User } from "@prisma/client";
+
+interface IUser extends User {
+  Role: Role;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: IUser;
+    }
+  }
+}
 
 const app = express();
 
@@ -45,17 +61,19 @@ app.use("/auth", authRoute);
 app.use("/role", middleware, roleRoute);
 app.use("/position", middleware, posRoute);
 app.use("/user", middleware, userRoute);
+app.use("/profile", middleware, profileRoute);
 app.use("/debitur", middleware, debiturRoute);
+app.use("/mitra", middleware, mitraRoute);
 app.use("/file", middleware, fileRoute);
 
 // EARSIP
 app.use("/sub_type", middleware, subTypeRoute);
 app.use("/producttype", middleware, productTypeRoute);
-app.use("/product", middleware, productRoute);
 app.use("/submission", middleware, submissionRoute);
 app.use("/permitfile", middleware, permitFileRoute);
 app.use("/guestbook", middleware, guestBookRoute);
 app.use("/gbook_type", middleware, gbookTypeRoute);
+app.use("/participant", middleware, participantRoute);
 
 // CALLREPORT
 app.use("/visit_category", middleware, visitCategoryRoute);
@@ -67,6 +85,7 @@ app.use("/visit", middleware, visitRoute);
 app.use("/absence_config", middleware, absConfigRoute);
 app.use("/absence", middleware, absenceRoute);
 app.use("/permit_absence", middleware, permitAbsenceRoute);
+app.use("/payroll", middleware, payrollRoute);
 app.use("/log-activities", middleware, logActivitiesRoute);
 
 const PORT = process.env.APP_PORT || 5000;

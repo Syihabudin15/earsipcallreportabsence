@@ -13,7 +13,6 @@ import {
   Tabs,
   Badge,
   Segmented,
-  Tooltip,
 } from "antd";
 import { Plus, Edit, Trash, ArrowLeft, CheckCircle } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
@@ -320,6 +319,21 @@ const UpsertData = ({
     setLoading(false);
   };
 
+  // Get available permissions dari menu config
+  const getAvailablePermissions = (path: string): string[] => {
+    const menu = defaultMenu.find((m) => m.path === path);
+    return (
+      menu?.can_access || [
+        "read",
+        "write",
+        "update",
+        "delete",
+        "proses",
+        "download",
+      ]
+    );
+  };
+
   // Group permissions by application
   const getGroupedPermissions = () => {
     const groups: {
@@ -330,6 +344,12 @@ const UpsertData = ({
         items: IPermission[];
       };
     } = {
+      aplikasi: {
+        title: "⚙️ Administrasi",
+        color: "#fa541c",
+        icon: "⚙️",
+        items: [],
+      },
       earsip: {
         title: "📁 E-Arsip",
         color: "#0958d9",
@@ -343,15 +363,15 @@ const UpsertData = ({
         items: [],
       },
       absensi: {
-        title: "✓ Absensi",
+        title: "📋 Absensi",
         color: "#52c41a",
-        icon: "✓",
+        icon: "📋",
         items: [],
       },
-      aplikasi: {
-        title: "⚙️ Aplikasi",
-        color: "#fa541c",
-        icon: "⚙️",
+      guestbook: {
+        title: "👥 Buku Tamu",
+        color: "#faad14",
+        icon: "👥",
         items: [],
       },
     };
@@ -365,9 +385,19 @@ const UpsertData = ({
       ) {
         groups.callreport.items.push(item);
       } else if (
+        item.path.includes("guestbook") ||
+        item.path.includes("gbook_type")
+      ) {
+        groups.guestbook.items.push(item);
+      } else if (
         item.path.includes("absence") ||
         item.path.includes("absensi") ||
-        item.path.includes("absence_config")
+        item.path.includes("absence_config") ||
+        item.path.includes("attendance") ||
+        item.path.includes("kiosk") ||
+        item.path.includes("permit_absence") ||
+        item.path.includes("payroll") ||
+        item.path.includes("user_cost")
       ) {
         groups.absensi.items.push(item);
       } else {
@@ -535,7 +565,7 @@ const UpsertData = ({
                       setData({ ...data, data_status: value as "ALL" | "USER" })
                     }
                     options={[
-                      { label: "Semua Data", value: "ALL" },
+                      { label: "Semua Data", value: "SEMUA" },
                       { label: "Data Pribadi", value: "USER" },
                     ]}
                     block
@@ -592,20 +622,36 @@ const UpsertData = ({
                     style={{
                       display: "flex",
                       flexDirection: "column",
-                      gap: "10px",
+                      gap: "12px",
                       paddingTop: "8px",
                     }}
                   >
                     {group.items.map((item) => {
-                      const accessPercentage = (item.access.length / 6) * 100;
+                      const availablePermissions = getAvailablePermissions(
+                        item.path,
+                      );
+                      const allPermissions = [
+                        { label: "Baca", value: "read", icon: "👁️" },
+                        { label: "Tulis", value: "write", icon: "✍️" },
+                        { label: "Update", value: "update", icon: "🔄" },
+                        { label: "Hapus", value: "delete", icon: "🗑️" },
+                        { label: "Proses", value: "proses", icon: "⚡" },
+                        { label: "Download", value: "download", icon: "⬇️" },
+                      ];
+                      const filteredPermissions = allPermissions.filter((p) =>
+                        availablePermissions.includes(p.value),
+                      );
+
                       return (
                         <div
                           key={item.path}
                           style={{
-                            padding: "10px",
+                            padding: "12px",
                             background: "#fafafa",
                             border: "1px solid #eee",
-                            borderRadius: "4px",
+                            borderRadius: "6px",
+                            transition: "all 0.3s",
+                            borderLeft: `4px solid ${group.color}`,
                           }}
                         >
                           <div
@@ -619,108 +665,100 @@ const UpsertData = ({
                             <div>
                               <div
                                 style={{
-                                  fontSize: "12px",
+                                  fontSize: "13px",
                                   fontWeight: 600,
-                                  color: "#333",
+                                  color: "#1a1a1a",
+                                  marginBottom: "4px",
                                 }}
                               >
                                 {item.name}
                               </div>
                               <div
                                 style={{
-                                  fontSize: "10px",
+                                  fontSize: "11px",
                                   color: "#999",
-                                  marginTop: "2px",
                                 }}
                               >
                                 {item.path}
                               </div>
                             </div>
-                            <div
-                              style={{
-                                fontSize: "10px",
-                                fontWeight: 700,
-                                color: group.color,
-                              }}
-                            >
-                              {item.access.length}/6
-                            </div>
+                            {item.access.length > 0 && (
+                              <Badge
+                                count={item.access.length}
+                                style={{
+                                  backgroundColor: group.color,
+                                  fontSize: "11px",
+                                  fontWeight: 700,
+                                  padding: "0 6px",
+                                }}
+                              />
+                            )}
                           </div>
+
                           <div
                             style={{
-                              height: "3px",
-                              background: "#eee",
-                              borderRadius: "1px",
-                              marginBottom: "10px",
-                              overflow: "hidden",
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: "8px",
                             }}
                           >
-                            <div
-                              style={{
-                                height: "100%",
-                                background: group.color,
-                                width: `${accessPercentage}%`,
-                              }}
-                            />
-                          </div>
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns: "repeat(3, 1fr)",
-                              gap: "6px",
-                            }}
-                          >
-                            {[
-                              { label: "Baca", value: "read", icon: "👁️" },
-                              { label: "Tulis", value: "write", icon: "✍️" },
-                              { label: "Update", value: "update", icon: "🔄" },
-                              { label: "Hapus", value: "delete", icon: "🗑️" },
-                              { label: "Proses", value: "proses", icon: "⚡" },
-                              {
-                                label: "Download",
-                                value: "download",
-                                icon: "⬇️",
-                              },
-                            ].map((access) => (
-                              <Tooltip
+                            {filteredPermissions.map((access) => (
+                              <label
                                 key={access.value}
-                                title={`Toggle ${access.label}`}
-                              >
-                                <Button
-                                  size="small"
-                                  type={
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                  padding: "6px 10px",
+                                  background: item.access.includes(access.value)
+                                    ? group.color + "15"
+                                    : "#fff",
+                                  border: `1px solid ${
                                     item.access.includes(access.value)
-                                      ? "primary"
-                                      : "default"
-                                  }
-                                  onClick={() =>
+                                      ? group.color
+                                      : "#d9d9d9"
+                                  }`,
+                                  borderRadius: "4px",
+                                  cursor: "pointer",
+                                  userSelect: "none",
+                                  fontSize: "12px",
+                                  fontWeight: 500,
+                                  color: item.access.includes(access.value)
+                                    ? group.color
+                                    : "#666",
+                                  transition: "all 0.2s",
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={item.access.includes(access.value)}
+                                  onChange={() =>
                                     toggleAccess(item.path, access.value)
                                   }
                                   style={{
-                                    fontWeight: 600,
-                                    fontSize: "11px",
-                                    background: item.access.includes(
-                                      access.value,
-                                    )
-                                      ? group.color
-                                      : undefined,
-                                    borderColor: item.access.includes(
-                                      access.value,
-                                    )
-                                      ? group.color
-                                      : "#d9d9d9",
-                                    color: item.access.includes(access.value)
-                                      ? "white"
-                                      : "#666",
-                                    border: "1px solid",
                                     cursor: "pointer",
+                                    accentColor: group.color,
                                   }}
-                                >
-                                  {access.icon} {access.label}
-                                </Button>
-                              </Tooltip>
+                                />
+                                <span>{access.icon}</span>
+                                <span>{access.label}</span>
+                              </label>
                             ))}
                           </div>
+
+                          {filteredPermissions.length === 1 && (
+                            <div
+                              style={{
+                                marginTop: "8px",
+                                fontSize: "11px",
+                                color: "#999",
+                                fontStyle: "italic",
+                              }}
+                            >
+                              ℹ️ Menu ini hanya memiliki akses{" "}
+                              {filteredPermissions[0].label}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

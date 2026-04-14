@@ -2,6 +2,7 @@ import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 import moment from "moment";
+import type { Prisma } from "@prisma/client";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
   let { page = 1, limit = 50, search, startDate, endDate } = req.query;
@@ -10,7 +11,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
   const skip = (page - 1) * limit;
 
   try {
-    const where: any = {};
+    const where: Prisma.LogActivitiesWhereInput = {};
 
     // Date range filter
     if (startDate && endDate) {
@@ -27,16 +28,16 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     // Search filter
     if (search) {
       where.OR = [
-        { action: { contains: search as string, mode: "insensitive" } },
-        { payload: { contains: search as string, mode: "insensitive" } },
+        { method: { contains: search as string } },
         {
           User: {
-            fullname: { contains: search as string, mode: "insensitive" },
-          },
-        },
-        {
-          User: {
-            username: { contains: search as string, mode: "insensitive" },
+            OR: [
+              { fullname: { contains: search as string } },
+              { username: { contains: search as string } },
+              { id: { contains: search as string } },
+              { nik: { contains: search as string } },
+              { nip: { contains: search as string } },
+            ],
           },
         },
       ];
@@ -46,7 +47,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       where,
       skip,
       take: limit,
-      orderBy: { created_at: "asc" },
+      orderBy: { created_at: "desc" },
       include: { User: true },
     });
 

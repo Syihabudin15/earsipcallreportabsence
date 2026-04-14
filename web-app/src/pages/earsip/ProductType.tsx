@@ -3,11 +3,11 @@ import {
   Button,
   Card,
   Divider,
+  Empty,
   Input,
   List,
   Modal,
   Pagination,
-  Select,
   Space,
   Spin,
   Tag,
@@ -20,7 +20,6 @@ import type {
   IActionPage,
   IPageProps,
   IProductType,
-  IProductTypeFile,
 } from "../../libs/interface";
 import type { HookAPI } from "antd/es/modal/useModal";
 import api from "../../libs/api";
@@ -29,9 +28,8 @@ import {
   FileOutlined,
   FilePdfOutlined,
   FileImageOutlined,
-  PlusCircleOutlined,
-  DeleteOutlined,
 } from "@ant-design/icons";
+import { Link } from "react-router-dom";
 const { Text, Title } = Typography;
 
 export default function DataProductType() {
@@ -99,14 +97,16 @@ export default function DataProductType() {
         <div className="bg-white  flex flex-wrap items-center gap-4 mb-2">
           <div className="flex-1 flex">
             {hasAccess(window.location.pathname, "write") && (
-              <Button
-                onClick={() => setAction({ ...action, upsert: true })}
-                icon={<Plus size={15} />}
-                type="primary"
-                size="small"
-              >
-                New
-              </Button>
+              <Link to={"/app/earsip/product_type/upsert"}>
+                <Button
+                  // onClick={() => setAction({ ...action, upsert: true })}
+                  icon={<Plus size={15} />}
+                  type="primary"
+                  size="small"
+                >
+                  New
+                </Button>
+              </Link>
             )}
           </div>
           <div className="flex-1 flex items-center justify-end gap-2">
@@ -136,6 +136,13 @@ export default function DataProductType() {
               />
             ))}
           </div>
+          {pageprops.data.length === 0 && (
+            <div className="py-20 flex flex-col gap-4 items-center justify-center">
+              <div className="text-center text-2xl font-bold">
+                <Empty description="Tidak ada data yang ditemukan" />
+              </div>
+            </div>
+          )}
         </Spin>
 
         <div className="flex justify-end">
@@ -151,16 +158,6 @@ export default function DataProductType() {
           />
         </div>
       </div>
-      <UpsertData
-        open={action.upsert}
-        setOpen={(val: boolean) =>
-          setAction({ ...action, upsert: val, record: undefined })
-        }
-        record={action.record}
-        getData={getData}
-        hook={modal}
-        key={action.record ? "upsert" + action.record.id : "upsert"}
-      />
       {action.delete && action.record && (
         <DeleteData
           open={action.delete}
@@ -176,256 +173,6 @@ export default function DataProductType() {
     </div>
   );
 }
-
-const UpsertData = ({
-  open,
-  setOpen,
-  record,
-  getData,
-  hook,
-}: {
-  open: boolean;
-  setOpen: Function;
-  record?: IProductType;
-  getData: Function;
-  hook: HookAPI;
-}) => {
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<IProductType>(record || defaultData);
-
-  const handleSubmit = async () => {
-    if (!data.name) {
-      hook.error({
-        title: "ERROR",
-        content: "Mohon lengkapi data terlebih dahulu!",
-      });
-      return;
-    }
-    setLoading(true);
-    await api
-      .request({
-        url: import.meta.env.VITE_API_URL + "/producttype?id=" + record?.id,
-        method: record ? "PUT" : "POST",
-        data: data,
-        headers: { "Content-Type": "Application/json" },
-      })
-      .then(async (res) => {
-        if (res.status === 201 || res.status === 200) {
-          hook.success({
-            title: "BERHASIL",
-            content: res.data.msg,
-          });
-          setOpen(false);
-          getData && (await getData());
-        } else {
-          hook.error({
-            title: "ERROR",
-            content: res.data.msg,
-          });
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-        hook.error({
-          title: "ERROR",
-          content: err.message || "Internal Server Error",
-        });
-      });
-    setLoading(false);
-  };
-
-  const handleDeleteFile = async (record: IProductTypeFile) => {
-    setLoading(true);
-    if (record.productTypeId === "") {
-      setData({
-        ...data,
-        ProductTypeFile: data.ProductTypeFile.filter((f) => f.id !== record.id),
-      });
-    } else {
-      await api
-        .request({
-          url: import.meta.env.VITE_API_URL + "/producttype?id=" + record?.id,
-          method: "PATCH",
-          headers: { "Content-Type": "Application/json" },
-        })
-        .then(async (res) => {
-          if (res.status !== 200) {
-            hook.error({
-              title: "ERROR",
-              content: res.data.msg,
-            });
-          } else {
-            setData({
-              ...data,
-              ProductTypeFile: data.ProductTypeFile.map((f) => ({
-                ...f,
-                status: f.id === record.id ? false : f.status,
-              })),
-            });
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-          hook.error({
-            title: "ERROR",
-            content: err.message || "Internal Server Error",
-          });
-        });
-    }
-    setLoading(false);
-  };
-
-  return (
-    <Modal
-      open={open}
-      onCancel={() => setOpen(false)}
-      title={`Upsert Data ${record ? record.name : ""}`}
-      style={{ top: 10 }}
-      width={800}
-      onOk={handleSubmit}
-      okButtonProps={{ loading: loading, disabled: !data.name }}
-    >
-      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-        <div>
-          <Text strong>ID:</Text>
-          <Input
-            placeholder="ID/Kosongkan untuk otomatis"
-            value={data.id}
-            onChange={(e) => setData({ ...data, id: e.target.value })}
-            style={{ marginTop: "8px" }}
-          />
-        </div>
-        <div>
-          <Text strong>Jenis/Tipe Produk:</Text>
-          <Input
-            placeholder="Masukkan nama..."
-            value={data.name}
-            onChange={(e) => setData({ ...data, name: e.target.value })}
-            style={{ marginTop: "8px" }}
-          />
-        </div>
-        <div>
-          <Text strong>Keterangan:</Text>
-          <Input.TextArea
-            placeholder="Masukkan keterangan..."
-            value={data.description}
-            onChange={(e) => setData({ ...data, description: e.target.value })}
-            style={{ marginTop: "8px" }}
-          />
-        </div>
-      </div>
-      <Divider style={{ margin: 0, padding: 2 }} titlePlacement="center">
-        List Files
-      </Divider>
-      <div className="my-3 flex flex-col gap-2">
-        {data.ProductTypeFile.filter((f) => f.status).map((d, i) => (
-          <div key={i} className="flex gap-2">
-            <div className="w-25">
-              <Input
-                size="small"
-                width={"100%"}
-                placeholder="ID"
-                value={d.id}
-                onChange={(e) =>
-                  setData({
-                    ...data,
-                    ProductTypeFile: data.ProductTypeFile.map((pd, ind) =>
-                      ind === i ? { ...d, id: e.target.value } : pd,
-                    ),
-                  })
-                }
-              />
-            </div>
-            <div className="flex-1">
-              <Input
-                size="small"
-                width={"100%"}
-                placeholder="Nama file"
-                value={d.name}
-                onChange={(e) =>
-                  setData({
-                    ...data,
-                    ProductTypeFile: data.ProductTypeFile.map((pd, ind) =>
-                      ind === i ? { ...d, name: e.target.value } : pd,
-                    ),
-                  })
-                }
-              />
-            </div>
-            <div className="flex-1">
-              <Select
-                size="small"
-                style={{ width: "100%" }}
-                placeholder="Tipe file"
-                options={[
-                  { label: "PDF", value: "pdf" },
-                  { label: "Image", value: "image" },
-                  { label: "Video", value: "video" },
-                ]}
-                value={d.type}
-                onChange={(e) =>
-                  setData({
-                    ...data,
-                    ProductTypeFile: data.ProductTypeFile.map((pd, ind) =>
-                      ind === i ? { ...d, type: e } : pd,
-                    ),
-                  })
-                }
-              />
-            </div>
-            <Button
-              icon={<DeleteOutlined />}
-              danger
-              size="small"
-              onClick={() => handleDeleteFile(d)}
-            ></Button>
-          </div>
-        ))}
-      </div>
-      <Button
-        icon={<PlusCircleOutlined />}
-        type="primary"
-        size="small"
-        block
-        onClick={() =>
-          setData({
-            ...data,
-            ProductTypeFile: [
-              ...data.ProductTypeFile,
-              {
-                ...defaultFileType,
-                id: `${data.id || "PTYPE" + Date.now()}0${data.ProductTypeFile.length + 1}`,
-              },
-            ],
-          })
-        }
-      >
-        Add more files
-      </Button>
-    </Modal>
-  );
-};
-
-const defaultData: IProductType = {
-  id: "",
-  name: "",
-  description: "",
-  status: true,
-  created_at: new Date(),
-  updated_at: new Date(),
-  ProductTypeFile: [],
-  Product: [],
-};
-const defaultFileType: IProductTypeFile = {
-  id: "",
-  name: "",
-  type: "pdf",
-  status: true,
-  created_at: new Date(),
-  updated_at: new Date(),
-  Files: [],
-  productTypeId: "",
-};
 
 const DeleteData = ({
   open,
@@ -528,14 +275,16 @@ const ProductTypeCard = ({
           />
         </Tooltip>,
         <Tooltip title="Edit Tipe">
-          <Button
-            type="text"
-            icon={<Edit2 style={{ color: "#1890ff" }} size={15} />}
-            onClick={() =>
-              setAction((prev: any) => ({ ...prev, record, upsert: true }))
-            }
-            disabled={!hasupdate}
-          />
+          <Link to={"/app/earsip/product_type/upsert/" + record.id}>
+            <Button
+              type="text"
+              icon={<Edit2 style={{ color: "#1890ff" }} size={15} />}
+              // onClick={() =>
+              //   setAction((prev: any) => ({ ...prev, record, upsert: true }))
+              // }
+              disabled={!hasupdate}
+            />
+          </Link>
         </Tooltip>,
         <Tooltip title="Hapus">
           <Button
@@ -567,9 +316,14 @@ const ProductTypeCard = ({
           <Title level={5} style={{ margin: 0 }}>
             ({record.id}) {record.name}
           </Title>
-          <Text type="secondary" style={{ fontSize: "12px" }}>
-            {record.ProductTypeFile.filter((d) => d.status).length} Files
-          </Text>
+          <div className="flex justify-evenly gap-4">
+            <Text type="secondary" style={{ fontSize: "12px" }}>
+              {record.ProductTypeFile.filter((d) => d.status).length} Files
+            </Text>
+            <Text type="secondary" style={{ fontSize: "12px" }}>
+              {record.Product.filter((d) => d.status).length} Produk
+            </Text>
+          </div>
         </div>
       </div>
 
@@ -587,44 +341,76 @@ const ProductTypeCard = ({
         title={
           <Space>
             <FileOutlined />
-            <span>Detail Files {record?.name}</span>
+            <span>Detail Katagori Berkas {record?.name}</span>
           </Space>
         }
-        width={600}
+        width={1000}
         style={{ top: 20 }}
       >
-        <List
-          itemLayout="horizontal"
-          dataSource={record?.ProductTypeFile.filter((f) => f.status) || []} // Asumsi data file ada di dalam record
-          locale={{ emptyText: "Belum ada list file!" }}
-          renderItem={(item) => (
-            <List.Item>
-              <List.Item.Meta
-                avatar={
-                  <div style={{ fontSize: "15px", paddingTop: "4px" }}>
-                    {getFileIcon(item.type)}
+        <div className="flex flex-col sm:flex-row gap-8">
+          <div className="flex-1">
+            <Divider titlePlacement="center">Daftar Berkas</Divider>
+            <List
+              itemLayout="horizontal"
+              dataSource={record?.ProductTypeFile.filter((f) => f.status) || []} // Asumsi data file ada di dalam record
+              locale={{ emptyText: "Belum ada list file!" }}
+              renderItem={(item) => (
+                <List.Item>
+                  <List.Item.Meta
+                    avatar={
+                      <div style={{ fontSize: "15px", paddingTop: "4px" }}>
+                        {getFileIcon(item.type)}
+                      </div>
+                    }
+                    title={<Text strong>{item.name}</Text>}
+                    description={
+                      <Space orientation="horizontal" size={5}>
+                        <Text type="secondary" style={{ fontSize: "12px" }}>
+                          ID: <Tag>{item.id}</Tag>
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: "12px" }}>
+                          Tipe: <Tag>{item.type.toUpperCase()}</Tag>
+                        </Text>
+                      </Space>
+                    }
+                  />
+                  <div>
+                    <Tag color={item.status ? "green" : "red"}>
+                      {item.status ? "Aktif" : "Non-aktif"}
+                    </Tag>
                   </div>
-                }
-                title={<Text strong>{item.name}</Text>}
-                description={
-                  <Space orientation="horizontal" size={5}>
-                    <Text type="secondary" style={{ fontSize: "12px" }}>
-                      ID: <Tag>{item.id}</Tag>
-                    </Text>
-                    <Text type="secondary" style={{ fontSize: "12px" }}>
-                      Tipe: <Tag>{item.type.toUpperCase()}</Tag>
-                    </Text>
-                  </Space>
-                }
-              />
-              <div>
-                <Tag color={item.status ? "green" : "red"}>
-                  {item.status ? "Aktif" : "Non-aktif"}
-                </Tag>
-              </div>
-            </List.Item>
-          )}
-        />
+                </List.Item>
+              )}
+            />
+          </div>
+          <div className="flex-1">
+            <Divider titlePlacement="center">Daftar Produk</Divider>
+            <List
+              itemLayout="horizontal"
+              dataSource={record?.Product.filter((f) => f.status) || []} // Asumsi data file ada di dalam record
+              locale={{ emptyText: "Belum ada list produk!" }}
+              renderItem={(item) => (
+                <List.Item>
+                  <List.Item.Meta
+                    title={<Text strong>{item.name}</Text>}
+                    description={
+                      <Space orientation="horizontal" size={5}>
+                        <Text type="secondary" style={{ fontSize: "12px" }}>
+                          ID: <Tag>{item.id}</Tag>
+                        </Text>
+                      </Space>
+                    }
+                  />
+                  <div>
+                    <Tag color={item.status ? "green" : "red"}>
+                      {item.status ? "Aktif" : "Non-aktif"}
+                    </Tag>
+                  </div>
+                </List.Item>
+              )}
+            />
+          </div>
+        </div>
       </Modal>
     </Card>
   );

@@ -1,5 +1,4 @@
-import React from "react";
-import { Button, Space, Typography } from "antd";
+import { Button, Typography } from "antd";
 import { ArrowLeft, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SelfAbsence from "./SelfAbsence";

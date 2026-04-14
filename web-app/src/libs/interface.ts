@@ -14,13 +14,19 @@ export interface IPageProps<T> {
   data: T[];
   [key: string]: any;
 }
-type EStatus = "APPROVED" | "REJECTED" | "PENDING";
+export type EStatusSubmission = "DISETUJUI" | "DITOLAK" | "PENDING" | "SELESAI";
+export type EStatusGuarantee =
+  | "DITERIMA"
+  | "PENDING"
+  | "DIPINJAM"
+  | "DIKEMBALIKAN";
 
 export interface IMenu {
   path: string;
   name: string;
   icon?: string | React.ReactNode;
   need_access: boolean;
+  can_access?: string[];
   children?: IMenu[];
 }
 
@@ -29,6 +35,7 @@ export interface IPermission {
   path: string;
   name: string;
   access: string[];
+  can_access?: string[];
 }
 
 export interface IComments {
@@ -62,6 +69,42 @@ export interface IPosition {
   updated_at: Date;
   User: IUser[];
 }
+export interface IUserCost {
+  id: string;
+  name: string;
+  type: "PENAMBAHAN" | "PENGURANGAN";
+  nominal: number;
+  nominal_type: "RUPIAH" | "PERCENT";
+  start_at: Date;
+  end_at?: Date | null;
+  userId: string;
+  User?: IUser;
+}
+export interface IUser {
+  updated_at: Date;
+  created_at: Date;
+  status: boolean;
+  id: string;
+  fullname: string;
+  nik: string | null;
+  nip: string | null;
+  phone: string | null;
+  email: string | null;
+  username: string | null;
+  password: string | null;
+  salary: number;
+  ptkp: string;
+  absen_method: "BUTTON" | "FACE";
+  face: string | null;
+  photo: string | null;
+  Role: IRole;
+  Position: IPosition;
+  Absence: IAbsence[];
+  UserCost?: IUserCost[] | null;
+  roleId: string;
+  positionId: string | null;
+}
+
 export interface IAbsence {
   id: string;
   method: string;
@@ -69,6 +112,10 @@ export interface IAbsence {
   check_out: Date | null;
   geo_in: string | null;
   geo_out: string | null;
+  geo_in_lat?: number | null;
+  geo_in_long?: number | null;
+  geo_out_lat?: number | null;
+  geo_out_long?: number | null;
   absence_status: "HADIR" | "TERLAMBAT" | "CUTI" | "PERDIN" | "SAKIT";
   description: string | null;
 
@@ -86,25 +133,26 @@ export interface IGuestBookType {
   updated_at: Date;
 }
 export interface IParticipant {
-  id: string;
+  id?: string;
   name: string;
-  phone: string | null;
-  email: string | null;
-  comment: string | null;
-  guestBookId: string;
+  phone?: string | null;
+  email?: string | null;
+  comment?: string | null;
+  guestBookId?: string;
+  action?: "create" | "update" | "delete";
 }
 export interface IGuestBook {
   id: string;
   name: string;
-  date: Date;
+  date: Date | string;
   status_come: "AKANDATANG" | "TELAHDATANG";
   description: string | null;
   status: boolean;
-  created_at: Date;
-  updated_at: Date;
+  created_at: Date | string;
+  updated_at: Date | string;
   gBookTypeId: string;
   GbookType: IGuestBookType;
-  participants: IParticipant[];
+  Participants: IParticipant[];
 }
 export interface IPermitFileDetail {
   id: string;
@@ -127,27 +175,7 @@ export interface IPermitFile {
   created_at: Date;
   updated_at: Date;
 }
-export interface IUser {
-  updated_at: Date;
-  created_at: Date;
-  status: boolean;
-  id: string;
-  fullname: string;
-  nik: string | null;
-  nip: string | null;
-  phone: string | null;
-  email: string | null;
-  username: string | null;
-  password: string | null;
-  salary: number;
-  ptkp: string;
-  absence_method: "BUTTON" | "FACE";
-  face: string | null;
-  photo: string | null;
-  Role: IRole;
-  Position: IPosition;
-  Absence: IAbsence[];
-}
+
 export interface IDebitur {
   id: string;
   fullname: string;
@@ -210,10 +238,31 @@ export interface IProduct {
   status: boolean;
   created_at: Date;
   updated_at: Date;
-  ProductType: IProductType;
+  ProductType?: IProductType | null;
   productTypeId: string;
-  Submission: ISubmission[];
+  Submission?: ISubmission[];
 }
+
+export interface IMitra {
+  ProductType: any;
+  id: string;
+  name: string;
+  code: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  pic: string | null;
+  no_contract: string | null;
+  drawer_code: string | null;
+  description: string | null;
+  file: string | null;
+
+  status: boolean;
+  created_at: Date;
+  updated_at: Date;
+  Submission?: [];
+}
+
 export interface ISubmission {
   id: string;
   purpose: string | null;
@@ -221,21 +270,47 @@ export interface ISubmission {
   account_number: string | null;
   activities: IActivities[];
   value: number;
-  guarantee_status: boolean;
+  tenor: number;
+  guarantee_status: EStatusGuarantee;
+  approve_status: EStatusSubmission;
   drawer_code: string;
 
-  is_active: boolean;
   status: boolean;
   created_at: Date;
   updated_at: Date;
   Debitur: IDebitur;
   Product: IProduct;
   User: IUser;
+  CreatedBy: IUser;
   Files: IFile[];
+  Mitra?: IMitra | null;
+  CollateralLending?: ICollateralLending[];
+  Visit?: IVisit[];
+  PermitFileDetail?: IPermitFileDetail[];
   debiturId: string;
   productId: string;
   userId: string;
-  // PermitFileDetail PermitFileDetail[]
+  mitraId?: string | null;
+  createdById: string;
+}
+
+export interface ICollateralLending {
+  id: string;
+  description: string | null;
+  start_at: Date;
+  end_at: Date;
+  file: string | null;
+  return_at: Date;
+
+  status: boolean;
+  created_at: Date;
+  updated_at: Date;
+  Submission: ISubmission;
+  CreatedBy: IUser;
+  ApproverBy?: IUser | null;
+  approverById?: string | null;
+  createdById: string;
+  submissionId: string;
 }
 
 export interface IVisitCategory {
@@ -269,13 +344,12 @@ export interface IVisit {
   id: string;
   date: Date;
   value: number;
-  summary?: string;
+  summary?: string | null;
   coments?: IComments[];
-  date_action?: Date;
-  geo?: string;
+  date_action?: Date | null;
+  geo?: string | null;
   files?: IFileVisit[];
   next_action?: string;
-  approve_status: EStatus;
 
   status: boolean;
   created_at: Date;
@@ -285,14 +359,24 @@ export interface IVisit {
   VisitCategory: IVisitCategory;
   VisitStatus: IVisitStatus; // Di schema Anda bernama 'Visit' (relation name)
   VisitPurpose: IVisitPurpose; // Di schema Anda bernama 'Visit' (relation name)
+  Submission?: ISubmission | null;
   debiturId: string;
   userId: string;
   visitCategoryId: string;
   visitStatusId: string;
   visitPurposeId: string;
+  submissionId?: string | null;
 }
 
 export interface IFileVisit {
   name: string;
   url: string;
 }
+
+export const PTKPDetail = [
+  { name: "TK/0", desc: "Belum Menikah", value: 0 },
+  { name: "K/0", desc: "Menikah (0 Anak)", value: 54000000 },
+  { name: "K/1", desc: "Menikah (1 Anak)", value: 58500000 },
+  { name: "K/2", desc: "Menikah (2 Anak)", value: 63000000 },
+  { name: "K/3", desc: "Menikah (3 Anak)", value: 67500000 },
+];

@@ -14,6 +14,7 @@ import { Plus, Filter } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
   IActionPage,
+  IMitra,
   IPageProps,
   IProduct,
   IProductType,
@@ -47,9 +48,10 @@ export default function DataSubmission() {
     productId: "",
     productTypeId: "",
     backdate: "",
-    is_active: "",
+    approve_status: "",
     guarantee_status: "",
     submissionTypeId: "",
+    mitraId: "",
   });
   const [action, setAction] = useState<IActionPage<ISubmission>>({
     upsert: false,
@@ -62,6 +64,7 @@ export default function DataSubmission() {
   const [subTypes, setSubTypes] = useState<ISubType[]>([]);
   const [products, setProducts] = useState<IProduct[]>([]);
   const [productTypes, setProductTypes] = useState<IProductType[]>([]);
+  const [mitras, setMitras] = useState<IMitra[]>([]);
 
   const getData = async () => {
     setLoading(true);
@@ -72,12 +75,14 @@ export default function DataSubmission() {
     if (pageprops.productTypeId)
       params.append("productTypeId", pageprops.productTypeId);
     if (pageprops.productId) params.append("productId", pageprops.productId);
-    if (pageprops.is_active) params.append("is_active", pageprops.is_active);
+    if (pageprops.approve_status)
+      params.append("approve_status", pageprops.approve_status);
     if (pageprops.guarantee_status)
       params.append("guarantee_status", pageprops.guarantee_status);
     if (pageprops.backdate) params.append("backdate", pageprops.backdate);
     if (pageprops.submissionTypeId)
       params.append("submissionTypeId", pageprops.submissionTypeId);
+    if (pageprops.mitraId) params.append("mitraId", pageprops.mitraId);
 
     await api
       .request({
@@ -93,7 +98,7 @@ export default function DataSubmission() {
               ...d.Product,
               ProductType: {
                 ...d.Product.ProductType,
-                ProductTypeFile: d.Product.ProductType.ProductTypeFile.map(
+                ProductTypeFile: d.Product?.ProductType?.ProductTypeFile.map(
                   (ptf) => ({
                     ...ptf,
                     Files: d.Files.filter(
@@ -119,19 +124,22 @@ export default function DataSubmission() {
           method: "GET",
           url: `${import.meta.env.VITE_API_URL}/producttype`,
         })
-        .then((res) => setProductTypes(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/product`,
-        })
-        .then((res) => setProducts(res.data.data));
+        .then((res) => {
+          setProductTypes(res.data.data);
+          setProducts(res.data.data.flatMap((p: IProductType) => p.Product));
+        });
       await api
         .request({
           method: "GET",
           url: `${import.meta.env.VITE_API_URL}/sub_type`,
         })
         .then((res) => setSubTypes(res.data.data));
+      await api
+        .request({
+          method: "GET",
+          url: `${import.meta.env.VITE_API_URL}/mitra`,
+        })
+        .then((res) => setMitras(res.data.data));
     })();
   }, []);
 
@@ -148,8 +156,9 @@ export default function DataSubmission() {
     pageprops.productId,
     pageprops.productTypeId,
     pageprops.submissionTypeId,
-    pageprops.is_active,
+    pageprops.approve_status,
     pageprops.guarantee_status,
+    pageprops.mitraId,
   ]);
 
   const columns: TableProps<ISubmission>["columns"] = [
@@ -210,7 +219,7 @@ export default function DataSubmission() {
           <div>
             <div>{record.Product.name}</div>
             <div className="text-xs opacity-80">
-              {record.Product.ProductType.name}
+              {record.Product.ProductType?.name}
             </div>
           </div>
         );
@@ -224,6 +233,7 @@ export default function DataSubmission() {
         return (
           <div className="text-right">
             <div>Rp. {IDRFormat(record.value)}</div>
+            <div className="text-xs opacity-80">{record.tenor} Bulan</div>
           </div>
         );
       },
@@ -254,6 +264,18 @@ export default function DataSubmission() {
       },
     },
     {
+      title: "Mitra",
+      key: "mitra",
+      dataIndex: "mitra",
+      render(_value, record, _index) {
+        return (
+          <div>
+            <div>{record.Mitra?.name}</div>
+          </div>
+        );
+      },
+    },
+    {
       title: "Files",
       key: "files",
       dataIndex: "files",
@@ -261,10 +283,14 @@ export default function DataSubmission() {
         return (
           <div style={{ maxWidth: 300 }}>
             <CollapseList
-              items={record.Product.ProductType.ProductTypeFile.map(
-                (c) =>
-                  `${c.name} (${c.Files.length}) {${c.Files.map((f) => f.name).join(", ")}}`,
-              )}
+              items={
+                record.Product.ProductType
+                  ? record.Product.ProductType?.ProductTypeFile.map(
+                      (c) =>
+                        `${c.name} (${c.Files.length}) {${c.Files.map((f) => f.name).join(", ")}}`,
+                    )
+                  : []
+              }
               initialVisible={1}
             />
           </div>
@@ -287,24 +313,6 @@ export default function DataSubmission() {
       },
     },
     {
-      title: "Status Jaminan",
-      key: "jaminan",
-      dataIndex: "jaminan",
-      render(_value, record, _index) {
-        return (
-          <div className="flex justify-center">
-            <Tag
-              style={{ width: 80, textAlign: "center" }}
-              color={record.guarantee_status ? "green" : "orange"}
-              variant="solid"
-            >
-              {record.guarantee_status ? "SELESAI" : "PENDING"}
-            </Tag>
-          </div>
-        );
-      },
-    },
-    {
       title: "Status Permohonan",
       key: "permohonan",
       dataIndex: "permohonan",
@@ -313,15 +321,48 @@ export default function DataSubmission() {
           <div className="flex justify-center">
             <Tag
               style={{ width: 80, textAlign: "center" }}
-              color={record.is_active ? "green" : "orange"}
+              color={
+                record.approve_status === "DITOLAK"
+                  ? "red"
+                  : record.approve_status === "PENDING"
+                    ? "orange"
+                    : "green"
+              }
               variant="solid"
             >
-              {record.is_active ? "AKTIF" : "NONAKTIF"}
+              {record.approve_status}
             </Tag>
           </div>
         );
       },
     },
+    {
+      title: "Status Jaminan",
+      key: "jaminan",
+      dataIndex: "jaminan",
+      render(_value, record, _index) {
+        return (
+          <div className="flex justify-center">
+            <Tag
+              style={{ width: 80, textAlign: "center" }}
+              color={
+                record.guarantee_status === "DITERIMA"
+                  ? "green"
+                  : record.guarantee_status === "PENDING"
+                    ? "orange"
+                    : record.guarantee_status === "DIPINJAM"
+                      ? "blue"
+                      : "red"
+              }
+              variant="solid"
+            >
+              {record.guarantee_status}
+            </Tag>
+          </div>
+        );
+      },
+    },
+
     {
       title: "Tanggal",
       key: "created_at",
@@ -439,13 +480,29 @@ export default function DataSubmission() {
         />
       </div>
       <div className="flex flex-col w-full">
+        <p className="mb-1">Mitra</p>
+        <Select
+          placeholder="Pilih mitra.."
+          className="w-full"
+          options={mitras.map((t) => ({ label: t.name, value: t.id }))}
+          onChange={(val) => setPageprops({ ...pageprops, mitraId: val })}
+          allowClear
+          value={pageprops.mitraId}
+          optionFilterProp={"label"}
+          showSearch
+          size="small"
+        />
+      </div>
+      <div className="flex flex-col w-full">
         <p className="mb-1">Status Jaminan</p>
         <Select
           placeholder="Pilih status jaminan.."
           className="w-full"
           options={[
-            { label: "SELESAI", value: "true" },
-            { label: "PENDING", value: "false" },
+            { label: "PENDING", value: "PENDING" },
+            { label: "DITERIMA", value: "DITERIMA" },
+            { label: "DIPINJAM", value: "DIPINJAM" },
+            { label: "DIKEMBALIKAN", value: "DIKEMBALIKAN" },
           ]}
           onChange={(val) =>
             setPageprops({ ...pageprops, guarantee_status: val })
@@ -463,12 +520,16 @@ export default function DataSubmission() {
           placeholder="Pilih status permohonan.."
           className="w-full"
           options={[
-            { label: "AKTIF", value: "true" },
-            { label: "NONAKTIF", value: "false" },
+            { label: "PENDING", value: "PENDING" },
+            { label: "DISETUJUI", value: "DISETUJUI" },
+            { label: "DITOLAK", value: "DITOLAK" },
+            { label: "SELESAI", value: "SELESAI" },
           ]}
-          onChange={(val) => setPageprops({ ...pageprops, is_active: val })}
+          onChange={(val) =>
+            setPageprops({ ...pageprops, approve_status: val })
+          }
           allowClear
-          value={pageprops.is_active}
+          value={pageprops.approve_status}
           optionFilterProp={"label"}
           showSearch
           size="small"
@@ -502,10 +563,11 @@ export default function DataSubmission() {
               ...pageprops,
               productTypeId: "",
               productId: "",
-              is_active: "",
+              approve_status: "",
               guarantee_status: "",
               backdate: "",
               submissionTypeId: "",
+              mitraid: "",
             })
           }
         >
@@ -570,7 +632,8 @@ export default function DataSubmission() {
                   pageprops.productTypeId ||
                   pageprops.productId ||
                   pageprops.guarantee_status ||
-                  pageprops.is_active ||
+                  pageprops.approve_status ||
+                  pageprops.mitraId ||
                   pageprops.backdate ||
                   pageprops.submissionTypeId
                     ? "primary"

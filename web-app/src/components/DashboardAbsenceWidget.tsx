@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Card, Button, Space, Tooltip, Drawer } from "antd";
+import { Card, Button, Tooltip, Drawer } from "antd";
 import { Clock, QrCode } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SelfAbsence from "../pages/absensi/SelfAbsence";

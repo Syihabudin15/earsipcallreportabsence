@@ -83,13 +83,32 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
   const body = req.body;
   try {
     const { id, Participants, ...saved } = body;
-    await prisma.guestBook.create({
+    
+    // Filter out any participants without a name
+    const validParticipants = (Participants || [])
+      .filter((p: any) => p.name && p.name.trim())
+      .map((p: any) => {
+        const { id, action, ...participant } = p;
+        return participant;
+      });
+
+    const data = await prisma.guestBook.create({
       data: {
         ...saved,
-        ...(Participants && { Participants: { create: Participants } }),
+        ...(validParticipants.length > 0 && {
+          Participants: { create: validParticipants },
+        }),
+      },
+      include: {
+        GbookType: true,
+        Participants: true,
       },
     });
-    return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
+
+    return ResponseServer(res, 200, {
+      msg: "Data berhasil ditambahkan",
+      data,
+    });
   } catch (err) {
     console.log(err);
     return ResponseServer(res, 500, {
@@ -111,29 +130,74 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
 
     const find = await prisma.guestBook.findFirst({
       where: { id: id as string },
+      include: { Participants: true },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
     const { Participants, ...saved } = body;
 
-    await prisma.guestBook.update({
-      where: { id: find.id },
-      data: { ...saved, updated_at: new Date() },
-    });
-
+    // Handle participants if provided
     if (Participants) {
-      await prisma.participant.deleteMany({ where: { guestBookId: find.id } });
-      if (Participants.length > 0) {
-        await prisma.participant.createMany({
-          data: Participants.map((participant: any) => ({
-            ...participant,
+      const createParticipants: any[] = [];
+      const updateParticipants: any[] = [];
+      const deleteParticipantIds: string[] = [];
+
+      // Process each participant based on action
+      for (const participant of Participants) {
+        if (!participant.name || !participant.name.trim()) continue;
+
+        if (participant.action === "delete" && participant.id) {
+          deleteParticipantIds.push(participant.id);
+        } else if (participant.action === "update" && participant.id) {
+          const { id: pId, action, ...data } = participant;
+          updateParticipants.push({ id: pId, data });
+        } else {
+          // Create new (action: "create" or no action + no id)
+          const { id: pId, action, ...data } = participant;
+          createParticipants.push({
+            ...data,
             guestBookId: find.id,
-          })),
+          });
+        }
+      }
+
+      // Delete removed participants
+      if (deleteParticipantIds.length > 0) {
+        await prisma.participant.deleteMany({
+          where: { id: { in: deleteParticipantIds } },
+        });
+      }
+
+      // Update existing participants
+      for (const { id: pId, data } of updateParticipants) {
+        await prisma.participant.update({
+          where: { id: pId },
+          data,
+        });
+      }
+
+      // Create new participants
+      if (createParticipants.length > 0) {
+        await prisma.participant.createMany({
+          data: createParticipants,
         });
       }
     }
 
-    return ResponseServer(res, 200, { msg: "Data berhasil dirubah" });
+    // Update guestbook
+    const data = await prisma.guestBook.update({
+      where: { id: find.id },
+      data: { ...saved, updated_at: new Date() },
+      include: {
+        GbookType: true,
+        Participants: true,
+      },
+    });
+
+    return ResponseServer(res, 200, {
+      msg: "Data berhasil dirubah",
+      data,
+    });
   } catch (err) {
     console.log(err);
     return ResponseServer(res, 500, {

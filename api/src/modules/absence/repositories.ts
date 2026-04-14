@@ -42,10 +42,18 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
           { method: { contains: search as string } },
           { absence_status: { contains: search as string } },
           { description: { contains: search as string } },
-          { User: { fullname: { contains: search as string } } },
-          { User: { nik: { contains: search as string } } },
-          { User: { email: { contains: search as string } } },
-          { User: { phone: { contains: search as string } } },
+          {
+            User: {
+              OR: [
+                { fullname: { contains: search as string } },
+                { id: { contains: search as string } },
+                { nik: { contains: search as string } },
+                { nip: { contains: search as string } },
+                { email: { contains: search as string } },
+                { phone: { contains: search as string } },
+              ],
+            },
+          },
         ],
       }),
     };
@@ -209,7 +217,7 @@ export const SELF_ATTEND = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const { method, type = "CHECK_IN" } = req.body; // type: CHECK_IN or CHECK_OUT
+  const { method, type = "CHECK_IN", lat, long } = req.body; // type: CHECK_IN or CHECK_OUT
   const userId = (req as any).user?.id; // Assuming user is set by auth middleware
 
   if (!userId) {
@@ -217,6 +225,31 @@ export const SELF_ATTEND = async (
   }
 
   try {
+    // Get absence config for geolocation validation
+    const config = await prisma.absenceConfig.findFirst();
+
+    // Validate geolocation if config requires it
+    if (config?.geo_location && config?.meter_tolerance) {
+      if (!lat || !long) {
+        return ResponseServer(res, 400, {
+          msg: "Lokasi diperlukan untuk absensi di tempat ini",
+        });
+      }
+
+      const [configLat, configLong] = config.geo_location
+        .split(",")
+        .map(Number);
+      const distance = calculateDistance(lat, long, configLat, configLong);
+
+      if (distance > config.meter_tolerance) {
+        return ResponseServer(res, 400, {
+          msg: `Anda berada di luar zona absensi. Jarak: ${Math.round(distance)}m, Toleransi: ${config.meter_tolerance}m`,
+          distance,
+          tolerance: config.meter_tolerance,
+        });
+      }
+    }
+
     // Get today's date range
     const today = moment().startOf("day").toDate();
     const tomorrow = moment().endOf("day").toDate();
@@ -245,6 +278,9 @@ export const SELF_ATTEND = async (
         data: {
           method,
           check_in: new Date(),
+          geo_in_lat: lat || null,
+          geo_in_long: long || null,
+          geo_in: lat && long ? `${lat},${long}` : null,
           userId,
           absence_status: "HADIR",
         },
@@ -266,6 +302,9 @@ export const SELF_ATTEND = async (
         where: { id: todayAbsence.id },
         data: {
           check_out: new Date(),
+          geo_out_lat: lat || null,
+          geo_out_long: long || null,
+          geo_out: lat && long ? `${lat},${long}` : null,
         },
       });
 
@@ -284,6 +323,26 @@ export const SELF_ATTEND = async (
   }
 };
 
+// Helper function to calculate distance between two coordinates (in meters)
+const calculateDistance = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number => {
+  const R = 6371; // Radius of the Earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c * 1000; // Return distance in meters
+};
+
 export const REPORT = async (
   req: Request,
   res: Response,
@@ -293,12 +352,20 @@ export const REPORT = async (
 
   try {
     let startDate, endDate;
+    const reportMonth = month
+      ? parseInt(month as string)
+      : moment().month() + 1;
+    const reportYear = year ? parseInt(year as string) : moment().year();
 
-    if (type === "monthly") {
-      startDate = moment(`${year}-${month}-01`).startOf("month").toDate();
-      endDate = moment(`${year}-${month}-01`).endOf("month").toDate();
+    // Format month and year properly
+    const monthPadded = String(reportMonth).padStart(2, "0");
+    const dateStr = `${reportYear}-${monthPadded}-01`;
+
+    if (type === "monthly" || type === "daily") {
+      startDate = moment(dateStr, "YYYY-MM-DD").startOf("month").toDate();
+      endDate = moment(dateStr, "YYYY-MM-DD").endOf("month").toDate();
     } else {
-      // Daily report for current month
+      // Default to monthly for current month
       startDate = moment().startOf("month").toDate();
       endDate = moment().endOf("month").toDate();
     }
@@ -346,8 +413,8 @@ export const REPORT = async (
     return ResponseServer(res, 200, {
       msg: "Report absensi",
       type,
-      month,
-      year,
+      month: reportMonth,
+      year: reportYear,
       data: Object.values(report),
     });
   } catch (err) {

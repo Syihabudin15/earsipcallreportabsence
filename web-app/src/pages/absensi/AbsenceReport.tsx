@@ -6,23 +6,26 @@ import {
   Space,
   Table,
   Typography,
+  message,
 } from "antd";
 import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
 import api from "../../libs/api";
-import moment from "moment";
+import dayjs from "dayjs";
 import { useSearchParams } from "react-router-dom";
 
 const { Title } = Typography;
 const { Option } = Select;
 
+interface User {
+  id: string;
+  fullname: string;
+  nik: string;
+}
+
 interface ReportData {
-  user: {
-    id: string;
-    fullname: string;
-    nik: string;
-  };
+  user: User;
   totalDays: number;
   presentDays: number;
   lateDays: number;
@@ -34,10 +37,13 @@ export default function AbsenceReport() {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<ReportData[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState(moment().month() + 1);
-  const [selectedYear, setSelectedYear] = useState(moment().year());
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    dayjs().month() + 1,
+  );
+  const [selectedYear, setSelectedYear] = useState<number>(dayjs().year());
   const [reportType, setReportType] = useState<"monthly" | "daily">("monthly");
 
+  // Initialize report type from URL params
   useEffect(() => {
     const type = searchParams.get("type");
     if (type === "daily" || type === "monthly") {
@@ -48,15 +54,34 @@ export default function AbsenceReport() {
   const fetchReport = async () => {
     setLoading(true);
     try {
-      const response = await api.request({
-        url: `${import.meta.env.VITE_API_URL}/absence/report?type=${reportType}&month=${selectedMonth}&year=${selectedYear}`,
-        method: "GET",
+      const queryString = new URLSearchParams({
+        type: reportType,
+        month: String(selectedMonth),
+        year: String(selectedYear),
+      }).toString();
+
+      const response = await api.get(`/absence/report?${queryString}`);
+
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        setReportData(response.data.data);
+      } else {
+        setReportData([]);
+      }
+    } catch (error: any) {
+      console.error("Fetch Report Error:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        url: error.config?.url,
       });
-      setReportData(response.data.data);
-    } catch (error) {
-      console.error("Error fetching report:", error);
+      const errorMsg =
+        error.response?.data?.msg || "Gagal mengambil data laporan";
+      message.error(errorMsg);
+      setReportData([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -97,6 +122,11 @@ export default function AbsenceReport() {
   ];
 
   const exportToCSV = () => {
+    if (!reportData || reportData.length === 0) {
+      message.warning("Tidak ada data untuk di-export");
+      return;
+    }
+
     const csvContent = [
       ["Nama", "NIK", "Total Hari", "Hadir", "Terlambat", "Tidak Hadir"],
       ...reportData.map((item) => [
@@ -111,14 +141,29 @@ export default function AbsenceReport() {
       .map((row) => row.join(","))
       .join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `laporan-absensi-${selectedYear}-${selectedMonth}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `laporan-absensi-${reportType}-${selectedYear}-${String(selectedMonth).padStart(2, "0")}.csv`,
+    );
+    link.click();
+    URL.revokeObjectURL(url);
   };
+
+  const handleMonthChange = (date: any) => {
+    if (date) {
+      setSelectedMonth(date.month() + 1);
+      setSelectedYear(date.year());
+    }
+  };
+
+  const currentDate = dayjs()
+    .year(selectedYear)
+    .month(selectedMonth - 1)
+    .date(1);
 
   return (
     <div className="space-y-4">
@@ -136,13 +181,14 @@ export default function AbsenceReport() {
           type="primary"
           icon={<Download size={14} />}
           onClick={exportToCSV}
+          loading={loading}
         >
           Export CSV
         </Button>
       </div>
 
       <Card>
-        <Space className="mb-4">
+        <Space className="mb-4" wrap>
           <Select
             value={reportType}
             onChange={setReportType}
@@ -154,13 +200,9 @@ export default function AbsenceReport() {
 
           <DatePicker
             picker="month"
-            value={moment(`${selectedYear}-${selectedMonth}`, "YYYY-M")}
-            onChange={(date) => {
-              if (date) {
-                setSelectedMonth(date.month() + 1);
-                setSelectedYear(date.year());
-              }
-            }}
+            value={currentDate}
+            onChange={handleMonthChange}
+            format="MMMM YYYY"
           />
         </Space>
 

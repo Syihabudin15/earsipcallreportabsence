@@ -1,10 +1,15 @@
 import { App, Button, Card, Col, Divider, Row, Spin, Tooltip } from "antd";
 import type {
+  EStatusGuarantee,
+  EStatusSubmission,
   IActivities,
   IComments,
   IDebitur,
   IFile,
+  IMitra,
   IProduct,
+  IProductType,
+  IProductTypeFile,
   ISubmission,
   ISubType,
   IUser,
@@ -26,7 +31,8 @@ import { Link } from "react-router-dom";
 export default function UpsertSubmission({ record }: { record?: ISubmission }) {
   const [loading, setLoading] = useState(false);
   const [subType, setSubType] = useState<ISubType[]>([]);
-  const [products, setProducts] = useState<IProduct[]>([]);
+  const [mitras, setMitras] = useState<IProduct[]>([]);
+  const [products, setProducts] = useState<IMitra[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [search, setSearch] = useState("");
   const [activities, setActivities] = useState<IActivities[]>([]);
@@ -54,15 +60,27 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
       await api
         .request({
           method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/product`,
+          url: `${import.meta.env.VITE_API_URL}/producttype`,
         })
-        .then((res) => setProducts(res.data.data));
+        .then((res) =>
+          setProducts(
+            res.data.data.flatMap((p: IProductType) =>
+              p.Product.map((dp) => ({ ...dp, ProductType: p })),
+            ),
+          ),
+        );
       await api
         .request({
           method: "GET",
           url: `${import.meta.env.VITE_API_URL}/user`,
         })
         .then((res) => setUsers(res.data.data));
+      await api
+        .request({
+          method: "GET",
+          url: `${import.meta.env.VITE_API_URL}/mitra`,
+        })
+        .then((res) => setMitras(res.data.data));
     })();
   }, []);
 
@@ -197,6 +215,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
             <InputUtil
               label="NIK"
               value={data.Debitur?.nik}
+              required
               onchage={(e: string) => {
                 setData({ ...data, Debitur: { ...data.Debitur, nik: e } });
                 record &&
@@ -208,6 +227,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
           <Col xs={12} md={8}>
             <InputUtil
               label="Nama Lengkap"
+              required
               value={data.Debitur?.fullname}
               onchage={(e: string) => {
                 setData({ ...data, Debitur: { ...data.Debitur, fullname: e } });
@@ -224,6 +244,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
           <Col xs={12} md={8}>
             <InputUtil
               label="Tempat Lahir"
+              required
               value={data.Debitur?.birthplace}
               onchage={(e: string) => {
                 setData({
@@ -243,6 +264,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
           <Col xs={12} md={8}>
             <InputUtil
               label="Tanggal Lahir"
+              required
               value={moment(data.Debitur?.birthdate).format("YYYY-MM-DD")}
               onchage={(e: string) => {
                 setData({
@@ -299,6 +321,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
           <Col xs={12} md={8}>
             <InputUtil
               label="Jenis Pemohon"
+              required
               value={data.Debitur?.submissionTypeId}
               onchage={(e: string) => {
                 setData({
@@ -345,6 +368,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
             <Col xs={12} md={8}>
               <InputUtil
                 label="Tanggal Permohonan"
+                required
                 value={moment(data.created_at).format("YYYY-MM-DD")}
                 onchage={(e: string) => {
                   setData({
@@ -365,12 +389,13 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
               <InputUtil
                 label="Produk"
                 value={data.productId}
+                required
                 onchage={(e: string) => {
                   const find = products.find((u) => u.id === e);
                   setData({
                     ...data,
                     productId: e,
-                    Product: find as IProduct,
+                    Product: find as unknown as IProduct,
                   });
                   record &&
                     handleChangeRecord(
@@ -380,7 +405,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
                     );
                 }}
                 options={products.map((s) => ({
-                  label: `(${s.ProductType.name}) ${s.name}`,
+                  label: `(${s.ProductType?.name}) ${s.name}`,
                   value: s.id,
                 }))}
                 type="option"
@@ -400,6 +425,18 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
                     );
                 }}
                 type="text"
+              />
+            </Col>
+            <Col xs={12} md={8}>
+              <InputUtil
+                label="Tenor"
+                value={data.tenor}
+                onchage={(e: number) => {
+                  setData({ ...data, tenor: e });
+                  record &&
+                    handleChangeRecord("edit Tenor", activities, setActivities);
+                }}
+                type="number"
               />
             </Col>
             <Col xs={12} md={8}>
@@ -437,11 +474,12 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
             <Col xs={12} md={8}>
               <InputUtil
                 label="Status Permohonan"
-                value={data.is_active}
-                onchage={(e: boolean) => {
+                required
+                value={data.approve_status}
+                onchage={(e: EStatusSubmission) => {
                   setData({
                     ...data,
-                    is_active: e,
+                    approve_status: e,
                   });
                   record &&
                     handleChangeRecord(
@@ -451,8 +489,10 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
                     );
                 }}
                 options={[
-                  { label: "AKTIF", value: true },
-                  { label: "NONAKTIF", value: false },
+                  { label: "PENDING", value: "PENDING" },
+                  { label: "DISETUJUI", value: "DISETUJUI" },
+                  // { label: "DITOLAK", value: "DITOLAK" },
+                  { label: "SELESAI", value: "SELESAI" },
                 ]}
                 type="option"
               />
@@ -460,8 +500,9 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
             <Col xs={12} md={8}>
               <InputUtil
                 label="Status Jaminan"
+                required
                 value={data.guarantee_status}
-                onchage={(e: boolean) => {
+                onchage={(e: EStatusGuarantee) => {
                   setData({
                     ...data,
                     guarantee_status: e,
@@ -474,8 +515,10 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
                     );
                 }}
                 options={[
-                  { label: "SELESAI", value: true },
-                  { label: "PENDING", value: false },
+                  { label: "PENDING", value: "PENDING" },
+                  { label: "DITERIMA", value: "DITERIMA" },
+                  { label: "DIPINJAM", value: "DIPINJAM" },
+                  { label: "DIKEMBALIKAN", value: "DIKEMBALIKAN" },
                 ]}
                 type="option"
               />
@@ -496,6 +539,23 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
                 type="text"
               />
             </Col>
+            <Col xs={12} md={8}>
+              <InputUtil
+                label="Mitra"
+                required
+                value={data.mitraId}
+                onchage={(e: string) => {
+                  setData({
+                    ...data,
+                    mitraId: e,
+                  });
+                  record &&
+                    handleChangeRecord("edit Mitra", activities, setActivities);
+                }}
+                options={mitras.map((m) => ({ label: m.name, value: m.id }))}
+                type="option"
+              />
+            </Col>
           </Row>
         </Card>
         <Card
@@ -511,6 +571,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
               <InputUtil
                 label="Petugas"
                 value={data.userId}
+                required
                 disabled={!hasAccess("/app/earsip/submission", "proses")}
                 onchage={(e: string) => {
                   const find = users.find((u) => u.id === e);
@@ -653,7 +714,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
                             canDelete={!record || hasApprovedDeletePermit}
                             ondelete={() => {
                               const updatedProductTypeFile =
-                                data.Product.ProductType.ProductTypeFile.map(
+                                data.Product.ProductType?.ProductTypeFile.map(
                                   (pdffile, pdfi) => {
                                     if (pdfi === i) {
                                       return {
@@ -674,8 +735,9 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
                                   ...data.Product,
                                   ProductType: {
                                     ...data.Product.ProductType,
-                                    ProductTypeFile: updatedProductTypeFile,
-                                  },
+                                    ProductTypeFile:
+                                      updatedProductTypeFile as IProductTypeFile[],
+                                  } as IProductType,
                                 },
                               });
                               record &&
@@ -694,7 +756,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
                                   ProductType: {
                                     ...data.Product.ProductType,
                                     ProductTypeFile:
-                                      data.Product.ProductType.ProductTypeFile.map(
+                                      data.Product.ProductType?.ProductTypeFile.map(
                                         (pdffile, pdfi) => ({
                                           ...pdffile,
                                           ...(pdfi === i && {
@@ -708,7 +770,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
                                           }),
                                         }),
                                       ),
-                                  },
+                                  } as IProductType,
                                 },
                               });
                               record &&
@@ -751,8 +813,8 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
                                     ],
                                   }),
                                 }),
-                              ),
-                          },
+                              ) as IProductTypeFile[],
+                          } as IProductType,
                         },
                       })
                     }
@@ -783,13 +845,14 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
 const defaultData: ISubmission = {
   id: "",
   value: 0,
+  tenor: 0,
   drawer_code: "",
   purpose: "",
   account_number: null,
   coments: [],
   activities: [],
-  guarantee_status: false,
-  is_active: true,
+  guarantee_status: "PENDING",
+  approve_status: "PENDING",
   status: true,
   created_at: new Date(),
   updated_at: new Date(),
@@ -798,8 +861,12 @@ const defaultData: ISubmission = {
   userId: "",
   Debitur: {} as IDebitur,
   User: {} as IUser,
+  CreatedBy: {} as IUser,
   Product: {} as IProduct,
   Files: [],
+  Mitra: null,
+  mitraId: null,
+  createdById: "",
 };
 
 const defaultComment: IComments = {

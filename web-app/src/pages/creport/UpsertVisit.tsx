@@ -198,6 +198,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <InputUtil
               label="NIK"
               value={data.Debitur?.nik}
+              required
               onchage={(e: string) => {
                 setData({ ...data, Debitur: { ...data.Debitur, nik: e } });
               }}
@@ -207,6 +208,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
           <Col xs={12} md={8}>
             <InputUtil
               label="Nama Lengkap"
+              required
               value={data.Debitur?.fullname}
               onchage={(e: string) => {
                 setData({ ...data, Debitur: { ...data.Debitur, fullname: e } });
@@ -217,6 +219,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
           <Col xs={12} md={8}>
             <InputUtil
               label="Tempat Lahir"
+              required
               value={data.Debitur?.birthplace}
               onchage={(e: string) => {
                 setData({
@@ -230,6 +233,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
           <Col xs={12} md={8}>
             <InputUtil
               label="Tanggal Lahir"
+              required
               value={moment(data.Debitur?.birthdate).format("YYYY-MM-DD")}
               onchage={(e: string) => {
                 setData({
@@ -274,6 +278,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
           <Col xs={12} md={8}>
             <InputUtil
               label="Jenis Pemohon"
+              required
               value={data.Debitur?.submissionTypeId}
               onchage={(e: string) => {
                 setData({
@@ -308,6 +313,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <Col xs={12} md={8}>
               <InputUtil
                 label="Tanggal Rencana Kunjungan"
+                required
                 value={moment(data.date).format("YYYY-MM-DD")}
                 onchage={(e: string) => {
                   setData({
@@ -334,6 +340,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <Col xs={12} md={8}>
               <InputUtil
                 label="Jenis Kunjungan"
+                required
                 value={data.VisitCategory?.id}
                 onchage={(e: string) => {
                   const find = visitCategories.find((u) => u.id === e);
@@ -353,6 +360,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <Col xs={12} md={8}>
               <InputUtil
                 label="Tujuan Kunjungan"
+                required
                 value={data.VisitPurpose?.id}
                 onchage={(e: string) => {
                   const find = visitPurposes.find((u) => u.id === e);
@@ -382,6 +390,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <Col xs={12} md={8}>
               <InputUtil
                 label="Hasil Kunjungan"
+                required
                 value={data.VisitStatus?.id}
                 onchage={(e: string) => {
                   const find = visitStatuses.find((u) => u.id === e);
@@ -438,6 +447,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <Col xs={12} md={8}>
               <InputUtil
                 label="Petugas"
+                required
                 value={data.userId}
                 disabled={!hasAccess("/app/callreport/visit", "proses")}
                 onchage={(e: string) => {
@@ -602,7 +612,7 @@ const defaultData: IVisit = {
   value: 0,
   date: new Date(),
   summary: "",
-  date_action: new Date(),
+  date_action: null,
   geo: "",
   files: [],
   next_action: "",

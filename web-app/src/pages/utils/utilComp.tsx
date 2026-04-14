@@ -22,6 +22,7 @@ import {
   Typography,
 } from "antd";
 import {
+  CloseCircleOutlined,
   EyeOutlined,
   FilePdfOutlined,
   FileTextOutlined,
@@ -29,6 +30,7 @@ import {
   HistoryOutlined,
   PrinterOutlined,
   SafetyCertificateOutlined,
+  SwapOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { IDRFormat } from "./utilForm";
@@ -204,13 +206,23 @@ export const DetailSubmission = ({
                 header: {
                   fontSize: "12px",
                   textAlign: "center",
-                  background: record.is_active ? "#f6ffed" : "#fff7e6",
+                  background:
+                    record.approve_status === "DISETUJUI" ||
+                    record.approve_status === "SELESAI"
+                      ? "#f6ffed" // Hijau muda
+                      : record.approve_status === "DITOLAK"
+                        ? "#fff1f0" // Merah muda
+                        : "#fff7e6", // Oranye muda (Pending)
                 },
               }}
               style={{
-                border: record.is_active
-                  ? "1px solid #b7eb8f"
-                  : "1px solid #ffd591",
+                border:
+                  record.approve_status === "DISETUJUI" ||
+                  record.approve_status === "SELESAI"
+                    ? "1px solid #b7eb8f"
+                    : record.approve_status === "DITOLAK"
+                      ? "1px solid #ffa39e"
+                      : "1px solid #ffd591",
               }}
             >
               <div
@@ -220,23 +232,41 @@ export const DetailSubmission = ({
                   padding: "8px 0",
                 }}
               >
-                {record.is_active ? (
-                  <Tag
-                    color="success"
-                    icon={<SafetyCertificateOutlined />}
-                    style={{ margin: 0 }}
-                  >
-                    AKTIF
-                  </Tag>
-                ) : (
-                  <Tag
-                    color="warning"
-                    icon={<HistoryOutlined />}
-                    style={{ margin: 0 }}
-                  >
-                    PENDING
-                  </Tag>
-                )}
+                {(() => {
+                  switch (record.approve_status) {
+                    case "DISETUJUI":
+                    case "SELESAI":
+                      return (
+                        <Tag
+                          color="success"
+                          icon={<SafetyCertificateOutlined />}
+                          style={{ margin: 0 }}
+                        >
+                          {record.approve_status}
+                        </Tag>
+                      );
+                    case "DITOLAK":
+                      return (
+                        <Tag
+                          color="error"
+                          icon={<CloseCircleOutlined />}
+                          style={{ margin: 0 }}
+                        >
+                          DITOLAK
+                        </Tag>
+                      );
+                    default:
+                      return (
+                        <Tag
+                          color="warning"
+                          icon={<HistoryOutlined />}
+                          style={{ margin: 0 }}
+                        >
+                          PENDING
+                        </Tag>
+                      );
+                  }
+                })()}
               </div>
             </Card>
 
@@ -248,13 +278,23 @@ export const DetailSubmission = ({
                 header: {
                   fontSize: "12px",
                   textAlign: "center",
-                  background: record.guarantee_status ? "#f6ffed" : "#fff7e6",
+                  background:
+                    record.guarantee_status === "DITERIMA" ||
+                    record.guarantee_status === "DIKEMBALIKAN"
+                      ? "#f6ffed"
+                      : record.guarantee_status === "DIPINJAM"
+                        ? "#e6f7ff" // Biru muda
+                        : "#fff7e6",
                 },
               }}
               style={{
-                border: record.guarantee_status
-                  ? "1px solid #b7eb8f"
-                  : "1px solid #ffd591",
+                border:
+                  record.guarantee_status === "DITERIMA" ||
+                  record.guarantee_status === "DIKEMBALIKAN"
+                    ? "1px solid #b7eb8f"
+                    : record.guarantee_status === "DIPINJAM"
+                      ? "1px solid #91d5ff"
+                      : "1px solid #ffd591",
               }}
             >
               <div
@@ -264,23 +304,41 @@ export const DetailSubmission = ({
                   padding: "8px 0",
                 }}
               >
-                {record.guarantee_status ? (
-                  <Tag
-                    color="success"
-                    icon={<SafetyCertificateOutlined />}
-                    style={{ margin: 0 }}
-                  >
-                    SELESAI
-                  </Tag>
-                ) : (
-                  <Tag
-                    color="warning"
-                    icon={<HistoryOutlined />}
-                    style={{ margin: 0 }}
-                  >
-                    PENDING
-                  </Tag>
-                )}
+                {(() => {
+                  switch (record.guarantee_status) {
+                    case "DITERIMA":
+                    case "DIKEMBALIKAN":
+                      return (
+                        <Tag
+                          color="success"
+                          icon={<SafetyCertificateOutlined />}
+                          style={{ margin: 0 }}
+                        >
+                          {record.guarantee_status}
+                        </Tag>
+                      );
+                    case "DIPINJAM":
+                      return (
+                        <Tag
+                          color="processing"
+                          icon={<SwapOutlined />}
+                          style={{ margin: 0 }}
+                        >
+                          DIPINJAM
+                        </Tag>
+                      );
+                    default:
+                      return (
+                        <Tag
+                          color="warning"
+                          icon={<HistoryOutlined />}
+                          style={{ margin: 0 }}
+                        >
+                          PENDING
+                        </Tag>
+                      );
+                  }
+                })()}
               </div>
             </Card>
           </div>
@@ -324,7 +382,7 @@ export const DetailSubmission = ({
         </Divider>
         <Descriptions bordered size="small" column={{ xl: 2, xs: 1 }}>
           <Descriptions.Item label="Kategori Berkas">
-            **{record.Product.ProductType.name}**
+            **{record.Product.ProductType?.name}**
           </Descriptions.Item>
           <Descriptions.Item label="Produk">
             {record.Product.name}
@@ -335,6 +393,9 @@ export const DetailSubmission = ({
           <Descriptions.Item label="Nilai">
             Rp. {IDRFormat(record.value)}
           </Descriptions.Item>
+          <Descriptions.Item label="Tenor">
+            {record.tenor} Bulan
+          </Descriptions.Item>
           <Descriptions.Item label="Tujuan Penggunaan">
             {record.purpose}
           </Descriptions.Item>
@@ -343,6 +404,9 @@ export const DetailSubmission = ({
           </Descriptions.Item>
           <Descriptions.Item label="No Lemari">
             {record.drawer_code}
+          </Descriptions.Item>
+          <Descriptions.Item label="Mitra">
+            {record.Mitra?.name}
           </Descriptions.Item>
         </Descriptions>
 

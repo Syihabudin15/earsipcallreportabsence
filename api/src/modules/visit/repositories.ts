@@ -2,7 +2,7 @@ import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 import moment from "moment";
-import type { EPermitStatus } from "@prisma/client";
+import type { EPermitStatus, Prisma } from "@prisma/client";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
   let {
@@ -21,46 +21,51 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
   const skip = (page - 1) * limit;
 
   try {
-    const data = await prisma.visit.findMany({
-      where: {
-        status: true,
-        ...(search && {
-          OR: [
-            { id: { contains: search as string } },
-            {
-              Debitur: {
-                OR: [
-                  { fullname: { contains: search as string } },
-                  { cif: { contains: search as string } },
-                  { nik: { contains: search as string } },
-                  { id: { contains: search as string } },
-                ],
-              },
+    const querywhere: Prisma.VisitWhereInput = {
+      status: true,
+      ...(search && {
+        OR: [
+          { id: { contains: search as string } },
+          {
+            Debitur: {
+              OR: [
+                { fullname: { contains: search as string } },
+                { cif: { contains: search as string } },
+                { nik: { contains: search as string } },
+                { id: { contains: search as string } },
+              ],
             },
-          ],
-        }),
-        ...(visitCategoryId && { visitCategoryId: visitCategoryId as string }),
-        ...(visitStatusId && { visitStatusId: visitStatusId as string }),
-        ...(visitPurposeId && { visitPurposeId: visitPurposeId as string }),
-        ...(approve_status && {
-          approve_status: approve_status as EPermitStatus,
-        }),
-        ...(submissionTypeId && {
-          Debitur: {
-            submissionTypeId: submissionTypeId as string,
           },
-        }),
-        ...(backdate && {
-          created_at: {
-            gte: moment((backdate as string).split(",")[0])
-              .startOf("date")
-              .toDate(),
-            lte: moment((backdate as string).split(",")[1])
-              .endOf("day")
-              .toDate(),
-          },
-        }),
-      },
+        ],
+      }),
+      ...(visitCategoryId && { visitCategoryId: visitCategoryId as string }),
+      ...(visitStatusId && { visitStatusId: visitStatusId as string }),
+      ...(visitPurposeId && { visitPurposeId: visitPurposeId as string }),
+      ...(approve_status && {
+        approve_status: approve_status as EPermitStatus,
+      }),
+      ...(req.user?.Role.data_status === "USER"
+        ? { userId: req.user?.id }
+        : {}),
+      ...(submissionTypeId && {
+        Debitur: {
+          submissionTypeId: submissionTypeId as string,
+        },
+      }),
+      ...(backdate && {
+        created_at: {
+          gte: moment((backdate as string).split(",")[0])
+            .startOf("date")
+            .toDate(),
+          lte: moment((backdate as string).split(",")[1])
+            .endOf("day")
+            .toDate(),
+        },
+      }),
+    };
+
+    const data = await prisma.visit.findMany({
+      where: querywhere,
       include: {
         Debitur: { include: { SubmissionType: true } },
         VisitCategory: true,
@@ -73,45 +78,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     });
 
     const total = await prisma.visit.count({
-      where: {
-        status: true,
-        ...(search && {
-          OR: [
-            { id: { contains: search as string } },
-            {
-              Debitur: {
-                OR: [
-                  { fullname: { contains: search as string } },
-                  { cif: { contains: search as string } },
-                  { nik: { contains: search as string } },
-                  { id: { contains: search as string } },
-                ],
-              },
-            },
-          ],
-        }),
-        ...(visitCategoryId && { visitCategoryId: visitCategoryId as string }),
-        ...(visitStatusId && { visitStatusId: visitStatusId as string }),
-        ...(visitPurposeId && { visitPurposeId: visitPurposeId as string }),
-        ...(approve_status && {
-          approve_status: approve_status as EPermitStatus,
-        }),
-        ...(submissionTypeId && {
-          Debitur: {
-            submissionTypeId: submissionTypeId as string,
-          },
-        }),
-        ...(backdate && {
-          created_at: {
-            gte: moment((backdate as string).split(",")[0])
-              .startOf("date")
-              .toDate(),
-            lte: moment((backdate as string).split(",")[1])
-              .endOf("day")
-              .toDate(),
-          },
-        }),
-      },
+      where: querywhere,
     });
     return ResponseServer(res, 200, {
       msg: "GET /visit",

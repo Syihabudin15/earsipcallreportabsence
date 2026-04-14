@@ -10,13 +10,28 @@ export const MainDashboard = async (
   const [submissionType, productType, visitCategory, visitStatus] =
     await prisma.$transaction([
       prisma.submissionType.findMany({
-        where: { status: true },
+        where: {
+          status: true,
+        },
         include: { Debitur: true },
       }),
       prisma.productType.findMany({
-        where: { status: true },
+        where: {
+          status: true,
+        },
         include: {
-          Product: { include: { Submission: { where: { status: true } } } },
+          Product: {
+            include: {
+              Submission: {
+                where: {
+                  status: true,
+                  ...(req.user?.Role.data_status === "USER"
+                    ? { userId: req.user?.id }
+                    : {}),
+                },
+              },
+            },
+          },
           ProductTypeFile: {
             include: { Files: { where: { submissionId: { not: null } } } },
             where: { status: true },
@@ -25,11 +40,29 @@ export const MainDashboard = async (
       }),
       prisma.visitCategory.findMany({
         where: { status: true },
-        include: { Visit: true },
+        include: {
+          Visit: {
+            where: {
+              status: true,
+              ...(req.user?.Role.data_status === "USER"
+                ? { userId: req.user?.id }
+                : {}),
+            },
+          },
+        },
       }),
       prisma.visitStatus.findMany({
         where: { status: true },
-        include: { Visit: true },
+        include: {
+          Visit: {
+            where: {
+              status: true,
+              ...(req.user?.Role.data_status === "USER"
+                ? { userId: req.user?.id }
+                : {}),
+            },
+          },
+        },
       }),
     ]);
   return ResponseServer(res, 200, {

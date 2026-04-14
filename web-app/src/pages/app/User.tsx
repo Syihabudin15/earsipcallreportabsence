@@ -5,30 +5,31 @@ import {
   Select,
   Table,
   type TableProps,
-  Card,
-  Row,
-  Col,
   Tag,
-  message,
   Popconfirm,
   Modal,
-  Form,
+  App,
+  Divider,
 } from "antd";
-import {
-  Plus,
-  Filter,
-  Users,
-  UserCheck,
-  Phone,
-  Mail,
-  Edit2,
-  Trash2,
-} from "lucide-react";
+import { Plus, Filter, Phone, Mail, Edit2, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { IPageProps, IUser, IRole, IPosition } from "../../libs/interface";
+import {
+  type IPageProps,
+  type IUser,
+  type IRole,
+  type IPosition,
+  type IActionPage,
+  PTKPDetail,
+  type IUserCost,
+} from "../../libs/interface";
 import useContext from "../../libs/context";
-import { CloseOutlined } from "@ant-design/icons";
+import {
+  CloseOutlined,
+  DeleteOutlined,
+  PlusCircleOutlined,
+} from "@ant-design/icons";
 import api from "../../libs/api";
+import { IDRFormat, IDRToNumber, InputUtil } from "../utils/utilForm";
 
 export default function UserManagement() {
   const [loading, setLoading] = useState(false);
@@ -38,21 +39,19 @@ export default function UserManagement() {
     data: [],
     total: 0,
     search: "",
+    roleId: "",
+    positionId: "",
+  });
+  const [action, setAction] = useState<IActionPage<IUser>>({
+    record: undefined,
+    upsert: false,
+    delete: false,
+    process: false,
   });
   const { hasAccess } = useContext((state: any) => state);
   const [roles, setRoles] = useState<IRole[]>([]);
   const [positions, setPositions] = useState<IPosition[]>([]);
-  const [messageApi, contextHolder] = message.useMessage();
-  const [form] = Form.useForm();
-  const [openModal, setOpenModal] = useState(false);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [editingUser, setEditingUser] = useState<IUser | null>(null);
-
-  // Calculate statistics from data
-  const stats = {
-    total: pageprops.total,
-    active: pageprops.data.length,
-  };
+  const { message } = App.useApp();
 
   const getData = async () => {
     setLoading(true);
@@ -60,6 +59,8 @@ export default function UserManagement() {
     params.append("page", pageprops.page.toString());
     params.append("limit", pageprops.limit.toString());
     if (pageprops.search) params.append("search", pageprops.search);
+    if (pageprops.roleId) params.append("roleId", pageprops.roleId);
+    if (pageprops.positionId) params.append("positionId", pageprops.positionId);
 
     await api
       .request({
@@ -103,73 +104,29 @@ export default function UserManagement() {
       await getData();
     }, 200);
     return () => clearTimeout(timeout);
-  }, [pageprops.page, pageprops.limit, pageprops.search]);
+  }, [
+    pageprops.page,
+    pageprops.limit,
+    pageprops.search,
+    pageprops.roleId,
+    pageprops.positionId,
+  ]);
 
-  const handleOpenModal = (user?: IUser) => {
-    if (user) {
-      setEditingUser(user);
-      form.setFieldsValue({
-        username: user.username,
-        fullname: user.fullname,
-        email: user.email,
-        phone: user.phone,
-        nik: user.nik,
-        nip: user.nip,
-        position_id: (user as any).position_id || user.Position?.id,
-        role_id: (user as any).role_id || user.Role?.id,
-        absence_method: user.absence_method,
-      });
-    } else {
-      setEditingUser(null);
-      form.resetFields();
-    }
-    setOpenModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setOpenModal(false);
-    setEditingUser(null);
-    form.resetFields();
-  };
-
-  const handleSaveUser = async (values: any) => {
-    setModalLoading(true);
-    try {
-      if (editingUser) {
-        await api.request({
-          url: `${import.meta.env.VITE_API_URL}/user/${editingUser.id}`,
-          method: "PUT",
-          data: values,
-        });
-        messageApi.success("User berhasil diupdate!");
-      } else {
-        await api.request({
-          url: `${import.meta.env.VITE_API_URL}/user`,
-          method: "POST",
-          data: values,
-        });
-        messageApi.success("User berhasil ditambahkan!");
-      }
-      handleCloseModal();
-      await getData();
-    } catch (err: any) {
-      messageApi.error(err.response?.data?.message || "Terjadi kesalahan!");
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
-  const handleDeleteUser = async (id: string) => {
-    try {
-      await api.request({
-        url: `${import.meta.env.VITE_API_URL}/user/${id}`,
+  const handleDelete = async (id: string) => {
+    setLoading(true);
+    await api
+      .request({
+        url: `${import.meta.env.VITE_API_URL}/user?id=${id}`,
         method: "DELETE",
+      })
+      .then(() => {
+        message.success("User berhasil dihapus");
+        getData();
+      })
+      .catch(() => {
+        message.error("Gagal menghapus user");
       });
-      messageApi.success("User berhasil dihapus!");
-      await getData();
-    } catch (err: any) {
-      messageApi.error(err.response?.data?.message || "Terjadi kesalahan!");
-    }
+    setLoading(false);
   };
 
   const columns: TableProps<IUser>["columns"] = [
@@ -196,9 +153,7 @@ export default function UserManagement() {
         return (
           <div>
             <div className="font-semibold">{value}</div>
-            <div className="text-xs opacity-80">
-              Username: {record.username}
-            </div>
+            <div className="text-xs opacity-80">@{record.username}</div>
           </div>
         );
       },
@@ -239,22 +194,19 @@ export default function UserManagement() {
       title: "Jabatan",
       key: "position",
       dataIndex: ["Position", "name"],
-      render(value) {
-        return <Tag color="cyan">{value}</Tag>;
-      },
-    },
-    {
-      title: "Role",
-      key: "role",
-      dataIndex: ["Role", "name"],
-      render(value) {
-        return <Tag color="blue">{value || "N/A"}</Tag>;
+      render(value, record) {
+        return (
+          <div className="text-xs flex flex-col gap-1">
+            <Tag color="cyan">{value}</Tag>
+            <Tag color="blue">{record.Role?.name || "N/A"}</Tag>
+          </div>
+        );
       },
     },
     {
       title: "Metode Absensi",
-      key: "absence_method",
-      dataIndex: "absence_method",
+      key: "absen_method",
+      dataIndex: "absen_method",
       render(value) {
         return (
           <Tag
@@ -263,20 +215,6 @@ export default function UserManagement() {
           >
             {value === "FACE" ? "👤 Face Recognition" : "🔘 Button"}
           </Tag>
-        );
-      },
-    },
-    {
-      title: "Status",
-      key: "status",
-      dataIndex: "id",
-      render(_value, _record, _index) {
-        return (
-          <div className="flex justify-center">
-            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
-              <UserCheck size={14} /> Aktif
-            </span>
-          </div>
         );
       },
     },
@@ -294,16 +232,16 @@ export default function UserManagement() {
                   type="text"
                   size="small"
                   icon={<Edit2 size={14} />}
-                  onClick={() => handleOpenModal(record)}
+                  onClick={() => setAction({ ...action, upsert: true, record })}
                   className="text-blue-500 hover:text-blue-700"
                 />
                 <Popconfirm
                   title="Hapus User"
                   description="Apakah Anda yakin ingin menghapus user ini?"
-                  onConfirm={() => handleDeleteUser(record.id)}
                   okText="Ya"
                   cancelText="Tidak"
                   okButtonProps={{ danger: true }}
+                  onConfirm={() => handleDelete(record.id)}
                 >
                   <Button
                     type="text"
@@ -331,13 +269,12 @@ export default function UserManagement() {
           placeholder="Pilih role..."
           className="w-full"
           options={roles.map((r) => ({ label: r.name, value: r.id }))}
-          onChange={(val) =>
-            setPageprops({ ...pageprops, submissionTypeId: val })
-          }
+          onChange={(val) => setPageprops({ ...pageprops, roleId: val })}
+          value={pageprops.roleId}
           allowClear
           optionFilterProp={"label"}
           showSearch
-          size="large"
+          size="small"
         />
       </div>
       <div className="flex flex-col w-full">
@@ -349,21 +286,24 @@ export default function UserManagement() {
           placeholder="Pilih jabatan..."
           className="w-full"
           options={positions.map((p) => ({ label: p.name, value: p.id }))}
+          onChange={(val) => setPageprops({ ...pageprops, positionId: val })}
+          value={pageprops.positionId}
           allowClear
           optionFilterProp={"label"}
           showSearch
-          size="large"
+          size="small"
         />
       </div>
       <div className="flex justify-end gap-2 pt-4 border-t">
         <Button
-          size="large"
+          size="small"
           danger
           icon={<CloseOutlined />}
           onClick={() =>
             setPageprops({
               ...pageprops,
-              submissionTypeId: "",
+              roleId: "",
+              positionId: "",
             })
           }
         >
@@ -375,57 +315,14 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-3 min-h-screen bg-linear-to-br from-gray-50 via-white to-gray-50 p-3 md:p-4">
-      {/* --- HEADER WITH GRADIENT --- */}
-      <div className="bg-linear-to-r from-blue-600 to-blue-700 rounded-2xl p-4 md:p-6 text-white shadow-lg">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold mb-1">
-              👤 Manajemen User
-            </h1>
-            <p className="text-blue-100 text-sm md:text-base hidden md:block">
-              Kelola data pengguna sistem
-            </p>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">
+            Data Pengguna
+          </h1>
+          <p className="text-slate-500 text-sm">Manajemen Pengguna Sistem.</p>
         </div>
       </div>
-
-      {/* --- STATISTICS CARDS --- */}
-      <Row gutter={[12, 12]}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            className="shadow-sm border-l-4 border-l-blue-500 hover:shadow-md transition-shadow"
-            styles={{ body: { padding: "10px" } }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-gray-500 text-xs font-semibold">
-                  Total User
-                </div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {stats.total}
-                </div>
-              </div>
-              <Users className="text-blue-200" size={32} />
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            className="shadow-sm border-l-4 border-l-green-500 hover:shadow-md transition-shadow"
-            styles={{ body: { padding: "10px" } }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-gray-500 text-xs font-semibold">Aktif</div>
-                <div className="text-2xl font-bold text-green-600">
-                  {stats.active}
-                </div>
-              </div>
-              <UserCheck className="text-green-200" size={32} />
-            </div>
-          </Card>
-        </Col>
-      </Row>
 
       {/* --- FILTER & SEARCH --- */}
       <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100">
@@ -435,9 +332,11 @@ export default function UserManagement() {
               <Button
                 icon={<Plus size={14} />}
                 type="primary"
-                size="middle"
+                size="small"
                 className="flex items-center gap-1 text-sm"
-                onClick={() => handleOpenModal()}
+                onClick={() =>
+                  setAction({ ...action, upsert: true, record: undefined })
+                }
               >
                 Tambah
               </Button>
@@ -448,7 +347,7 @@ export default function UserManagement() {
               type="text"
               placeholder="Cari nama/username/email..."
               className="transition-all"
-              size="middle"
+              size="small"
               style={{ width: "auto", minWidth: 180 }}
               onChange={(e) =>
                 setPageprops({ ...pageprops, search: e.target.value })
@@ -461,7 +360,7 @@ export default function UserManagement() {
               placement="topRight"
             >
               <Button
-                size="middle"
+                size="small"
                 type="default"
                 icon={<Filter size={14} />}
                 className="flex items-center gap-1 text-sm"
@@ -501,200 +400,379 @@ export default function UserManagement() {
           }}
         />
       </div>
-
-      {/* --- MODAL FORM (2-COLUMN LAYOUT) --- */}
-      <Modal
-        title={editingUser ? "✏️ Edit User" : "➕ Tambah User Baru"}
-        open={openModal}
-        onCancel={handleCloseModal}
-        footer={null}
-        width={800}
-        styles={{ body: { padding: "24px" } }}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSaveUser}
-          autoComplete="off"
-        >
-          <Row gutter={[24, 0]}>
-            {/* --- COLUMN 1: BASIC INFO --- */}
-            <Col xs={24} lg={12}>
-              <div className="space-y-4">
-                <h3 className="text-base font-semibold text-gray-700 border-b border-gray-200 pb-2">
-                  📋 Informasi Dasar
-                </h3>
-
-                <Form.Item
-                  label="Username"
-                  name="username"
-                  rules={[
-                    { required: true, message: "Username harus diisi!" },
-                    { min: 3, message: "Username minimal 3 karakter!" },
-                  ]}
-                >
-                  <Input placeholder="Masukkan username" size="large" />
-                </Form.Item>
-
-                <Form.Item
-                  label="Nama Lengkap"
-                  name="fullname"
-                  rules={[
-                    { required: true, message: "Nama lengkap harus diisi!" },
-                  ]}
-                >
-                  <Input placeholder="Masukkan nama lengkap" size="large" />
-                </Form.Item>
-
-                <Form.Item
-                  label="Email"
-                  name="email"
-                  rules={[
-                    { required: true, message: "Email harus diisi!" },
-                    { type: "email", message: "Format email tidak valid!" },
-                  ]}
-                >
-                  <Input
-                    placeholder="Masukkan email"
-                    type="email"
-                    size="large"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="No. Telepon"
-                  name="phone"
-                  rules={[
-                    { required: true, message: "No. telepon harus diisi!" },
-                  ]}
-                >
-                  <Input placeholder="Masukkan no. telepon" size="large" />
-                </Form.Item>
-
-                <Form.Item label="NIK" name="nik">
-                  <Input placeholder="Masukkan NIK (opsional)" size="large" />
-                </Form.Item>
-
-                <Form.Item label="NIP" name="nip">
-                  <Input placeholder="Masukkan NIP (opsional)" size="large" />
-                </Form.Item>
-              </div>
-            </Col>
-
-            {/* --- COLUMN 2: ACCESS SETTINGS --- */}
-            <Col xs={24} lg={12}>
-              <div className="space-y-4">
-                <h3 className="text-base font-semibold text-gray-700 border-b border-gray-200 pb-2">
-                  🔐 Pengaturan Akses
-                </h3>
-
-                <Form.Item
-                  label="Jabatan"
-                  name="position_id"
-                  rules={[
-                    { required: true, message: "Jabatan harus dipilih!" },
-                  ]}
-                >
-                  <Select
-                    placeholder="Pilih jabatan"
-                    options={positions.map((p) => ({
-                      label: p.name,
-                      value: p.id,
-                    }))}
-                    optionFilterProp="label"
-                    showSearch
-                    size="large"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="Role"
-                  name="role_id"
-                  rules={[{ required: true, message: "Role harus dipilih!" }]}
-                >
-                  <Select
-                    placeholder="Pilih role"
-                    options={roles.map((r) => ({
-                      label: r.name,
-                      value: r.id,
-                    }))}
-                    optionFilterProp="label"
-                    showSearch
-                    size="large"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="Metode Absensi"
-                  name="absence_method"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Metode absensi harus dipilih!",
-                    },
-                  ]}
-                >
-                  <Select
-                    placeholder="Pilih metode absensi"
-                    options={[
-                      { label: "🔘 Button", value: "BUTTON" },
-                      { label: "👤 Face Recognition", value: "FACE" },
-                    ]}
-                    size="large"
-                  />
-                </Form.Item>
-
-                {!editingUser && (
-                  <Form.Item
-                    label="Password"
-                    name="password"
-                    rules={[
-                      { required: true, message: "Password harus diisi!" },
-                      {
-                        min: 6,
-                        message: "Password minimal 6 karakter!",
-                      },
-                    ]}
-                  >
-                    <Input.Password
-                      placeholder="Masukkan password"
-                      size="large"
-                    />
-                  </Form.Item>
-                )}
-
-                {editingUser && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
-                    💡 Password tidak ditampilkan. Hubungi admin untuk reset
-                    password.
-                  </div>
-                )}
-
-                <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
-                  <Button
-                    size="large"
-                    onClick={handleCloseModal}
-                    className="flex-1"
-                  >
-                    Batal
-                  </Button>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    size="large"
-                    loading={modalLoading}
-                    className="flex-1"
-                  >
-                    {editingUser ? "Update User" : "Tambah User"}
-                  </Button>
-                </div>
-              </div>
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
-
-      {contextHolder}
+      <UpsertData
+        open={action.upsert}
+        setOpen={(open) => setAction({ ...action, upsert: open })}
+        record={action.record}
+        message={message}
+        getData={getData}
+        roles={roles}
+        positions={positions}
+        key={action.record ? "upset" + action.record.id : "create"}
+      />
     </div>
   );
 }
+
+const UpsertData = ({
+  open,
+  setOpen,
+  record,
+  message,
+  getData,
+  roles,
+  positions,
+}: {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  record?: IUser;
+  message: any;
+  getData: () => void;
+  roles: IRole[];
+  positions: IPosition[];
+}) => {
+  const [data, setData] = useState<IUser>(record || defaultData);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    await api
+      .request({
+        url: `${import.meta.env.VITE_API_URL}/user?id=` + record?.id,
+        method: record ? "PUT" : "POST",
+        data: data,
+      })
+      .then((res) => {
+        if (res.data.status === 200) {
+          message.success("Upsert data user berhasil");
+          setOpen(false);
+          getData();
+        } else {
+          message.error(res.data.msg || "Upsert data user gagal");
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        message.error("Internal Server Error");
+      });
+    setLoading(false);
+  };
+
+  const AddButton = (type: "PENAMBAHAN" | "PENGURANGAN") => (
+    <Button
+      icon={<PlusCircleOutlined />}
+      size="small"
+      block
+      type="primary"
+      onClick={() =>
+        setData({
+          ...data,
+          UserCost: data.UserCost
+            ? [...data.UserCost, { ...defaultCost, type }]
+            : [{ ...defaultCost, type }],
+        })
+      }
+    >
+      Tambah Data
+    </Button>
+  );
+
+  return (
+    <Modal
+      title="Upsert Data User"
+      open={open}
+      onCancel={() => setOpen(false)}
+      width={1000}
+      style={{ top: 10 }}
+      loading={loading}
+      onOk={() => handleSubmit()}
+    >
+      <div className="flex gap-4 flex-col sm:flex-row">
+        <div className="flex-1 flex flex-col gap-2">
+          <InputUtil
+            label="ID"
+            value={data.id}
+            placeholder="Kosongkan untuk otomatis"
+            type="text"
+            layout="horizontal"
+            onchage={(value: string) => setData({ ...data, id: value })}
+          />
+          <InputUtil
+            label="Nama Lengkap"
+            value={data.fullname}
+            required
+            type="text"
+            layout="horizontal"
+            onchage={(value: string) => setData({ ...data, fullname: value })}
+          />
+          <InputUtil
+            label="NIK"
+            value={data.nik || ""}
+            required
+            type="text"
+            layout="horizontal"
+            onchage={(value: string) => setData({ ...data, nik: value })}
+          />
+          <InputUtil
+            label="NIP"
+            value={data.nip || ""}
+            required
+            type="text"
+            layout="horizontal"
+            onchage={(value: string) => setData({ ...data, nip: value })}
+          />
+          <InputUtil
+            label="Username"
+            value={data.username}
+            required
+            type="text"
+            layout="horizontal"
+            onchage={(value: string) => setData({ ...data, username: value })}
+          />
+          <InputUtil
+            label="Email"
+            value={data.email || ""}
+            required
+            type="text"
+            layout="horizontal"
+            onchage={(value: string) => setData({ ...data, email: value })}
+          />
+          <InputUtil
+            label="No Telepon"
+            value={data.phone || ""}
+            required
+            type="text"
+            layout="horizontal"
+            onchage={(value: string) => setData({ ...data, phone: value })}
+          />
+          {!record && (
+            <InputUtil
+              label="Password"
+              value={data.password}
+              required
+              type="password"
+              layout="horizontal"
+              onchage={(value: string) => setData({ ...data, password: value })}
+            />
+          )}
+          <InputUtil
+            label="Gaji Pokok"
+            value={IDRFormat(data.salary)}
+            required
+            type="text"
+            layout="horizontal"
+            onchage={(value: string) =>
+              setData({ ...data, salary: IDRToNumber(value) })
+            }
+          />
+          <InputUtil
+            label="Status PTKP"
+            value={data.ptkp}
+            type="option"
+            options={PTKPDetail.map((p) => ({
+              label: `${p.name} - ${p.desc}`,
+              value: p.name,
+            }))}
+            layout="horizontal"
+            onchage={(value: string) => setData({ ...data, ptkp: value })}
+          />
+          <InputUtil
+            label="Jabatan"
+            value={data.positionId || ""}
+            type="option"
+            options={positions.map((p) => ({ label: p.name, value: p.id }))}
+            layout="horizontal"
+            onchage={(value: string) => setData({ ...data, positionId: value })}
+          />
+          <InputUtil
+            label="Role"
+            value={data.roleId || ""}
+            type="option"
+            options={roles.map((p) => ({ label: p.name, value: p.id }))}
+            layout="horizontal"
+            onchage={(value: string) => setData({ ...data, roleId: value })}
+          />
+          <InputUtil
+            label="Metode Absen"
+            value={data.absen_method}
+            type="option"
+            options={[
+              { label: "BUTTON", value: "BUTTON" },
+              { label: "FACE", value: "FACE" },
+            ]}
+            layout="horizontal"
+            onchage={(value: string) =>
+              setData({ ...data, absen_method: value as any })
+            }
+          />
+        </div>
+        <div className="flex-1 flex flex-col gap-2">
+          <Divider style={{ margin: 5 }}>Tunjangan & Potongan</Divider>
+          <div className="flex flex-col gap-2">
+            {data.UserCost?.filter((u) => !u.end_at).map((uc, uci) => (
+              <div
+                key={"allowance" + uci}
+                className="flex gap-2 flex-wrap justify-between items-center"
+              >
+                <div className="flex-1">
+                  <Select
+                    style={{ width: "100%" }}
+                    value={uc.type}
+                    options={[
+                      { label: "Tunjangan", value: "PENAMBAHAN" },
+                      { label: "Potongan", value: "PENGURANGAN" },
+                    ]}
+                    onChange={(e) =>
+                      setData({
+                        ...data,
+                        UserCost: data.UserCost?.map((u, i) => ({
+                          ...u,
+                          ...(uci === i && { type: e }),
+                        })),
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex-1">
+                  <Input
+                    width={"100%"}
+                    placeholder="Nama"
+                    value={uc.name}
+                    onChange={(e) =>
+                      setData({
+                        ...data,
+                        UserCost: data.UserCost?.map((u, i) => ({
+                          ...u,
+                          ...(uci === i && { name: e.target.value }),
+                        })),
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex-1">
+                  <Select
+                    style={{ width: "100%" }}
+                    value={uc.nominal_type}
+                    options={[
+                      { label: "Rupiah", value: "RUPIAH" },
+                      { label: "Persentase", value: "PERCENT" },
+                    ]}
+                    onChange={(e) =>
+                      setData({
+                        ...data,
+                        UserCost: data.UserCost?.map((u, i) => ({
+                          ...u,
+                          ...(uci === i && { nominal_type: e }),
+                        })),
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex-1">
+                  <Input
+                    width={"100%"}
+                    placeholder="Nominal"
+                    type={"text"}
+                    value={
+                      uc.nominal_type === "RUPIAH"
+                        ? IDRFormat(uc.nominal)
+                        : uc.nominal
+                    }
+                    onChange={(e) => {
+                      const inputValue = e.target.value;
+                      const normalizedValue = inputValue.replace(",", ".");
+                      setData({
+                        ...data,
+                        UserCost: data.UserCost?.map((u, i) => {
+                          if (uci === i) {
+                            if (u.nominal_type === "RUPIAH") {
+                              return {
+                                ...u,
+                                nominal: IDRToNumber(inputValue || "0"),
+                              };
+                            } else {
+                              if (
+                                /^-?\d*[.,]?\d*$/.test(inputValue) ||
+                                inputValue === ""
+                              ) {
+                                return {
+                                  ...u,
+                                  nominal: normalizedValue as any,
+                                };
+                              }
+                            }
+                          }
+                          return u;
+                        }),
+                      });
+                    }}
+                  />
+                </div>
+                <div>
+                  <Button
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    danger
+                    onClick={() =>
+                      uc.id === ""
+                        ? setData({
+                            ...data,
+                            UserCost: data.UserCost?.filter(
+                              (_, i) => i !== uci,
+                            ),
+                          })
+                        : setData({
+                            ...data,
+                            UserCost: data.UserCost?.map((u, i) => ({
+                              ...u,
+                              ...(uci === i && { end_at: new Date() }),
+                            })),
+                          })
+                    }
+                  ></Button>
+                </div>
+              </div>
+            ))}
+            {AddButton("PENAMBAHAN")}
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+const defaultData: IUser = {
+  id: "",
+  fullname: "",
+  username: "",
+  email: "",
+  phone: "",
+  password: "",
+  nik: "",
+  nip: "",
+  status: true,
+  created_at: new Date(),
+  updated_at: new Date(),
+  Position: {} as IPosition,
+  Role: {} as IRole,
+  salary: 0,
+  ptkp: "TK/0",
+  absen_method: "BUTTON",
+  face: null,
+  photo: null,
+  roleId: "",
+  positionId: "",
+  Absence: [],
+  UserCost: [],
+};
+
+const defaultCost: IUserCost = {
+  id: "",
+  name: "",
+  type: "PENAMBAHAN",
+  nominal: 0,
+  nominal_type: "RUPIAH",
+  start_at: new Date(),
+  userId: "",
+  User: undefined,
+};

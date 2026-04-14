@@ -14,10 +14,10 @@ export const middleware = async (
   try {
     const decoded = decode(token);
     if (!decoded) return ResponseServer(res, 401, { msg: "Unauthorized" });
-
     // Get user from database
     const user = await prisma.user.findFirst({
       where: { id: decoded.id, status: true },
+      include: { Role: true },
     });
 
     if (!user) return ResponseServer(res, 401, { msg: "User not found" });
@@ -31,13 +31,10 @@ export const middleware = async (
 
     res.json = function (body: any) {
       statusCode = res.statusCode;
-
-      // Log activity for API calls (exclude auth endpoints to avoid spam)
-      if (!req.path.includes("/auth/")) {
+      if (!req.path.includes("/auth/") && req.method !== "GET") {
         logActivity(
           user.id,
-          req.path,
-          req.method,
+          req.baseUrl + " " + req.method,
           statusCode >= 200 && statusCode < 300 ? "SUCCESS" : "FAILURE",
           req,
         ).catch((error) => console.error("Failed to log activity:", error));
@@ -55,7 +52,6 @@ export const middleware = async (
 // Helper function to log activities
 async function logActivity(
   userId: string,
-  action: string,
   method: string,
   status: string,
   req: Request,
@@ -64,12 +60,10 @@ async function logActivity(
     await prisma.logActivities.create({
       data: {
         userId,
-        action,
         method,
         status,
         ip: req.ip || req.connection.remoteAddress || "",
         userAgent: req.get("User-Agent") || "",
-        payload: "",
       },
     });
   } catch (error) {

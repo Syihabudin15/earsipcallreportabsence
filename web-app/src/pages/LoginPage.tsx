@@ -10,6 +10,7 @@ import {
 import { apps, type AppType } from "../libs/list_app";
 import api from "../libs/api";
 import useContext from "../libs/context";
+import { useNavigate } from "react-router-dom";
 
 const APP_COLOR = import.meta.env.VITE_APP_COLOR || "#F58220";
 
@@ -19,8 +20,9 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  const { user, login } = useContext((state: any) => state);
+  const { user, login } = useContext((state) => state);
   const selectedAppConfig = apps.find((app) => app.id === selectedApp)!;
+  const navigate = useNavigate();
 
   const handleLogin = async () => {
     setLoading(true);
@@ -33,8 +35,8 @@ function LoginPage() {
       })
       .then((res) => {
         if (res.status === 200) {
-          login(res.data.data, res.data.accessToken, res.data.refreshToken);
-          window.location.replace("/app");
+          login(res.data.data, res.data.token);
+          navigate("/app");
         } else {
           setErr(res.data.msg);
         }
@@ -50,11 +52,12 @@ function LoginPage() {
   useEffect(() => {
     setErr("");
   }, [credential]);
+
   useEffect(() => {
     if (user) {
-      window.location.replace("/app");
+      navigate("/app");
     }
-  }, []);
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -112,12 +115,12 @@ function LoginPage() {
             </div>
           </div>
 
-          <div className="text-center md:text-left">
+          {/* <div className="text-center md:text-left">
             <p className="text-xs text-orange-100/70">
               &copy; 2026 PT BPR Hasamitra Jawa Barat. <br /> Seluruh hak cipta
               dilindungi.
             </p>
-          </div>
+          </div> */}
         </div>
 
         {/* --- Bagian Kanan: Form Login --- */}

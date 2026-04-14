@@ -6,7 +6,7 @@ async function main() {
   const role = await prisma.role.upsert({
     where: { id: "RL01" },
     create: {
-      id: "RL001",
+      id: "RL01",
       name: "Developer",
       permission: JSON.stringify([
         {
@@ -23,6 +23,7 @@ async function main() {
   const position = await prisma.position.upsert({
     where: { id: "POS01" },
     create: {
+      id: "POS01",
       name: "IT",
       description: "",
     },
@@ -54,7 +55,7 @@ async function main() {
 
   await prisma.absenceConfig.create({
     data: {
-      late_eduction: 0,
+      late_deduction: 0,
       fast_leave_deduction: 0,
       alpha_deduction: 0,
       shift_start: 8,

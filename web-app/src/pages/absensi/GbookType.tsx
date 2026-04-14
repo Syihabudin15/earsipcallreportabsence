@@ -9,22 +9,26 @@ import {
 } from "antd";
 import { Plus, Edit, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { IActionPage, IPageProps, ISubType } from "../../libs/interface";
+import type {
+  IActionPage,
+  IPageProps,
+  IGuestBookType,
+} from "../../libs/interface";
 import type { HookAPI } from "antd/es/modal/useModal";
 import api from "../../libs/api";
 import useContext from "../../libs/context";
 const { Text } = Typography;
 
-export default function DataSubmissionType() {
+export default function DataGbookType() {
   const [loading, setLoading] = useState(false);
-  const [pageprops, setPageprops] = useState<IPageProps<ISubType>>({
+  const [pageprops, setPageprops] = useState<IPageProps<IGuestBookType>>({
     page: 1,
     limit: 50,
     data: [],
     total: 0,
     search: "",
   });
-  const [action, setAction] = useState<IActionPage<ISubType>>({
+  const [action, setAction] = useState<IActionPage<IGuestBookType>>({
     upsert: false,
     delete: false,
     process: false,
@@ -43,7 +47,7 @@ export default function DataSubmissionType() {
     }
     await api
       .request({
-        url: `${import.meta.env.VITE_API_URL}/sub_type?${params.toString()}`,
+        url: `${import.meta.env.VITE_API_URL}/gbook_type?${params.toString()}`,
         method: "GET",
       })
       .then((res) =>
@@ -63,7 +67,7 @@ export default function DataSubmissionType() {
     return () => clearTimeout(timeout);
   }, [pageprops.page, pageprops.limit, pageprops.search]);
 
-  const columns: TableProps<ISubType>["columns"] = [
+  const columns: TableProps<IGuestBookType>["columns"] = [
     {
       title: "ID",
       key: "id",
@@ -78,7 +82,7 @@ export default function DataSubmissionType() {
       },
     },
     {
-      title: "Jenis Pemohon",
+      title: "Jenis Buku Tamu",
       key: "name",
       dataIndex: "name",
     },
@@ -86,15 +90,6 @@ export default function DataSubmissionType() {
       title: "Keterangan",
       key: "description",
       dataIndex: "description",
-    },
-    {
-      title: "Debitur",
-      key: "debitur",
-      dataIndex: "debitur",
-      className: "text-center",
-      render(_value, record, _index) {
-        return <>{record.Debitur.length}</>;
-      },
     },
     {
       title: "Aksi",
@@ -130,10 +125,10 @@ export default function DataSubmissionType() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-            Data Jenis Pemohon
+            Data Jenis Buku Tamu
           </h1>
           <p className="text-slate-500 text-sm">
-            Manajemen jenis pemohon debitur.
+            Manajemen jenis buku tamu kantor.
           </p>
         </div>
       </div>
@@ -156,7 +151,7 @@ export default function DataSubmissionType() {
           <div className="flex-1 flex items-center justify-end gap-2">
             <Input.Search
               type="text"
-              placeholder="Cari Nama, NIK, atau ID Debitur..."
+              placeholder="Cari nama atau keterangan..."
               className="w-full transition-all"
               size="small"
               width={200}
@@ -230,12 +225,12 @@ const UpsertData = ({
 }: {
   open: boolean;
   setOpen: Function;
-  record?: ISubType;
+  record?: IGuestBookType;
   getData: Function;
   hook: HookAPI;
 }) => {
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<ISubType>(record || defaultData);
+  const [data, setData] = useState<IGuestBookType>(record || defaultData);
 
   const handleSubmit = async () => {
     if (!data.name) {
@@ -248,7 +243,7 @@ const UpsertData = ({
     setLoading(true);
     await api
       .request({
-        url: import.meta.env.VITE_API_URL + "/sub_type?id=" + record?.id,
+        url: import.meta.env.VITE_API_URL + "/gbook_type?id=" + record?.id,
         method: record ? "PUT" : "POST",
         data: data,
         headers: { "Content-Type": "Application/json" },
@@ -299,7 +294,7 @@ const UpsertData = ({
           />
         </div>
         <div>
-          <Text strong>Jenis Pemohon:</Text>
+          <Text strong>Jenis Buku Tamu:</Text>
           <Input
             placeholder="Masukkan nama..."
             value={data.name}
@@ -322,14 +317,13 @@ const UpsertData = ({
   );
 };
 
-const defaultData: ISubType = {
+const defaultData: IGuestBookType = {
   id: "",
   name: "",
   description: "",
   status: true,
   created_at: new Date(),
   updated_at: new Date(),
-  Debitur: [],
 };
 
 const DeleteData = ({
@@ -341,7 +335,7 @@ const DeleteData = ({
 }: {
   open: boolean;
   setOpen: Function;
-  record: ISubType;
+  record: IGuestBookType;
   getData: Function;
   hook: HookAPI;
 }) => {
@@ -351,7 +345,7 @@ const DeleteData = ({
     setLoading(true);
     await api
       .request({
-        url: import.meta.env.VITE_API_URL + "/sub_type?id=" + record?.id,
+        url: import.meta.env.VITE_API_URL + "/gbook_type?id=" + record?.id,
         method: "DELETE",
         headers: { "Content-Type": "Application/json" },
       })

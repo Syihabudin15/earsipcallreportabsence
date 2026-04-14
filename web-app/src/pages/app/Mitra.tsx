@@ -1,45 +1,35 @@
-import {
-  App,
-  Button,
-  Input,
-  Modal,
-  Popover,
-  Select,
-  Table,
-  Typography,
-  type TableProps,
-} from "antd";
-import { Plus, Filter, Edit, Trash } from "lucide-react";
+import { App, Button, Input, Modal, Table, type TableProps } from "antd";
+import { Plus, Edit, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
-import type {
-  IActionPage,
-  IPageProps,
-  IProduct,
-  IProductType,
-} from "../../libs/interface";
+import type { IActionPage, IMitra, IPageProps } from "../../libs/interface";
 import type { HookAPI } from "antd/es/modal/useModal";
 import api from "../../libs/api";
 import useContext from "../../libs/context";
-import { CloseOutlined } from "@ant-design/icons";
-const { Text } = Typography;
+import {
+  EnvironmentOutlined,
+  FileFilled,
+  MailOutlined,
+  PhoneOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import { CollapseText } from "../utils/utilComp";
+import { InputFileUploadVisit, InputUtil } from "../utils/utilForm";
 
-export default function DataProduct() {
+export default function DataMitra() {
   const [loading, setLoading] = useState(false);
-  const [pageprops, setPageprops] = useState<IPageProps<IProduct>>({
+  const [pageprops, setPageprops] = useState<IPageProps<IMitra>>({
     page: 1,
     limit: 50,
     data: [],
     total: 0,
     search: "",
-    productTypeId: "",
   });
-  const [action, setAction] = useState<IActionPage<IProduct>>({
+  const [action, setAction] = useState<IActionPage<IMitra>>({
     upsert: false,
     delete: false,
     process: false,
     record: undefined,
   });
-  const [productTypes, setProductTypes] = useState<IProductType[]>([]);
   const { modal } = App.useApp();
   const { hasAccess } = useContext((state: any) => state);
 
@@ -49,12 +39,10 @@ export default function DataProduct() {
     params.append("page", pageprops.page.toString());
     params.append("limit", pageprops.limit.toString());
     if (pageprops.search) params.append("search", pageprops.search);
-    if (pageprops.productTypeId)
-      params.append("productTypeId", pageprops.productTypeId);
 
     await api
       .request({
-        url: `${import.meta.env.VITE_API_URL}/product?${params.toString()}`,
+        url: `${import.meta.env.VITE_API_URL}/mitra?${params.toString()}`,
         method: "GET",
       })
       .then((res) =>
@@ -68,28 +56,13 @@ export default function DataProduct() {
   };
 
   useEffect(() => {
-    (async () => {
-      await api
-        .request({
-          url: `${import.meta.env.VITE_API_URL}/producttype`,
-          method: "GET",
-        })
-        .then((res) => setProductTypes(res.data.data));
-    })();
-  }, []);
-  useEffect(() => {
     const timeout = setTimeout(async () => {
       await getData();
     }, 200);
     return () => clearTimeout(timeout);
-  }, [
-    pageprops.page,
-    pageprops.limit,
-    pageprops.search,
-    pageprops.productTypeId,
-  ]);
+  }, [pageprops.page, pageprops.limit, pageprops.search]);
 
-  const columns: TableProps<IProduct>["columns"] = [
+  const columns: TableProps<IMitra>["columns"] = [
     {
       title: "ID",
       key: "id",
@@ -104,14 +77,75 @@ export default function DataProduct() {
       },
     },
     {
-      title: "Produk",
+      title: "Nama Mitra",
       key: "name",
       dataIndex: "name",
+      render(_value, record) {
+        return (
+          <>
+            <div>{record.name}</div>
+            <div className="text-xs opacity-80">@{record.code}</div>
+          </>
+        );
+      },
     },
     {
-      title: "Tipe Produk",
-      key: "productType",
-      dataIndex: ["ProductType", "name"],
+      title: "Kontak",
+      key: "contact",
+      dataIndex: "name",
+      render(_value, record) {
+        return (
+          <>
+            <div className="text-xs opacity-80">
+              <PhoneOutlined /> {record.phone}
+            </div>
+            <div className="text-xs opacity-80">
+              <MailOutlined /> {record.email}
+            </div>
+            <div className="text-xs opacity-80">
+              <EnvironmentOutlined /> {record.address}
+            </div>
+            <div className="text-xs opacity-80">
+              <UserOutlined /> {record.pic}
+            </div>
+          </>
+        );
+      },
+    },
+    {
+      title: "Kerjasama",
+      key: "contract",
+      dataIndex: "name",
+      render(_value, record) {
+        return (
+          <>
+            <div>Nomor: {record.no_contract}</div>
+            <div className="text-xs opacity-80">
+              File : {record.drawer_code}{" "}
+              {record.file && (
+                <a
+                  href={record.file}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group relative aspect-square rounded-xl bg-gray-200 overflow-hidden border-2 border-gray-100 hover:border-purple-500 transition-all hover:shadow-lg"
+                >
+                  <Button size="small">
+                    <FileFilled />
+                  </Button>
+                </a>
+              )}
+            </div>
+          </>
+        );
+      },
+    },
+    {
+      title: "Keterangan",
+      key: "desc",
+      dataIndex: "desc",
+      render(_value, record) {
+        return <CollapseText text={record.description || ""} />;
+      },
     },
     {
       title: "Aksi",
@@ -141,35 +175,6 @@ export default function DataProduct() {
       },
     },
   ];
-
-  const content = (
-    <div className="p-2 ">
-      <div className="flex flex-col w-48">
-        <p className="mb-1">Tipe Produk</p>
-        <Select
-          placeholder="Pilih tipe produk.."
-          className="w-full"
-          options={productTypes.map((t) => ({ label: t.name, value: t.id }))}
-          onChange={(val) => setPageprops({ ...pageprops, productTypeId: val })}
-          allowClear
-          value={pageprops.productTypeId}
-          optionFilterProp={"label"}
-          showSearch
-          size="small"
-        />
-      </div>
-      <div className="flex justify-end mt-4">
-        <Button
-          size="small"
-          danger
-          icon={<CloseOutlined />}
-          onClick={() => setPageprops({ ...pageprops, productTypeId: "" })}
-        >
-          Clear Filter
-        </Button>
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-2">
@@ -201,7 +206,7 @@ export default function DataProduct() {
           <div className="flex-1 flex items-center justify-end gap-2">
             <Input.Search
               type="text"
-              placeholder="Cari Nama, NIK, atau ID Debitur..."
+              placeholder="Cari mitra..."
               className="w-full transition-all"
               size="small"
               width={200}
@@ -210,19 +215,6 @@ export default function DataProduct() {
                 setPageprops({ ...pageprops, search: e.target.value })
               }
             />
-            <Popover
-              content={content}
-              title="Filter Tambahan"
-              trigger="click"
-              placement="left"
-            >
-              <Button
-                size="small"
-                type={pageprops.productTypeId ? "primary" : undefined}
-              >
-                <Filter size={14} /> Filter
-              </Button>
-            </Popover>
           </div>
         </div>
 
@@ -262,7 +254,6 @@ export default function DataProduct() {
         getData={getData}
         hook={modal}
         key={action.record ? "upsert" + action.record.id : "upsert"}
-        productTypes={productTypes}
       />
       {action.delete && action.record && (
         <DeleteData
@@ -286,17 +277,15 @@ const UpsertData = ({
   record,
   getData,
   hook,
-  productTypes,
 }: {
   open: boolean;
   setOpen: Function;
-  record?: IProduct;
+  record?: IMitra;
   getData: Function;
   hook: HookAPI;
-  productTypes: IProductType[];
 }) => {
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<IProduct>(record || defaultData);
+  const [data, setData] = useState<IMitra>(record || defaultData);
 
   const handleSubmit = async () => {
     if (!data.name) {
@@ -309,7 +298,7 @@ const UpsertData = ({
     setLoading(true);
     await api
       .request({
-        url: import.meta.env.VITE_API_URL + "/product?id=" + record?.id,
+        url: import.meta.env.VITE_API_URL + "/mitra?id=" + record?.id,
         method: record ? "PUT" : "POST",
         data: data,
         headers: { "Content-Type": "Application/json" },
@@ -349,50 +338,110 @@ const UpsertData = ({
       onOk={handleSubmit}
       okButtonProps={{ loading: loading, disabled: !data.name }}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-        <div>
-          <Text strong>ID:</Text>
-          <Input
-            placeholder="ID/Kosongkan untuk otomatis"
-            value={data.id}
-            onChange={(e) => setData({ ...data, id: e.target.value })}
-            style={{ marginTop: "8px" }}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 flex flex-col gap-2">
+          <InputUtil
+            label="ID"
+            type="text"
+            value={record?.id}
+            placeholder="Kosongkan untuk otomatis"
+            onchage={(e: string) => setData({ ...data, id: e || "" })}
+          />
+          <InputUtil
+            label="Nama Mitra"
+            type="text"
+            value={record?.name}
+            required
+            onchage={(e: string) => setData({ ...data, name: e || "" })}
+          />
+          <InputUtil
+            label="Kode Mitra"
+            type="text"
+            value={record?.code}
+            required
+            onchage={(e: string) => setData({ ...data, code: e || "" })}
+          />
+          <InputUtil
+            label="PIC"
+            type="text"
+            value={record?.pic}
+            onchage={(e: string) => setData({ ...data, pic: e || "" })}
+          />
+          <InputUtil
+            label="Keterangan"
+            type="area"
+            value={record?.description}
+            onchage={(e: string) => setData({ ...data, description: e || "" })}
           />
         </div>
-        <div>
-          <Text strong>Nama Produk:</Text>
-          <Input
-            placeholder="Masukkan nama..."
-            value={data.name}
-            onChange={(e) => setData({ ...data, name: e.target.value })}
-            style={{ marginTop: "8px" }}
+        <div className="flex-1 flex flex-col gap-2">
+          <InputUtil
+            label="Email"
+            type="text"
+            value={record?.email}
+            onchage={(e: string) => setData({ ...data, email: e || "" })}
           />
-        </div>
-        <div className="flex flex-col ">
-          <Text strong>Tipe Produk:</Text>
-          <Select
-            placeholder="Pilih tipe produk..."
-            value={data.productTypeId}
-            onChange={(e) => setData({ ...data, productTypeId: e })}
-            style={{ marginTop: "8px" }}
-            options={productTypes.map((p) => ({ label: p.name, value: p.id }))}
+          <InputUtil
+            label="No Telepon"
+            type="text"
+            value={record?.phone}
+            onchage={(e: string) => setData({ ...data, phone: e || "" })}
           />
+          <InputUtil
+            label="Alamat"
+            type="area"
+            value={record?.address}
+            onchage={(e: string) => setData({ ...data, address: e || "" })}
+          />
+          <InputUtil
+            label="No Kerjasama"
+            type="text"
+            value={record?.no_contract}
+            onchage={(e: string) => setData({ ...data, no_contract: e || "" })}
+          />
+          <InputUtil
+            label="No Lemari"
+            type="text"
+            value={record?.drawer_code}
+            onchage={(e: string) => setData({ ...data, drawer_code: e || "" })}
+          />
+          <div className="flex justify-between gap-4">
+            <p>Berkas</p>
+            <InputFileUploadVisit
+              filetype="application/pdf, image/*"
+              record={{
+                name: "File",
+                url: data.file || "",
+              }}
+              ondelete={() => setData({ ...data, file: null })}
+              onchange={(e: { name: string; url: string | null }) =>
+                setData({ ...data, file: e.url })
+              }
+              noname
+            />
+          </div>
         </div>
       </div>
     </Modal>
   );
 };
 
-const defaultData: IProduct = {
+const defaultData: IMitra = {
   id: "",
   name: "",
+  code: "",
+  email: "",
+  phone: "",
+  address: "",
+  no_contract: "",
+  drawer_code: "",
+  file: "",
+  pic: "",
+  description: "",
 
   status: true,
   created_at: new Date(),
   updated_at: new Date(),
-  ProductType: {} as IProductType,
-  productTypeId: "",
-  Submission: [],
 };
 
 const DeleteData = ({
@@ -404,7 +453,7 @@ const DeleteData = ({
 }: {
   open: boolean;
   setOpen: Function;
-  record: IProduct;
+  record: IMitra;
   getData: Function;
   hook: HookAPI;
 }) => {
@@ -414,7 +463,7 @@ const DeleteData = ({
     setLoading(true);
     await api
       .request({
-        url: import.meta.env.VITE_API_URL + "/product?id=" + record?.id,
+        url: import.meta.env.VITE_API_URL + "/mitra?id=" + record?.id,
         method: "DELETE",
         headers: { "Content-Type": "Application/json" },
       })

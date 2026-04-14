@@ -8,6 +8,8 @@ import {
   Table,
   Tag,
   type TableProps,
+  Row,
+  Col,
 } from "antd";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -320,8 +322,9 @@ export default function DataAbsence() {
         okText="Simpan"
         cancelText="Batal"
         confirmLoading={loading}
+        width={700}
       >
-        <Space orientation="vertical" className="w-full">
+        <Space orientation="vertical" className="w-full" size={16}>
           <Select
             placeholder="Pilih pengguna"
             value={form.userId}
@@ -365,6 +368,107 @@ export default function DataAbsence() {
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
           />
+
+          {/* GPS Coordinates Section */}
+          <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: "12px" }}>
+            <h4
+              style={{
+                marginBottom: "12px",
+                fontSize: "14px",
+                fontWeight: "500",
+              }}
+            >
+              Koordinat GPS
+            </h4>
+
+            <div style={{ marginBottom: "16px" }}>
+              <h5
+                style={{ fontSize: "12px", marginBottom: "8px", color: "#666" }}
+              >
+                Lokasi Masuk (Check-In)
+              </h5>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Input
+                    type="number"
+                    placeholder="Latitude"
+                    step="0.000001"
+                    value={form.geo_in_lat || ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        geo_in_lat: e.target.value
+                          ? parseFloat(e.target.value)
+                          : undefined,
+                      })
+                    }
+                    size="small"
+                  />
+                </Col>
+                <Col span={12}>
+                  <Input
+                    type="number"
+                    placeholder="Longitude"
+                    step="0.000001"
+                    value={form.geo_in_long || ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        geo_in_long: e.target.value
+                          ? parseFloat(e.target.value)
+                          : undefined,
+                      })
+                    }
+                    size="small"
+                  />
+                </Col>
+              </Row>
+            </div>
+
+            <div>
+              <h5
+                style={{ fontSize: "12px", marginBottom: "8px", color: "#666" }}
+              >
+                Lokasi Keluar (Check-Out)
+              </h5>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Input
+                    type="number"
+                    placeholder="Latitude"
+                    step="0.000001"
+                    value={form.geo_out_lat || ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        geo_out_lat: e.target.value
+                          ? parseFloat(e.target.value)
+                          : undefined,
+                      })
+                    }
+                    size="small"
+                  />
+                </Col>
+                <Col span={12}>
+                  <Input
+                    type="number"
+                    placeholder="Longitude"
+                    step="0.000001"
+                    value={form.geo_out_long || ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        geo_out_long: e.target.value
+                          ? parseFloat(e.target.value)
+                          : undefined,
+                      })
+                    }
+                    size="small"
+                  />
+                </Col>
+              </Row>
+            </div>
+          </div>
         </Space>
       </Modal>
     </div>

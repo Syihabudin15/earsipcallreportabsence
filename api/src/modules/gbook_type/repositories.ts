@@ -49,7 +49,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
 
   try {
     await prisma.gBookType.create({
-      data: { ...body },
+      data: { ...body, id: body.id ? body.id : await generateId() },
     });
     return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
   } catch (err) {
@@ -117,3 +117,10 @@ export const DELETE = async (
     });
   }
 };
+
+async function generateId() {
+  const prefix = "GTYPE";
+  const padLength = 2;
+  const lastRecord = await prisma.gBookType.count({});
+  return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
+}

@@ -1,11 +1,16 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import MainLayout from "./pages";
 import { ConfigProvider, App as ANTDApp, Button } from "antd";
 import useContext from "./libs/context";
+import { useEffect } from "react";
 
 export default function App() {
-  const { user } = useContext((state: any) => state);
+  const { user, updatetoken } = useContext((state) => state);
+
+  useEffect(() => {
+    updatetoken();
+  }, []);
 
   return (
     <ConfigProvider
@@ -37,9 +42,9 @@ export default function App() {
                   <div className="text-center text-2xl font-bold">
                     404 - Halaman Tidak Ditemukan
                   </div>
-                  <a href="/">
+                  <Link to="/">
                     <Button type="primary">Back</Button>
-                  </a>
+                  </Link>
                 </div>
               }
             />

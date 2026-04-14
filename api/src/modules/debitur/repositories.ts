@@ -1,6 +1,7 @@
 import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
+import type { Prisma } from "@prisma/client";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
   let { page = 1, limit = 50, search, submissionTypeId } = req.query;
@@ -9,29 +10,39 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
   const skip = (page - 1) * limit;
 
   try {
+    const querywhere: Prisma.DebiturWhereInput = {
+      status: true,
+      ...(search && {
+        OR: [
+          { fullname: { contains: search as string } },
+          { cif: { contains: search as string } },
+          { nik: { contains: search as string } },
+          { id: { contains: search as string } },
+        ],
+      }),
+      ...(submissionTypeId && {
+        submissionTypeId: submissionTypeId as string,
+      }),
+      ...(req.user?.Role.data_status === "USER"
+        ? { Submission: { some: { userId: req.user?.id } } }
+        : {}),
+    };
     const data = await prisma.debitur.findMany({
-      where: {
-        status: true,
-        ...(search && {
-          OR: [
-            { fullname: { contains: search as string } },
-            { cif: { contains: search as string } },
-            { nik: { contains: search as string } },
-            { id: { contains: search as string } },
-          ],
-        }),
-        ...(submissionTypeId && {
-          submissionTypeId: submissionTypeId as string,
-        }),
-      },
+      where: querywhere,
       skip: skip,
       take: limit,
       include: {
         SubmissionType: true,
-        Submissions: {
+        Submission: {
           include: { Product: { include: { ProductType: true } } },
         },
         Visit: {
+          where: {
+            status: true,
+            ...(req.user?.Role.data_status === "USER"
+              ? { userId: req.user?.id }
+              : {}),
+          },
           include: {
             VisitCategory: true,
             VisitStatus: true,
@@ -42,20 +53,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     });
 
     const total = await prisma.debitur.count({
-      where: {
-        status: true,
-        ...(search && {
-          OR: [
-            { fullname: { contains: search as string } },
-            { cif: { contains: search as string } },
-            { nik: { contains: search as string } },
-            { id: { contains: search as string } },
-          ],
-        }),
-        ...(submissionTypeId && {
-          submissionTypeId: submissionTypeId as string,
-        }),
-      },
+      where: querywhere,
     });
     return ResponseServer(res, 200, {
       msg: "GET /debitur",
@@ -173,7 +171,7 @@ export const PATCH = async (
       },
       include: {
         SubmissionType: true,
-        Submissions: {
+        Submission: {
           include: { Product: { include: { ProductType: true } } },
         },
         Visit: true,

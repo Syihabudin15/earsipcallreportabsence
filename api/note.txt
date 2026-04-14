@@ -1,2 +1,1 @@
-- CRUD Permit Absence         [x]
-- Model & CRUD Insentif       [x]
+- repositories ProductType rubah jadi 1 pas input itu include ProductTypeFile[] dan Product[]

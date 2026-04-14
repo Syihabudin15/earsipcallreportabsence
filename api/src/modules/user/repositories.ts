@@ -1,7 +1,6 @@
 import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
-import moment from "moment";
 import type { UserCost } from "@prisma/client";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
@@ -30,7 +29,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       where: {
         status: true,
         ...(userIdFilter && { id: userIdFilter }),
-        ...(search && { name: { contains: search as string } }),
+        ...(search && { fullname: { contains: search as string } }),
         ...(roleId && { roleId: roleId as string }),
         ...(positionId && { positionId: positionId as string }),
       },
@@ -40,14 +39,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
         Role: true,
         Position: true,
         UserCost: true,
-        Absence: {
-          where: {
-            created_at: {
-              gte: moment().startOf("day").toDate(),
-              lte: moment().endOf("day").toDate(),
-            },
-          },
-        },
+        Absence: true,
       },
     });
 
@@ -81,13 +73,14 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
   const { id, UserCost, Absence, Position, Role, ...usersaved } = body;
   try {
     const genId = await generateId();
+
     const saved = await prisma.user.create({
       data: {
         ...usersaved,
         id: body.id && body.id !== "" ? body.id : genId,
       },
     });
-    if (UserCost.length !== 0) {
+    if (UserCost && UserCost.length !== 0) {
       await prisma.userCost.createMany({
         data: UserCost.map((p: UserCost) => {
           return { ...p, userId: saved.id };
@@ -124,21 +117,13 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
         updated_at: new Date(),
       },
     });
-    if (UserCost.length !== 0) {
+    if (UserCost && UserCost.length !== 0) {
       for (const p of UserCost) {
-        const find = await prisma.userCost.findFirst({
+        await prisma.userCost.upsert({
           where: { id: p.id },
+          update: { ...p, userId: saved.id },
+          create: { ...p, userId: saved.id },
         });
-        if (find) {
-          await prisma.userCost.update({
-            where: { id: p.id },
-            data: { ...p, userId: saved.id },
-          });
-        } else {
-          await prisma.userCost.create({
-            data: { ...p, userId: saved.id },
-          });
-        }
       }
     }
 
@@ -165,7 +150,7 @@ export const DELETE = async (
 
     await prisma.user.update({
       where: { id: find.id },
-      data: { status: false },
+      data: { status: false, updated_at: new Date() },
     });
 
     return ResponseServer(res, 200, { msg: "Data berhasil dihapus" });

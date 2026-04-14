@@ -6,12 +6,10 @@ import {
   Space,
   Typography,
   Upload,
-  message,
   Form,
   Input,
-  InputNumber,
-  Modal,
   Divider,
+  App,
 } from "antd";
 import { Upload as UploadIcon, Edit, Save, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -22,12 +20,19 @@ import type { IUser } from "../../libs/interface";
 const { Title, Text } = Typography;
 
 export default function UserProfile() {
-  const { user, modal } = useContext((state: any) => state);
+  const { user } = useContext((state: any) => state);
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState<IUser | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm] = Form.useForm();
-  const [formData, setFormData] = useState<Partial<IUser>>({});
+  const [_formData, setFormData] = useState<Partial<IUser>>({});
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmNewPassword: "",
+    message: "",
+  });
+  const { message } = App.useApp();
 
   useEffect(() => {
     if (user) {
@@ -64,6 +69,7 @@ export default function UserProfile() {
           "Content-Type": "multipart/form-data",
         },
       });
+      console.log({ uploadResponse });
 
       if (uploadResponse.data.url) {
         // Update user photo
@@ -111,6 +117,37 @@ export default function UserProfile() {
   const handleCancel = () => {
     setIsEditing(false);
     editForm.resetFields();
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordData.newPassword !== passwordData.confirmNewPassword) {
+      setPasswordData((prev) => ({
+        ...prev,
+        message: "Konfirmasi password tidak cocok",
+      }));
+      return;
+    }
+    try {
+      await api.request({
+        url: `${import.meta.env.VITE_API_URL}/profile`,
+        method: "POST",
+        data: {
+          id: user.id,
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+          confirmNewPassword: passwordData.confirmNewPassword,
+        },
+      });
+      message.success("Password berhasil diperbarui");
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmNewPassword: "",
+        message: "",
+      });
+    } catch (error) {
+      message.error("Gagal memperbarui password");
+    }
   };
 
   return (
@@ -165,6 +202,7 @@ export default function UserProfile() {
               showUploadList={false}
               beforeUpload={handlePhotoUpload}
               disabled={loading || isEditing}
+              style={{ width: "100%" }}
             >
               <Button
                 icon={<UploadIcon size={16} />}
@@ -175,6 +213,9 @@ export default function UserProfile() {
                 {loading ? "Uploading..." : "Upload Foto"}
               </Button>
             </Upload>
+            <Button icon={<UploadIcon size={16} />} loading={loading} block>
+              {loading ? "Scanning..." : "Scan Wajah"}
+            </Button>
           </Space>
         </Card>
 
@@ -255,7 +296,7 @@ export default function UserProfile() {
           ) : (
             <>
               <Card title="Informasi Pribadi" className="shadow-sm">
-                <Descriptions column={2} bordered>
+                <Descriptions column={{ xs: 1, xl: 2 }} bordered>
                   <Descriptions.Item label="Nama Lengkap">
                     {userData?.fullname}
                   </Descriptions.Item>
@@ -278,7 +319,7 @@ export default function UserProfile() {
               </Card>
 
               <Card title="Informasi Pekerjaan" className="mt-4 shadow-sm">
-                <Descriptions column={2} bordered>
+                <Descriptions column={{ xs: 1, xl: 2 }} bordered>
                   <Descriptions.Item label="Posisi">
                     {userData?.Position?.name || "-"}
                   </Descriptions.Item>
@@ -313,7 +354,7 @@ export default function UserProfile() {
               </Card>
 
               <Card title="Informasi Sistem" className="mt-4 shadow-sm">
-                <Descriptions column={1} bordered>
+                <Descriptions column={{ xs: 1, xl: 2 }} bordered>
                   <Descriptions.Item label="Dibuat">
                     {userData?.created_at
                       ? new Date(userData.created_at).toLocaleString("id-ID")
@@ -328,6 +369,72 @@ export default function UserProfile() {
               </Card>
             </>
           )}
+          <Card title="Ganti Password" className="mt-4 shadow-sm">
+            <Input.Password
+              placeholder="Password saat ini"
+              className="my-2"
+              value={passwordData.currentPassword}
+              onChange={(e) =>
+                setPasswordData({
+                  ...passwordData,
+                  currentPassword: e.target.value,
+                })
+              }
+            />
+            <Input.Password
+              placeholder="Masukkan password baru"
+              className="my-1"
+              value={passwordData.newPassword}
+              onChange={(e) =>
+                setPasswordData({
+                  ...passwordData,
+                  newPassword: e.target.value,
+                })
+              }
+            />
+            <Input.Password
+              placeholder="Masukkan password baru"
+              className="my-1"
+              value={passwordData.confirmNewPassword}
+              onChange={(e) => {
+                setPasswordData({
+                  ...passwordData,
+                  confirmNewPassword: e.target.value,
+                });
+                if (e.target.value !== passwordData.newPassword) {
+                  setPasswordData((prev) => ({
+                    ...prev,
+                    message: "Konfirmasi password tidak cocok",
+                  }));
+                } else {
+                  setPasswordData((prev) => ({
+                    ...prev,
+                    message: "",
+                  }));
+                }
+              }}
+            />
+            {passwordData.message && (
+              <Text type="danger" className="mt-1">
+                {passwordData.message}
+              </Text>
+            )}
+            <div className="flex justify-end">
+              <Button
+                type="primary"
+                className="mt-3"
+                icon={<Save size={16} />}
+                disabled={
+                  !passwordData.currentPassword ||
+                  !passwordData.newPassword ||
+                  passwordData.newPassword !== passwordData.confirmNewPassword
+                }
+                onClick={() => handleChangePassword()}
+              >
+                Simpan Password Baru
+              </Button>
+            </div>
+          </Card>
         </div>
       </div>
     </div>

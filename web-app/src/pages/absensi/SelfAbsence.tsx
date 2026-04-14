@@ -1,25 +1,54 @@
-import { Button, Card, Modal, Space, Typography, App, Tag } from "antd";
+import {
+  Button,
+  Card,
+  Modal,
+  Space,
+  Typography,
+  App,
+  Tag,
+  Spin,
+  Divider,
+  Alert,
+} from "antd";
 import { useEffect, useRef, useState } from "react";
 import useContext from "../../libs/context";
 import api from "../../libs/api";
 import * as faceapi from "face-api.js";
-import { Clock, LogOut } from "lucide-react";
+import { Clock, LogOut, MapPin, AlertCircle, CheckCircle2 } from "lucide-react";
 
 const { Title, Text } = Typography;
 
+interface GeoConfig {
+  geo_location: string | null;
+  meter_tolerance: number;
+}
+
+interface LocationCoords {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+}
+
 export default function SelfAbsence() {
   const { message } = App.useApp();
-  const { user, modal } = useContext((state: any) => state);
+  const { user } = useContext((state: any) => state);
 
   // State management
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [faceRegistered, setFaceRegistered] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [modelsLoading, setModelsLoading] = useState(true);
   const [absenceMethod, setAbsenceMethod] = useState<string>(""); // FACE or BUTTON from DB
   const [checkedIn, setCheckedIn] = useState(false);
   const [checkedOut, setCheckedOut] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState<any>(null);
+  const [currentLocation, setCurrentLocation] = useState<LocationCoords | null>(
+    null,
+  );
+  const [_geoConfig, setGeoConfig] = useState<GeoConfig | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [geoEnabled, setGeoEnabled] = useState(false);
 
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -28,14 +57,34 @@ export default function SelfAbsence() {
   const [showCamera, setShowCamera] = useState(false);
 
   useEffect(() => {
-    // Initialize: Load user's attendance method and check today's status
+    // Initialize: Load user's attendance method, geolocation config, and check today's status
     const initializeAttendance = async () => {
       try {
         setInitialLoading(true);
+        setModelsLoading(true);
 
-        // Check user's face registration and fetch today's attendance status
+        // Check user's face registration
         if (user?.face) {
           setFaceRegistered(true);
+        }
+
+        // Fetch geolocation config
+        try {
+          const configResponse = await api.request({
+            url: `${import.meta.env.VITE_API_URL}/absence_config`,
+            method: "GET",
+          });
+          if (configResponse?.data?.data) {
+            setGeoConfig(configResponse.data.data);
+            setGeoEnabled(!!configResponse.data.data.geo_location);
+          }
+        } catch (err) {
+          console.warn("Failed to load geo config", err);
+        }
+
+        // Get geolocation if enabled in config
+        if (geoEnabled) {
+          getGeolocation();
         }
 
         // Fetch today's attendance status
@@ -81,18 +130,43 @@ export default function SelfAbsence() {
           faceapi.nets.faceRecognitionNet.loadFromUri(localModelUrl),
         ]);
         setModelsLoaded(true);
-        console.log("Face models loaded successfully from local storage");
+        console.log("✓ Face models loaded successfully from local storage");
       } catch (error) {
-        console.warn(
-          "Face recognition models could not be loaded. CORS or network issue detected.",
-          error,
-        );
+        console.warn("⚠ Face recognition models could not be loaded", error);
         setModelsLoaded(false);
+      } finally {
+        setModelsLoading(false);
       }
     };
 
     loadModels();
-  }, [user]);
+  }, [geoEnabled]);
+
+  const getGeolocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation tidak didukung di browser ini");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        setCurrentLocation({ latitude, longitude, accuracy });
+        setLocationError(null);
+      },
+      (error) => {
+        console.warn("Geolocation error:", error);
+        let errorMsg = "Tidak dapat mengakses lokasi";
+        if (error.code === error.PERMISSION_DENIED) {
+          errorMsg =
+            "Ijin lokasi ditolak. Silakan aktifkan di pengaturan browser.";
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          errorMsg = "Layanan lokasi tidak tersedia";
+        }
+        setLocationError(errorMsg);
+      },
+    );
+  };
 
   const startCamera = async () => {
     try {
@@ -145,7 +219,9 @@ export default function SelfAbsence() {
 
   const registerFace = async () => {
     if (!modelsLoaded) {
-      message.error("Model face recognition belum dimuat");
+      message.error(
+        "Model face recognition belum dimuat. Coba refresh halaman.",
+      );
       return;
     }
 
@@ -178,10 +254,27 @@ export default function SelfAbsence() {
   const attendWithButton = async (type: "CHECK_IN" | "CHECK_OUT") => {
     setLoading(true);
     try {
+      // Get fresh location if geo is enabled
+      let lat = null,
+        long = null;
+      if (geoEnabled && currentLocation) {
+        lat = currentLocation.latitude;
+        long = currentLocation.longitude;
+      } else if (geoEnabled && !currentLocation) {
+        getGeolocation();
+        // Wait a moment for geolocation
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
       const response = await api.request({
         url: `${import.meta.env.VITE_API_URL}/absence/self`,
         method: "POST",
-        data: { method: "BUTTON", type },
+        data: {
+          method: "BUTTON",
+          type,
+          lat: lat || currentLocation?.latitude,
+          long: long || currentLocation?.longitude,
+        },
       });
 
       if (type === "CHECK_IN") {
@@ -207,12 +300,22 @@ export default function SelfAbsence() {
     }
 
     if (!modelsLoaded) {
-      message.error("Model face recognition belum dimuat");
+      message.error(
+        "Model face recognition belum dimuat. Coba refresh halaman.",
+      );
       return;
     }
 
     setLoading(true);
     try {
+      // Get fresh location if geo is enabled
+      let lat = null,
+        long = null;
+      if (geoEnabled && currentLocation) {
+        lat = currentLocation.latitude;
+        long = currentLocation.longitude;
+      }
+
       await startCamera();
       setTimeout(async () => {
         const faceDescriptor = await captureFace();
@@ -227,7 +330,12 @@ export default function SelfAbsence() {
             const response = await api.request({
               url: `${import.meta.env.VITE_API_URL}/absence/self`,
               method: "POST",
-              data: { method: "FACE", type },
+              data: {
+                method: "FACE",
+                type,
+                lat: lat || currentLocation?.latitude,
+                long: long || currentLocation?.longitude,
+              },
             });
 
             if (type === "CHECK_IN") {
@@ -240,7 +348,7 @@ export default function SelfAbsence() {
               message.success("Check-out dengan face recognition berhasil");
             }
           } else {
-            message.error("Wajah tidak cocok");
+            message.error(`Wajah tidak cocok (jarak: ${distance.toFixed(2)})`);
           }
         }
         stopCamera();
@@ -253,12 +361,13 @@ export default function SelfAbsence() {
     }
   };
 
-  if (initialLoading) {
+  if (initialLoading || modelsLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <div className="text-center">
-            <Text>Loading...</Text>
+            <Spin spinning={true} />
+            <Text style={{ marginTop: "16px" }}>Loading...</Text>
           </div>
         </Card>
       </div>
@@ -273,7 +382,54 @@ export default function SelfAbsence() {
           <Text>Selamat datang, {user?.fullname}</Text>
         </div>
 
-        {/* Attendance Status */}
+        {/* Geo Location Status */}
+        {geoEnabled && (
+          <div style={{ marginBottom: 16 }}>
+            {currentLocation ? (
+              <Alert
+                message={
+                  <div className="flex items-start gap-2">
+                    <MapPin size={16} className="mt-1" />
+                    <div>
+                      <strong>Lokasi Terdeteksi</strong>
+                      <div style={{ fontSize: "12px", marginTop: "4px" }}>
+                        Lat: {currentLocation.latitude.toFixed(6)}, Long:{" "}
+                        {currentLocation.longitude.toFixed(6)}
+                        {currentLocation.accuracy && (
+                          <div>
+                            Akurasi: ±{Math.round(currentLocation.accuracy)}m
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                }
+                type="success"
+                showIcon={false}
+              />
+            ) : locationError ? (
+              <Alert
+                message={
+                  <div className="flex items-start gap-2">
+                    <AlertCircle size={16} className="mt-1" />
+                    <div>
+                      <strong>Lokasi Tidak Tersedia</strong>
+                      <div style={{ fontSize: "12px", marginTop: "4px" }}>
+                        {locationError}
+                      </div>
+                    </div>
+                  </div>
+                }
+                type="error"
+                showIcon={false}
+              />
+            ) : (
+              <Alert message="Mengambil lokasi..." type="info" />
+            )}
+          </div>
+        )}
+
+        {/* Attendance Status - Check In */}
         {checkedIn && (
           <div
             style={{
@@ -285,13 +441,26 @@ export default function SelfAbsence() {
             }}
           >
             <Text type="success" style={{ fontSize: "12px" }}>
+              <CheckCircle2
+                size={14}
+                style={{ display: "inline", marginRight: "6px" }}
+              />
               ✓ Sudah check-in hari ini
               {todayAttendance?.check_in &&
                 ` pada ${new Date(todayAttendance.check_in).toLocaleTimeString("id-ID")}`}
             </Text>
+            {todayAttendance?.geo_in_lat && todayAttendance?.geo_in_long && (
+              <div
+                style={{ fontSize: "11px", marginTop: "6px", color: "#666" }}
+              >
+                📍 Lokasi: {todayAttendance.geo_in_lat.toFixed(6)},{" "}
+                {todayAttendance.geo_in_long.toFixed(6)}
+              </div>
+            )}
           </div>
         )}
 
+        {/* Attendance Status - Check Out */}
         {checkedIn && checkedOut && (
           <div
             style={{
@@ -303,28 +472,35 @@ export default function SelfAbsence() {
             }}
           >
             <Text type="success" style={{ fontSize: "12px" }}>
+              <CheckCircle2
+                size={14}
+                style={{ display: "inline", marginRight: "6px" }}
+              />
               ✓ Sudah check-out hari ini
               {todayAttendance?.check_out &&
                 ` pada ${new Date(todayAttendance.check_out).toLocaleTimeString("id-ID")}`}
             </Text>
+            {todayAttendance?.geo_out_lat && todayAttendance?.geo_out_long && (
+              <div
+                style={{ fontSize: "11px", marginTop: "6px", color: "#666" }}
+              >
+                📍 Lokasi: {todayAttendance.geo_out_lat.toFixed(6)},{" "}
+                {todayAttendance.geo_out_long.toFixed(6)}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Warning when face recognition is disabled */}
-        {absenceMethod === "FACE" && !modelsLoaded && (
-          <div
-            style={{
-              marginBottom: 16,
-              padding: "12px",
-              backgroundColor: "#fff7e6",
-              border: "1px solid #ffd591",
-              borderRadius: "4px",
-            }}
-          >
-            <Text type="warning" style={{ fontSize: "12px" }}>
-              ℹ️ Face recognition is temporarily unavailable. Please use
-              button-based attendance.
-            </Text>
+        <Divider />
+
+        {/* Face Recognition Status */}
+        {absenceMethod === "FACE" && (
+          <div style={{ marginBottom: 16 }}>
+            {modelsLoaded ? (
+              <Tag color="green">✓ Face Recognition Siap</Tag>
+            ) : (
+              <Tag color="orange">⚠ Face Recognition Fallback ke Button</Tag>
+            )}
           </div>
         )}
 
@@ -332,8 +508,7 @@ export default function SelfAbsence() {
         {absenceMethod && (
           <div style={{ marginBottom: 16, textAlign: "center" }}>
             <Tag color={absenceMethod === "FACE" ? "blue" : "green"}>
-              Metode Absensi:{" "}
-              {absenceMethod === "FACE" ? "Face Recognition" : "Tombol"}
+              Metode: {absenceMethod === "FACE" ? "Face Recognition" : "Tombol"}
             </Tag>
           </div>
         )}
@@ -361,6 +536,7 @@ export default function SelfAbsence() {
                   loading={loading}
                   onClick={() => attendWithFace("CHECK_IN")}
                   icon={<Clock size={16} />}
+                  disabled={geoEnabled && !currentLocation}
                 >
                   Check-In (Face Recognition)
                 </Button>
@@ -371,6 +547,7 @@ export default function SelfAbsence() {
                   loading={loading}
                   onClick={() => attendWithButton("CHECK_IN")}
                   icon={<Clock size={16} />}
+                  disabled={geoEnabled && !currentLocation}
                 >
                   Check-In
                 </Button>
@@ -389,6 +566,7 @@ export default function SelfAbsence() {
                   onClick={() => attendWithFace("CHECK_OUT")}
                   icon={<LogOut size={16} />}
                   danger
+                  disabled={geoEnabled && !currentLocation}
                 >
                   Check-Out (Face Recognition)
                 </Button>
@@ -400,11 +578,19 @@ export default function SelfAbsence() {
                   onClick={() => attendWithButton("CHECK_OUT")}
                   icon={<LogOut size={16} />}
                   danger
+                  disabled={geoEnabled && !currentLocation}
                 >
                   Check-Out
                 </Button>
               )}
             </>
+          )}
+
+          {/* Refresh Location Button */}
+          {geoEnabled && (
+            <Button block onClick={getGeolocation} size="small" type="dashed">
+              Perbarui Lokasi
+            </Button>
           )}
         </Space>
 

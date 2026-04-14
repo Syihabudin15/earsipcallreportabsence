@@ -1,4 +1,4 @@
-import { Table, Space, Tag, Typography, DatePicker, Input, Button } from "antd";
+import { Table, Space, Tag, Typography, DatePicker, Input } from "antd";
 import { useEffect, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
 import api from "../../libs/api";
@@ -64,16 +64,6 @@ export default function LogActivities() {
     })();
   }, [pageProps.page, pageProps.limit, pageProps.search, pageProps.dateRange]);
 
-  const getActionColor = (action: string) => {
-    if (action.includes("LOGIN")) return "green";
-    if (action.includes("LOGOUT")) return "orange";
-    if (action.includes("FAILED")) return "red";
-    if (action.includes("CREATE") || action.includes("ADD")) return "blue";
-    if (action.includes("UPDATE") || action.includes("EDIT")) return "purple";
-    if (action.includes("DELETE")) return "red";
-    return "default";
-  };
-
   const columns: ColumnsType<LogActivity> = [
     {
       title: "No",
@@ -94,12 +84,6 @@ export default function LogActivities() {
       ),
     },
     {
-      title: "Action",
-      dataIndex: "action",
-      key: "action",
-      render: (action) => <Tag color={getActionColor(action)}>{action}</Tag>,
-    },
-    {
       title: "Method",
       dataIndex: "method",
       key: "method",
@@ -111,12 +95,6 @@ export default function LogActivities() {
       render: (status) => (
         <Tag color={status === "SUCCESS" ? "green" : "red"}>{status}</Tag>
       ),
-    },
-    {
-      title: "Description",
-      dataIndex: "payload",
-      key: "payload",
-      ellipsis: true,
     },
     {
       title: "IP Address",
@@ -149,7 +127,9 @@ export default function LogActivities() {
             size="small"
             placeholder="Cari aktivitas atau user..."
             allowClear
-            onSearch={(value) => setPageProps({ ...pageProps, search: value })}
+            onChange={(value) =>
+              setPageProps({ ...pageProps, search: value.target.value })
+            }
             style={{ minWidth: 250 }}
           />
           <RangePicker
@@ -161,14 +141,6 @@ export default function LogActivities() {
               })
             }
           />
-          <Button
-            size="small"
-            onClick={() =>
-              setPageProps({ ...pageProps, search: "", dateRange: null })
-            }
-          >
-            Reset Filter
-          </Button>
         </Space>
 
         <Table
