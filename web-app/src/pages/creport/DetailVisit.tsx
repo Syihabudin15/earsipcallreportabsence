@@ -19,12 +19,13 @@ export default function DetailVisit() {
 
     api
       .request({
-        method: "PATCH",
-        url: `${import.meta.env.VITE_API_URL}/visit?id=${id}`,
+        method: "GET",
+        url: "/visit",
+        params: { id },
       })
       .then((res) => {
         if (res.status === 200 || res.status === 201) {
-          setData(res.data.data);
+          setData(res.data.data[0] || res.data.data);
           setError("");
         } else {
           setError("Data tidak ditemukan");

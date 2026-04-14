@@ -26,6 +26,7 @@ import permitAbsenceRoute from "./modules/permit_absence/routes.js";
 import logActivitiesRoute from "./modules/log-activities/routes.js";
 import payrollRoute from "./modules/payroll/routes.js";
 import participantRoute from "./modules/participant/routes.js";
+import collateralLendingRoute from "./modules/collateral_lending/routes.js";
 import { MainDashboard } from "./modules/route.js";
 import type { Role, User } from "@prisma/client";
 
@@ -74,6 +75,7 @@ app.use("/permitfile", middleware, permitFileRoute);
 app.use("/guestbook", middleware, guestBookRoute);
 app.use("/gbook_type", middleware, gbookTypeRoute);
 app.use("/participant", middleware, participantRoute);
+app.use("/collateral_lending", middleware, collateralLendingRoute);
 
 // CALLREPORT
 app.use("/visit_category", middleware, visitCategoryRoute);

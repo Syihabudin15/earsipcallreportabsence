@@ -44,31 +44,31 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
       await api
         .request({
           method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/sub_type`,
+          url: "/sub_type",
         })
         .then((res) => setSubType(res.data.data));
       await api
         .request({
           method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/visit_category`,
+          url: "/visit_category",
         })
         .then((res) => setVisitCategories(res.data.data));
       await api
         .request({
           method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/visit_status`,
+          url: "/visit_status",
         })
         .then((res) => setVisitStatuses(res.data.data));
       await api
         .request({
           method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/visit_purpose`,
+          url: "/visit_purpose",
         })
         .then((res) => setVisitPurposes(res.data.data));
       await api
         .request({
           method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/user`,
+          url: "/user",
         })
         .then((res) => setUsers(res.data.data));
     })();
@@ -77,10 +77,10 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
   const handleSubmit = async () => {
     await api
       .request({
-        url: import.meta.env.VITE_API_URL + "/visit?id=" + record?.id,
+        url: "/visit",
         method: record ? "PUT" : "POST",
-        headers: { "Content-Type": "Application/json" },
-        data: { ...data, ...(record && { updated_at: new Date() }) },
+        params: record ? { id: record.id } : {},
+        data: data,
       })
       .then(async (res) => {
         if (res.status === 201 || res.status === 200) {
@@ -109,8 +109,9 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
     setLoading(true);
     await api
       .request({
-        url: import.meta.env.VITE_API_URL + "/debitur?id=" + search,
+        url: "/debitur",
         method: "PATCH",
+        params: { id: search },
       })
       .then((res) => {
         if (res.status === 200) {

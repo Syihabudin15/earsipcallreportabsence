@@ -39,7 +39,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
           { description: { contains: search as string } },
           { GbookType: { name: { contains: search as string } } },
           {
-            Participants: {
+            Participant: {
               some: { name: { contains: search as string } },
             },
           },
@@ -54,7 +54,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       orderBy: { date: "desc" },
       include: {
         GbookType: true,
-        Participants: true,
+        Participant: true,
       },
     });
 
@@ -83,7 +83,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
   const body = req.body;
   try {
     const { id, Participants, ...saved } = body;
-    
+
     // Filter out any participants without a name
     const validParticipants = (Participants || [])
       .filter((p: any) => p.name && p.name.trim())
@@ -96,12 +96,12 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
       data: {
         ...saved,
         ...(validParticipants.length > 0 && {
-          Participants: { create: validParticipants },
+          Participant: { create: validParticipants },
         }),
       },
       include: {
         GbookType: true,
-        Participants: true,
+        Participant: true,
       },
     });
 
@@ -130,7 +130,7 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
 
     const find = await prisma.guestBook.findFirst({
       where: { id: id as string },
-      include: { Participants: true },
+      include: { Participant: true },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
@@ -190,7 +190,7 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
       data: { ...saved, updated_at: new Date() },
       include: {
         GbookType: true,
-        Participants: true,
+        Participant: true,
       },
     });
 

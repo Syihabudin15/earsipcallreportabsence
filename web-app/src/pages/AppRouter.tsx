@@ -35,6 +35,14 @@ import Payroll from "./absensi/Payroll";
 import UpsertProductType from "./earsip/UpsertProductType";
 import UpdateProductType from "./earsip/UpdateProductType";
 import DataMitra from "./app/Mitra";
+import DashboardEarsip from "./earsip/DashboardEarsip";
+import DashboardCallReport from "./creport/DashboardCallReport";
+import DashboardAbsensi from "./absensi/DashboardAbsensi";
+import DashboardGuestBook from "./absensi/DashboardGuestBook";
+import CollateralLending from "./earsip/CollateralLending";
+import UpsertCollateralLending from "./earsip/UpsertCollateralLending";
+import VisitPlan from "./creport/VisitPlan";
+import VisitResult from "./creport/VisitResult";
 
 function AppRouter() {
   const path = window.location.pathname;
@@ -55,7 +63,7 @@ function AppRouter() {
           <Route path="/log-activities" element={<LogActivities />} />
 
           {/* EARSIP */}
-          <Route path="/earsip/" element={<DashboardApp />} />
+          <Route path="/earsip/" element={<DashboardEarsip />} />
           <Route path="/earsip/product_type" element={<DataProductType />} />
           <Route
             path="/earsip/product_type/upsert"
@@ -76,14 +84,25 @@ function AppRouter() {
           />
           <Route path="/earsip/debitur" element={<DebiturEArsip />} />
           <Route path="/earsip/permitfile" element={<DataPermitFile />} />
+          <Route path="/earsip/collateral_lending" element={<CollateralLending />} />
+          <Route
+            path="/earsip/collateral_lending/upsert"
+            element={<UpsertCollateralLending />}
+          />
+          <Route
+            path="/earsip/collateral_lending/upsert/:id"
+            element={<UpsertCollateralLending />}
+          />
 
           {/* CALLREPORT */}
-          <Route path="/callreport/" element={<DashboardApp />} />
+          <Route path="/callreport/" element={<DashboardCallReport />} />
           <Route path="/callreport/debitur" element={<DebiturCallReport />} />
           <Route path="/callreport/category" element={<DataVisitCategory />} />
           <Route path="/callreport/status" element={<DataVisitStatus />} />
           <Route path="/callreport/purpose" element={<DataVisitPurpose />} />
           <Route path="/callreport/visit" element={<DataVisit />} />
+          <Route path="/callreport/visit/plan" element={<VisitPlan />} />
+          <Route path="/callreport/visit/result" element={<VisitResult />} />
           <Route path="/callreport/visit/upsert" element={<UpsertVisit />} />
           <Route
             path="/callreport/visit/upsert/:id"
@@ -92,7 +111,7 @@ function AppRouter() {
           <Route path="/callreport/visit/:id" element={<DetailVisit />} />
 
           {/* ABSENSI */}
-          <Route path="/absensi" element={<DataAbsence />} />
+          <Route path="/absensi" element={<DashboardAbsensi />} />
           <Route path="/absensi/guestbook" element={<DataGuestBook />} />
           <Route path="/absensi/gbook_type" element={<DataGbookType />} />
           <Route path="/absensi/report" element={<AbsenceReport />} />
@@ -101,6 +120,11 @@ function AppRouter() {
           <Route path="/absensi/payroll" element={<Payroll />} />
           <Route path="/absensi/attendance" element={<SelfAbsence />} />
           <Route path="/absensi/kiosk" element={<AttendanceKiosk />} />
+
+          {/* GUESTBOOK */}
+          <Route path="/guestbook/" element={<DashboardGuestBook />} />
+          <Route path="/guestbook/guestbook" element={<DataGuestBook />} />
+          <Route path="/guestbook/gbook_type" element={<DataGbookType />} />
         </Route>
 
         {/* 404 Page (Opsional) */}

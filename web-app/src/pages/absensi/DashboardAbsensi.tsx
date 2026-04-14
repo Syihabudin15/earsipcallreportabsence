@@ -1,7 +1,7 @@
 import {
   Users,
   TrendingUp,
-  CreditCard,
+  Clock,
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
@@ -9,20 +9,23 @@ import { useEffect, useState } from "react";
 import { Spin, message } from "antd";
 import api from "../../libs/api";
 
-interface IDashboardData {
-  submissionType?: any[];
-  productType?: any[];
-  visitCategory?: any[];
+interface IAbsence {
+  id: string;
+  userId: string;
+  date: string;
+  time_in: string;
+  time_out?: string;
+  created_at: string;
 }
 
-const DashboardEarsip = () => {
+const DashboardAbsensi = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    totalDebitur: 0,
-    totalValue: "Rp 0",
-    activeSubmissions: 0,
+    total: 0,
+    present: 0,
+    percentage: 0,
   });
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<IAbsence[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -32,55 +35,35 @@ const DashboardEarsip = () => {
     setLoading(true);
     try {
       const res = await api.request({
-        url: "/maindashboard",
+        url: "/absence",
         method: "GET",
+        params: { limit: 100 },
       });
       if (res?.data) {
-        const data = res.data || {};
+        const data = res.data.data || [];
+        const total = res.data.total || 0;
 
-        // Calculate total debitur
-        const totalDebitur =
-          data.submissionType?.flatMap((d: any) => d.Debitur || []).length || 0;
+        // Calculate present today
+        const today = new Date().toISOString().split("T")[0];
+        const presentToday = data.filter(
+          (a: IAbsence) => a.date.split("T")[0] === today,
+        ).length;
 
-        // Calculate total value from submissions
-        const totalValue =
-          data.productType
-            ?.flatMap(
-              (pd: any) => pd.Product?.flatMap((p: any) => p.Submission) || [],
-            )
-            .reduce((acc: any, sub: any) => acc + (sub.value || 0), 0) || 0;
-
-        // Format currency
-        const formattedValue = new Intl.NumberFormat("id-ID", {
-          style: "currency",
-          currency: "IDR",
-          minimumFractionDigits: 0,
-        }).format(totalValue);
-
-        // Calculate active submissions
-        const activeSubmissions =
-          data.productType?.flatMap(
-            (pd: any) =>
-              pd.Product?.flatMap((p: any) => p.Submission).filter(
-                (s: any) => s.status === true,
-              ) || [],
-          ).length || 0;
+        // Calculate percentage
+        const percentage =
+          total > 0 ? Math.round((presentToday / total) * 100) : 0;
 
         setStats({
-          totalDebitur: totalDebitur,
-          totalValue: formattedValue,
-          activeSubmissions: activeSubmissions,
+          total: total,
+          present: presentToday,
+          percentage: percentage,
         });
 
-        // Set recent activities (first 4 submissions)
-        const allSubmissions =
-          data.productType?.flatMap(
-            (pd: any) => pd.Product?.flatMap((p: any) => p.Submission) || [],
-          ) || [];
-        setActivities(allSubmissions.slice(0, 4));
+        // Set recent activities
+        setActivities(data.slice(0, 4));
       }
     } catch (error) {
-      message.error("Gagal mengambil data dashboard");
+      message.error("Gagal mengambil data kehadiran");
     } finally {
       setLoading(false);
     }
@@ -88,28 +71,28 @@ const DashboardEarsip = () => {
 
   const statsDisplay = [
     {
-      label: "Total Nasabah",
-      value: stats.totalDebitur.toString(),
+      label: "Total Karyawan",
+      value: stats.total.toString(),
       icon: <Users size={24} />,
-      trend: "+12.5%",
+      trend: "+2.5%",
       trendUp: true,
       color: "bg-blue-500",
     },
     {
-      label: "Total Nilai Pembiayaan",
-      value: stats.totalValue,
-      icon: <TrendingUp size={24} />,
-      trend: "+8.2%",
+      label: "Hadir Hari Ini",
+      value: stats.present.toString(),
+      icon: <Clock size={24} />,
+      trend: "+1.2%",
       trendUp: true,
-      color: "bg-orange-500",
+      color: "bg-emerald-500",
     },
     {
-      label: "Pembiayaan Aktif",
-      value: stats.activeSubmissions.toString(),
-      icon: <CreditCard size={24} />,
-      trend: "-2.4%",
-      trendUp: false,
-      color: "bg-emerald-500",
+      label: "Tingkat Kehadiran",
+      value: `${stats.percentage}%`,
+      icon: <TrendingUp size={24} />,
+      trend: "+0.8%",
+      trendUp: true,
+      color: "bg-orange-500",
     },
   ];
 
@@ -122,8 +105,7 @@ const DashboardEarsip = () => {
             Selamat Pagi, Syihabudin! 👋
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Berikut adalah ringkasan performa EARSIP wilayah Jawa Barat hari
-            ini.
+            Berikut adalah ringkasan kehadiran karyawan hari ini.
           </p>
         </div>
 
@@ -168,7 +150,7 @@ const DashboardEarsip = () => {
           <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-slate-800">
-                Grafik Pertumbuhan Pembiayaan
+                Grafik Kehadiran Mingguan
               </h3>
               <select className="text-xs border-slate-200 rounded-lg bg-slate-50 p-1 outline-none">
                 <option>7 Hari Terakhir</option>
@@ -178,7 +160,7 @@ const DashboardEarsip = () => {
             {/* Box abu-abu sebagai placeholder Chart */}
             <div className="h-64 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center">
               <p className="text-slate-400 text-sm italic">
-                Area Visualisasi Grafik Pertumbuhan
+                Area Visualisasi Grafik Kehadiran
               </p>
             </div>
           </div>
@@ -186,7 +168,7 @@ const DashboardEarsip = () => {
           {/* --- RECENT ACTIVITIES --- */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-slate-800">Permohonan Terkini</h3>
+              <h3 className="font-bold text-slate-800">Aktivitas Terkini</h3>
               <button className="text-orange-500 text-xs font-bold hover:underline">
                 Lihat Semua
               </button>
@@ -200,23 +182,20 @@ const DashboardEarsip = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-slate-800 truncate">
-                        Permohonan Baru
+                        Absensi Masuk
                       </p>
                       <p className="text-xs text-slate-500">
-                        ID: {item.id?.substring(0, 8)}...
+                        Jam:{" "}
+                        {new Date(item.time_in).toLocaleTimeString("id-ID")}
                       </p>
                     </div>
                     <p className="text-[10px] text-slate-400 font-medium italic">
-                      {new Date(
-                        item.created_at || item.createdAt,
-                      ).toLocaleTimeString("id-ID")}
+                      {new Date(item.created_at).toLocaleTimeString("id-ID")}
                     </p>
                   </div>
                 ))
               ) : (
-                <p className="text-slate-400 text-sm">
-                  Tidak ada data permohonan
-                </p>
+                <p className="text-slate-400 text-sm">Tidak ada aktivitas</p>
               )}
             </div>
           </div>
@@ -245,4 +224,4 @@ const UserIcon = ({ size, className }: { size: any; className: any }) => (
   </svg>
 );
 
-export default DashboardEarsip;
+export default DashboardAbsensi;

@@ -99,8 +99,19 @@ export default function DataVisit() {
 
     await api
       .request({
-        url: `${import.meta.env.VITE_API_URL}/visit?${params.toString()}`,
+        url: "/visit",
         method: "GET",
+        params: {
+          page: pageprops.page,
+          limit: pageprops.limit,
+          search: pageprops.search,
+          visitCategoryId: pageprops.visitCategoryId,
+          visitStatusId: pageprops.visitStatusId,
+          visitPurposeId: pageprops.visitPurposeId,
+          approve_status: pageprops.approve_status,
+          backdate: pageprops.backdate,
+          submissionTypeId: pageprops.submissionTypeId,
+        },
       })
       .then((res) =>
         setPageprops((prev) => ({
@@ -117,25 +128,25 @@ export default function DataVisit() {
       await api
         .request({
           method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/visit_category`,
+          url: "/visit_category",
         })
         .then((res) => setVisitCategories(res.data.data));
       await api
         .request({
           method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/visit_status`,
+          url: "/visit_status",
         })
         .then((res) => setVisitStatuses(res.data.data));
       await api
         .request({
           method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/visit_purpose`,
+          url: "/visit_purpose",
         })
         .then((res) => setVisitPurposes(res.data.data));
       await api
         .request({
           method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/sub_type`,
+          url: "/sub_type",
         })
         .then((res) => setSubTypes(res.data.data));
     })();

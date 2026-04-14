@@ -137,7 +137,6 @@ export interface IParticipant {
   name: string;
   phone?: string | null;
   email?: string | null;
-  comment?: string | null;
   guestBookId?: string;
   action?: "create" | "update" | "delete";
 }

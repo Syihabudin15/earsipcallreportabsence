@@ -16,6 +16,7 @@ import type {
   IGuestBook,
   IGuestBookType,
   IPageProps,
+  IParticipant,
 } from "../../libs/interface";
 import api from "../../libs/api";
 import useContext from "../../libs/context";
@@ -56,36 +57,40 @@ export default function DataGuestBook() {
 
   const getGuestBooks = async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    params.append("page", pageprops.page.toString());
-    params.append("limit", pageprops.limit.toString());
-    if (pageprops.search) params.append("search", pageprops.search);
-    if (pageprops.date) params.append("date", pageprops.date);
-    if (pageprops.gBookTypeId)
-      params.append("gBookTypeId", pageprops.gBookTypeId);
-
-    await api
-      .request({
-        url: `${import.meta.env.VITE_API_URL}/guestbook?${params.toString()}`,
+    try {
+      const res = await api.request({
+        url: "/guestbook",
         method: "GET",
-      })
-      .then((res) =>
-        setPageprops((prev) => ({
-          ...prev,
-          data: res.data.data,
-          total: res.data.total,
-        })),
-      );
+        params: {
+          page: pageprops.page,
+          limit: pageprops.limit,
+          search: pageprops.search,
+          date: pageprops.date,
+          gBookTypeId: pageprops.gBookTypeId,
+        },
+      });
+      setPageprops((prev) => ({
+        ...prev,
+        data: res.data.data || [],
+        total: res.data.total || 0,
+      }));
+    } catch (error) {
+      modal.error({ title: "Gagal mengambil data buku tamu" });
+    }
     setLoading(false);
   };
 
   const getTypes = async () => {
-    await api
-      .request({
-        url: `${import.meta.env.VITE_API_URL}/gbook_type?page=1&limit=200`,
+    try {
+      const res = await api.request({
+        url: "/gbook_type",
         method: "GET",
-      })
-      .then((res) => setTypes(res.data.data));
+        params: { limit: 200 },
+      });
+      setTypes(res.data.data || []);
+    } catch (error) {
+      modal.error({ title: "Gagal mengambil tipe buku tamu" });
+    }
   };
 
   useEffect(() => {
@@ -106,17 +111,24 @@ export default function DataGuestBook() {
   ]);
 
   const handleSave = async () => {
+    if (!form.name?.trim()) {
+      modal.error({ title: "Nama tamu tidak boleh kosong" });
+      return;
+    }
+    if (!form.gBookTypeId) {
+      modal.error({ title: "Jenis buku tamu harus dipilih" });
+      return;
+    }
+
     setLoading(true);
     const participantData = (form.Participants || [])
       .filter((item) => item.name && item.name.trim())
       .map((p) => {
-        // Track action for each participant
         if (p.id && p.action === "delete") {
           return { ...p, action: "delete" };
         } else if (p.id && !p.action) {
           return { ...p, action: "update" };
         } else {
-          // New participant without id
           const { id, ...data } = p;
           return { ...data, action: "create" };
         }
@@ -125,8 +137,9 @@ export default function DataGuestBook() {
     try {
       if (action.record) {
         await api.request({
-          url: `${import.meta.env.VITE_API_URL}/guestbook?id=${action.record.id}`,
+          url: "/guestbook",
           method: "PUT",
+          params: { id: action.record.id },
           data: {
             ...form,
             Participants: participantData,
@@ -135,7 +148,7 @@ export default function DataGuestBook() {
         modal.success({ title: "Data buku tamu berhasil diubah" });
       } else {
         await api.request({
-          url: `${import.meta.env.VITE_API_URL}/guestbook`,
+          url: "/guestbook",
           method: "POST",
           data: {
             ...form,
@@ -162,18 +175,17 @@ export default function DataGuestBook() {
 
   const deleteBook = async (record: IGuestBook) => {
     setLoading(true);
-    await api
-      .request({
-        url: `${import.meta.env.VITE_API_URL}/guestbook?id=${record.id}`,
+    try {
+      await api.request({
+        url: "/guestbook",
         method: "DELETE",
-      })
-      .then(() => {
-        modal.success({ title: "Buku tamu berhasil dihapus" });
-        getGuestBooks();
-      })
-      .catch(() => {
-        modal.error({ title: "Gagal menghapus buku tamu" });
+        params: { id: record.id },
       });
+      modal.success({ title: "Buku tamu berhasil dihapus" });
+      await getGuestBooks();
+    } catch (error) {
+      modal.error({ title: "Gagal menghapus buku tamu" });
+    }
     setLoading(false);
   };
 
@@ -298,19 +310,24 @@ export default function DataGuestBook() {
           <Input.Search
             placeholder="Cari nama atau tipe tamu.."
             allowClear
-            onSearch={(value) => setPageprops({ ...pageprops, search: value })}
+            onSearch={(value) =>
+              setPageprops({ ...pageprops, page: 1, search: value })
+            }
             style={{ minWidth: 240 }}
             size="small"
           />
           <DatePicker
             size="small"
-            value={pageprops.date ? moment(pageprops.date) : undefined}
+            format="YYYY-MM-DD"
+            value={pageprops.date ? moment(pageprops.date, "YYYY-MM-DD") : null}
             onChange={(value) =>
               setPageprops({
                 ...pageprops,
+                page: 1,
                 date: value ? value.format("YYYY-MM-DD") : "",
               })
             }
+            placeholder="Pilih tanggal"
           />
           <Select
             size="small"
@@ -323,7 +340,7 @@ export default function DataGuestBook() {
               value: item.id,
             }))}
             onChange={(value) =>
-              setPageprops({ ...pageprops, gBookTypeId: value })
+              setPageprops({ ...pageprops, page: 1, gBookTypeId: value })
             }
           />
         </div>
@@ -358,184 +375,188 @@ export default function DataGuestBook() {
         okText="Simpan"
         cancelText="Batal"
         confirmLoading={loading}
-        width={760}
+        width={800}
+        style={{ top: 20 }}
       >
-        <Space orientation="vertical" className="w-full">
-          <Input
-            placeholder="Nama tamu"
-            value={form.name || ""}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-          <DatePicker
-            style={{ width: "100%" }}
-            value={form.date ? moment(form.date) : undefined}
-            onChange={(value) =>
-              setForm({ ...form, date: value?.toISOString() })
-            }
-            size="middle"
-          />
-          <Select
-            value={form.status_come}
-            options={statusOptions}
-            onChange={(value) => setForm({ ...form, status_come: value })}
-            size="middle"
-          />
-          <Select
-            value={form.gBookTypeId}
-            options={types.map((item) => ({
-              label: item.name,
-              value: item.id,
-            }))}
-            onChange={(value) => setForm({ ...form, gBookTypeId: value })}
-            placeholder="Pilih jenis buku tamu"
-            size="middle"
-          />
-          <Input.TextArea
-            placeholder="Keterangan"
-            value={form.description || ""}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            rows={3}
-          />
+        <div className="space-y-4 py-4">
           <div>
-            <div className="mb-2 font-semibold">Peserta</div>
-            {(form.Participants || [])
-              .filter((p) => !p.action || p.action !== "delete")
-              .map((participant, index) => {
-                const actualIndex = (form.Participants || []).findIndex(
-                  (p) =>
-                    p.id === participant.id ||
-                    (p.name === participant.name && !p.id),
-                );
-                const isNew = !participant.id;
+            <label className="block text-sm font-medium mb-1">
+              Nama Tamu *
+            </label>
+            <Input
+              placeholder="Masukkan nama tamu"
+              value={form.name || ""}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              size="large"
+            />
+          </div>
 
-                return (
-                  <div
-                    key={index}
-                    style={{
-                      padding: "8px",
-                      marginBottom: "8px",
-                      backgroundColor: isNew ? "#fafafa" : "#fff",
-                      border: "1px solid #f0f0f0",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    <Space className="w-full mb-2" align="start">
-                      {isNew && (
-                        <Tag color="green" style={{ marginRight: 0 }}>
-                          Baru
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Tanggal *
+              </label>
+              <DatePicker
+                style={{ width: "100%" }}
+                format="YYYY-MM-DD"
+                value={form.date ? moment(form.date) : null}
+                onChange={(value) =>
+                  setForm({ ...form, date: value?.toISOString() })
+                }
+                size="large"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Status *</label>
+              <Select
+                value={form.status_come}
+                options={statusOptions}
+                onChange={(value) => setForm({ ...form, status_come: value })}
+                size="large"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Jenis Buku Tamu *
+            </label>
+            <Select
+              value={form.gBookTypeId || undefined}
+              options={types.map((item) => ({
+                label: item.name,
+                value: item.id,
+              }))}
+              onChange={(value) => setForm({ ...form, gBookTypeId: value })}
+              placeholder="Pilih jenis buku tamu"
+              size="large"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Keterangan</label>
+            <Input.TextArea
+              placeholder="Masukkan keterangan"
+              value={form.description || ""}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
+              rows={3}
+            />
+          </div>
+          <div className="border-t pt-4">
+            <div className="flex justify-between items-center mb-3">
+              <label className="text-sm font-semibold">Peserta</label>
+              <Button
+                type="dashed"
+                size="small"
+                onClick={() =>
+                  setForm({
+                    ...form,
+                    Participants: [
+                      ...(form.Participants || []),
+                      {
+                        name: "",
+                        phone: "",
+                        email: "",
+                        id: "",
+                        guestBookId: "",
+                      } as IParticipant,
+                    ],
+                  })
+                }
+              >
+                + Tambah Peserta
+              </Button>
+            </div>
+
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {(form.Participants || [])
+                .filter((p) => !p.action || p.action !== "delete")
+                .map((participant, index) => {
+                  const actualIndex = (form.Participants || []).findIndex(
+                    (p) =>
+                      p.id === participant.id ||
+                      (p.name === participant.name && !p.id),
+                  );
+                  const isNew = !participant.id;
+
+                  return (
+                    <div
+                      key={index}
+                      className="p-3 bg-slate-50 rounded-lg border border-slate-200"
+                    >
+                      <Space className="w-full mb-2">
+                        <Tag color={isNew ? "green" : "blue"}>
+                          {isNew ? "Baru" : "Existing"}
                         </Tag>
-                      )}
-                      {!isNew && (
-                        <Tag color="blue" style={{ marginRight: 0 }}>
-                          Ada
-                        </Tag>
-                      )}
-                    </Space>
-                    <Space className="w-full mb-2" align="start" wrap>
-                      <Input
-                        placeholder="Nama"
-                        value={participant.name}
-                        onChange={(e) => {
-                          const updated = [...(form.Participants || [])];
-                          updated[actualIndex] = {
-                            ...updated[actualIndex],
-                            name: e.target.value,
-                          };
-                          setForm({ ...form, Participants: updated });
-                        }}
-                        style={{ width: 200 }}
-                        size="small"
-                      />
-                      <Input
-                        placeholder="Phone"
-                        value={participant.phone || ""}
-                        onChange={(e) => {
-                          const updated = [...(form.Participants || [])];
-                          updated[actualIndex] = {
-                            ...updated[actualIndex],
-                            phone: e.target.value,
-                          };
-                          setForm({ ...form, Participants: updated });
-                        }}
-                        style={{ width: 140 }}
-                        size="small"
-                      />
-                      <Input
-                        placeholder="Email"
-                        value={participant.email || ""}
-                        onChange={(e) => {
-                          const updated = [...(form.Participants || [])];
-                          updated[actualIndex] = {
-                            ...updated[actualIndex],
-                            email: e.target.value,
-                          };
-                          setForm({ ...form, Participants: updated });
-                        }}
-                        style={{ width: 180 }}
-                        size="small"
-                      />
-                      <Input
-                        placeholder="Komentar"
-                        value={participant.comment || ""}
-                        onChange={(e) => {
-                          const updated = [...(form.Participants || [])];
-                          updated[actualIndex] = {
-                            ...updated[actualIndex],
-                            comment: e.target.value,
-                          };
-                          setForm({ ...form, Participants: updated });
-                        }}
-                        style={{ width: 180 }}
-                        size="small"
-                      />
-                      <Button
-                        danger
-                        size="small"
-                        onClick={() => {
-                          const updated = [...(form.Participants || [])];
-                          if (participant.id) {
-                            // Mark existing participant as deleted
+                        <Button
+                          danger
+                          size="small"
+                          onClick={() => {
+                            const updated = [...(form.Participants || [])];
+                            if (participant.id) {
+                              updated[actualIndex] = {
+                                ...updated[actualIndex],
+                                action: "delete",
+                              };
+                            } else {
+                              updated.splice(actualIndex, 1);
+                            }
+                            setForm({ ...form, Participants: updated });
+                          }}
+                        >
+                          Hapus
+                        </Button>
+                      </Space>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          placeholder="Nama"
+                          size="small"
+                          value={participant.name}
+                          onChange={(e) => {
+                            const updated = [...(form.Participants || [])];
                             updated[actualIndex] = {
                               ...updated[actualIndex],
-                              action: "delete",
+                              name: e.target.value,
                             };
-                          } else {
-                            // Remove new participant
-                            updated.splice(actualIndex, 1);
-                          }
-                          setForm({ ...form, Participants: updated });
-                        }}
-                      >
-                        Hapus
-                      </Button>
-                    </Space>
-                  </div>
-                );
-              })}
-            <Button
-              type="dashed"
-              className="w-full"
-              onClick={() =>
-                setForm({
-                  ...form,
-                  Participants: [
-                    ...(form.Participants || []),
-                    {
-                      name: "",
-                      phone: "",
-                      email: "",
-                      comment: "",
-                      id: "",
-                      guestBookId: "",
-                    } as any,
-                  ],
-                })
-              }
-            >
-              Tambah Peserta
-            </Button>
+                            setForm({ ...form, Participants: updated });
+                          }}
+                        />
+                        <Input
+                          placeholder="No. Telepon"
+                          size="small"
+                          value={participant.phone || ""}
+                          onChange={(e) => {
+                            const updated = [...(form.Participants || [])];
+                            updated[actualIndex] = {
+                              ...updated[actualIndex],
+                              phone: e.target.value,
+                            };
+                            setForm({ ...form, Participants: updated });
+                          }}
+                        />
+                        <Input
+                          placeholder="Email"
+                          size="small"
+                          value={participant.email || ""}
+                          onChange={(e) => {
+                            const updated = [...(form.Participants || [])];
+                            updated[actualIndex] = {
+                              ...updated[actualIndex],
+                              email: e.target.value,
+                            };
+                            setForm({ ...form, Participants: updated });
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
           </div>
-        </Space>
+        </div>
       </Modal>
     </div>
   );
