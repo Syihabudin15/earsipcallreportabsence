@@ -8,35 +8,28 @@ import {
   ExternalLink,
   Download,
   Share2,
-  Printer,
   MessageSquare,
+  Contact,
 } from "lucide-react";
 import type { IVisit } from "../../libs/interface";
-import { useState } from "react";
+import { Button, Divider, Tag, Tooltip, message } from "antd";
 import {
-  App,
-  Button,
-  Modal,
-  Divider,
-  Tag,
-  Tooltip,
-  Badge,
-  message,
-} from "antd";
-import { ArrowLeftOutlined, AuditOutlined } from "@ant-design/icons";
+  ArrowLeftOutlined,
+  EnvironmentFilled,
+  MailOutlined,
+  PhoneOutlined,
+} from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import api from "../../libs/api";
 import moment from "moment";
 
 // Props menggunakan interface IVisit yang Anda berikan
 
 export default function DetailCallReport({ data }: { data: IVisit }) {
-  const [open, setOpen] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
 
-  const handlePrint = () => {
-    window.print();
-  };
+  // const handlePrint = () => {
+  //   window.print();
+  // };
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -78,41 +71,12 @@ export default function DetailCallReport({ data }: { data: IVisit }) {
   };
 
   // Helper untuk mendapatkan warna berdasarkan status approve
-  const getStatusColors = () => {
-    switch (data.approve_status) {
-      case "APPROVED":
-        return {
-          headerGradient: "from-green-600 to-green-700",
-          buttonText: "text-green-600",
-          buttonHover: "hover:bg-green-50",
-          textColor: "text-green-100",
-        };
-      case "REJECTED":
-        return {
-          headerGradient: "from-red-600 to-red-700",
-          buttonText: "text-red-600",
-          buttonHover: "hover:bg-red-50",
-          textColor: "text-red-100",
-        };
-      default: // PENDING
-        return {
-          headerGradient: "from-blue-600 to-blue-700",
-          buttonText: "text-blue-600",
-          buttonHover: "hover:bg-blue-50",
-          textColor: "text-blue-100",
-        };
-    }
+  const getStatusColors = {
+    headerGradient: "from-blue-600 to-blue-700",
+    buttonText: "text-blue-600",
+    buttonHover: "hover:bg-blue-50",
+    textColor: "text-blue-100",
   };
-
-  const statusColors = getStatusColors();
-
-  // Check if visit is on-time - with safety checks
-  const dateAction = data.date_action ? new Date(data.date_action) : new Date();
-  const dateScheduled = data.date ? new Date(data.date) : new Date();
-  const isOnTime = dateAction <= dateScheduled;
-  const daysDifference = Math.floor(
-    (dateAction.getTime() - dateScheduled.getTime()) / (1000 * 3600 * 24),
-  );
 
   return (
     <>
@@ -131,13 +95,13 @@ export default function DetailCallReport({ data }: { data: IVisit }) {
               </Button>
             </Link>
             <div className="flex gap-2">
-              <Tooltip title="Print">
+              {/* <Tooltip title="Print">
                 <Button
                   icon={<Printer size={16} />}
                   type="text"
                   onClick={handlePrint}
                 />
-              </Tooltip>
+              </Tooltip> */}
               <Tooltip title="Share">
                 <Button
                   icon={<Share2 size={16} />}
@@ -150,43 +114,17 @@ export default function DetailCallReport({ data }: { data: IVisit }) {
 
           {/* Header Card with Status */}
           <div
-            className={`bg-linear-to-r ${statusColors.headerGradient} rounded-3xl p-8 text-white shadow-lg`}
+            className={`bg-linear-to-r ${getStatusColors.headerGradient} rounded-3xl p-8 text-white shadow-lg`}
           >
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>
-                <div className="flex items-center gap-3 mb-3">
-                  <Badge
-                    status={
-                      data.approve_status === "APPROVED"
-                        ? "success"
-                        : data.approve_status === "REJECTED"
-                          ? "error"
-                          : "processing"
-                    }
-                    text={
-                      <span className="text-white font-semibold">
-                        {data.approve_status}
-                      </span>
-                    }
-                  />
-                </div>
                 <h1 className="text-3xl md:text-4xl font-bold mb-2">
                   Detail Kunjungan
                 </h1>
-                <p className={statusColors.textColor}>
+                <p className={getStatusColors.textColor}>
                   ID Kunjungan: {data.id}
                 </p>
               </div>
-
-              {data.approve_status === "PENDING" && (
-                <button
-                  disabled={data.approve_status !== "PENDING"}
-                  className={`flex items-center gap-2 bg-white ${statusColors.buttonHover} disabled:bg-gray-300 ${statusColors.buttonText} px-6 py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95 cursor-pointer`}
-                  onClick={() => setOpen(true)}
-                >
-                  <AuditOutlined /> Proses Laporan
-                </button>
-              )}
             </div>
           </div>
 
@@ -240,7 +178,34 @@ export default function DetailCallReport({ data }: { data: IVisit }) {
 
                   <Divider className="my-4" />
 
-                  {/* Row 2: Visit Schedule */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                        <EnvironmentFilled className="inline mr-1" />
+                        Rencana Kunjungan
+                      </label>
+                      <p className="text-base font-semibold text-gray-800">
+                        {data.Debitur.address}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                        <Contact size={14} className="inline mr-1" />
+                        Informasi Kontak
+                      </label>
+                      <div className="text-xs font-semibold text-gray-900">
+                        <div>
+                          <PhoneOutlined /> {data.Debitur.phone}
+                        </div>
+                        <div>
+                          <MailOutlined /> {data.Debitur.email}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <Divider className="my-4" />
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
@@ -248,14 +213,10 @@ export default function DetailCallReport({ data }: { data: IVisit }) {
                         Rencana Kunjungan
                       </label>
                       <p className="text-base font-semibold text-gray-900">
-                        {data.date
-                          ? moment(data.date).format("DD MMMM YYYY")
+                        {data.date_plan
+                          ? moment(data.date_plan).format("DD MMMM YYYY")
                           : "N/A"}
                       </p>
-                      {/* <p className="text-sm text-gray-500">
-                      {data.date ? moment(data.date).format("HH:mm") : ""} ·{" "}
-                      {data.date ? moment(data.date).fromNow() : ""}
-                    </p> */}
                     </div>
 
                     <div className="space-y-2">
@@ -267,13 +228,6 @@ export default function DetailCallReport({ data }: { data: IVisit }) {
                         {data.date_action
                           ? moment(data.date_action).format("DD MMMM YYYY")
                           : "N/A"}
-                      </p>
-                      <p
-                        className={`text-sm font-medium ${isOnTime ? "text-green-600" : "text-orange-600"}`}
-                      >
-                        {isOnTime
-                          ? `✓ Tepat waktu`
-                          : `⚠ ${daysDifference} hari setelah rencana`}
                       </p>
                     </div>
                   </div>
@@ -540,8 +494,8 @@ export default function DetailCallReport({ data }: { data: IVisit }) {
                         RENCANA PELAKSANAAN
                       </p>
                       <p className="text-sm text-gray-900 font-medium">
-                        {data.date
-                          ? moment(data.date).format("DD MMM YYYY")
+                        {data.date_plan
+                          ? moment(data.date_plan).format("DD MMM YYYY")
                           : "N/A"}
                       </p>
                     </div>
@@ -549,7 +503,6 @@ export default function DetailCallReport({ data }: { data: IVisit }) {
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">
                       <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                      <div className="w-0.5 h-12 bg-gray-200"></div>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-gray-600">
@@ -562,114 +515,12 @@ export default function DetailCallReport({ data }: { data: IVisit }) {
                       </p>
                     </div>
                   </div>
-
-                  <div className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <div
-                        className={`w-3 h-3 rounded-full ${data.approve_status === "APPROVED" ? "bg-green-500" : data.approve_status === "REJECTED" ? "bg-red-500" : "bg-yellow-500"}`}
-                      ></div>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-600">
-                        {data.approve_status}
-                      </p>
-                      <p className="text-sm text-gray-900 font-medium">
-                        {data.updated_at
-                          ? moment(data.updated_at).format("DD MMM YYYY HH:mm")
-                          : "N/A"}
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        <ModalProccess
-          record={data}
-          open={open}
-          setOpen={(open) => setOpen(open)}
-        />
       </div>
     </>
   );
 }
-
-const ModalProccess = ({
-  record,
-  open,
-  setOpen,
-}: {
-  record: IVisit;
-  open: boolean;
-  setOpen: (open: boolean) => void;
-}) => {
-  const [loading, setLoading] = useState(false);
-  const { modal } = App.useApp();
-
-  const handleSubmit = async (status: string) => {
-    await api
-      .request({
-        url: import.meta.env.VITE_API_URL + "/visit?id=" + record?.id,
-        method: "PUT",
-        headers: { "Content-Type": "Application/json" },
-        data: { ...record, approve_status: status },
-      })
-      .then(async (res) => {
-        if (res.status === 201 || res.status === 200) {
-          modal.success({
-            title: "BERHASIL",
-            content: res.data.msg,
-          });
-          window.location.reload();
-        } else {
-          modal.error({
-            title: "ERROR",
-            content: res.data.msg,
-          });
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-        modal.error({
-          title: "ERROR",
-          content: err.message || "Internal Server Error",
-        });
-      });
-    setLoading(false);
-  };
-
-  return (
-    <Modal
-      title="Konfirmasi Proses"
-      open={open}
-      loading={loading}
-      onCancel={() => setOpen(false)}
-      footer={[
-        <Button
-          key={"tolak"}
-          type="primary"
-          danger
-          loading={loading}
-          onClick={() => handleSubmit("REJECTED")}
-        >
-          Tolak
-        </Button>,
-        <Button
-          key={"setujui"}
-          type="primary"
-          loading={loading}
-          onClick={() => handleSubmit("APPROVED")}
-        >
-          Setujui
-        </Button>,
-      ]}
-    >
-      <div className="p-4">
-        Konfirmasi Proses Persetujuan/Penolakan pada data kunjungan ini *
-        {record.id}*?
-      </div>
-    </Modal>
-  );
-};

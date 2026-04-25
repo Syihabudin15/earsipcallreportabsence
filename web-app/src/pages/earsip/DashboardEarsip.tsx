@@ -9,12 +9,6 @@ import { useEffect, useState } from "react";
 import { Spin, message } from "antd";
 import api from "../../libs/api";
 
-interface IDashboardData {
-  submissionType?: any[];
-  productType?: any[];
-  visitCategory?: any[];
-}
-
 const DashboardEarsip = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({

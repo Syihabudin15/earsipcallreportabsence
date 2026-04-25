@@ -23,9 +23,6 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       ...(submissionTypeId && {
         submissionTypeId: submissionTypeId as string,
       }),
-      ...(req.user?.Role.data_status === "USER"
-        ? { Submission: { some: { userId: req.user?.id } } }
-        : {}),
     };
     const data = await prisma.debitur.findMany({
       where: querywhere,
@@ -34,6 +31,12 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       include: {
         SubmissionType: true,
         Submission: {
+          where: {
+            status: true,
+            ...(req.user?.Role.data_status === "USER"
+              ? { userId: req.user?.id }
+              : {}),
+          },
           include: { Product: { include: { ProductType: true } } },
         },
         Visit: {

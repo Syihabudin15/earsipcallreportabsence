@@ -131,11 +131,11 @@ export default function DataDebitur() {
       render(_value, record, _index) {
         return (
           <div className="flex gap-2 justify-center">
-            <div>{record.Submissions.length}</div>
+            <div>{record.Submission.length}</div>
             <Button
               icon={<ReceiptText size={15} />}
               size="small"
-              disabled={record.Submissions.length === 0}
+              disabled={record.Submission.length === 0}
               onClick={() =>
                 setAction({ ...action, process: true, record: record })
               }
@@ -279,7 +279,7 @@ export default function DataDebitur() {
         setOpen={(val) => setAction({ ...action, upsert: val })}
       />
       <DetailSubmissionDebt
-        record={action.record?.Submissions}
+        record={action.record?.Submission}
         open={action.process}
         setOpen={(val) => setAction({ ...action, process: val })}
       />

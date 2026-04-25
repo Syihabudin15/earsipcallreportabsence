@@ -13,7 +13,6 @@ import UpdateSubmission from "./earsip/UpdateSubmission";
 import DataVisitCategory from "./creport/Category";
 import DataVisitStatus from "./creport/Status";
 import DataVisitPurpose from "./creport/Purpose";
-import DataVisit from "./creport/Visit";
 import UpsertVisit from "./creport/UpsertVisit";
 import UpdateVisit from "./creport/UpdateVisit";
 import DetailVisit from "./creport/DetailVisit";
@@ -22,10 +21,8 @@ import UserManagement from "./app/User";
 import UserProfile from "./app/UserProfile";
 import LogActivities from "./app/LogActivities";
 import DebiturEArsip from "./earsip/Debitur";
-import DataPermitFile from "./earsip/PermitFile";
-import DataAbsence from "./absensi/Absence";
-import DataGuestBook from "./absensi/GuestBook";
-import DataGbookType from "./absensi/GbookType";
+import DataGuestBook from "./guestbook/GuestBook";
+import DataGbookType from "./guestbook/GbookType";
 import AbsenceReport from "./absensi/AbsenceReport";
 import SelfAbsence from "./absensi/SelfAbsence";
 import AbsenceConfig from "./absensi/AbsenceConfig";
@@ -38,11 +35,15 @@ import DataMitra from "./app/Mitra";
 import DashboardEarsip from "./earsip/DashboardEarsip";
 import DashboardCallReport from "./creport/DashboardCallReport";
 import DashboardAbsensi from "./absensi/DashboardAbsensi";
-import DashboardGuestBook from "./absensi/DashboardGuestBook";
+import DashboardGuestBook from "./guestbook/DashboardGuestBook";
 import CollateralLending from "./earsip/CollateralLending";
 import UpsertCollateralLending from "./earsip/UpsertCollateralLending";
-import VisitPlan from "./creport/VisitPlan";
-import VisitResult from "./creport/VisitResult";
+import DataVisitPlan from "./creport/VisitPlan";
+import DataVisit from "./creport/Visit";
+import PermitDownload from "./earsip/PermitDownload";
+import PermitDelete from "./earsip/PermitDelete";
+import UpsertVisitPlan from "./creport/UpsertVisitPlan";
+import UpdateVisitPlan from "./creport/UpdateVisitPlan";
 
 function AppRouter() {
   const path = window.location.pathname;
@@ -83,8 +84,10 @@ function AppRouter() {
             element={<UpdateSubmission />}
           />
           <Route path="/earsip/debitur" element={<DebiturEArsip />} />
-          <Route path="/earsip/permitfile" element={<DataPermitFile />} />
-          <Route path="/earsip/collateral_lending" element={<CollateralLending />} />
+          <Route
+            path="/earsip/collateral_lending"
+            element={<CollateralLending />}
+          />
           <Route
             path="/earsip/collateral_lending/upsert"
             element={<UpsertCollateralLending />}
@@ -93,6 +96,8 @@ function AppRouter() {
             path="/earsip/collateral_lending/upsert/:id"
             element={<UpsertCollateralLending />}
           />
+          <Route path="/earsip/permit_download" element={<PermitDownload />} />
+          <Route path="/earsip/permit_delete" element={<PermitDelete />} />
 
           {/* CALLREPORT */}
           <Route path="/callreport/" element={<DashboardCallReport />} />
@@ -100,9 +105,16 @@ function AppRouter() {
           <Route path="/callreport/category" element={<DataVisitCategory />} />
           <Route path="/callreport/status" element={<DataVisitStatus />} />
           <Route path="/callreport/purpose" element={<DataVisitPurpose />} />
+          <Route path="/callreport/visit_plan" element={<DataVisitPlan />} />
+          <Route
+            path="/callreport/visit_plan/upsert"
+            element={<UpsertVisitPlan />}
+          />
+          <Route
+            path="/callreport/visit_plan/upsert/:id"
+            element={<UpdateVisitPlan />}
+          />
           <Route path="/callreport/visit" element={<DataVisit />} />
-          <Route path="/callreport/visit/plan" element={<VisitPlan />} />
-          <Route path="/callreport/visit/result" element={<VisitResult />} />
           <Route path="/callreport/visit/upsert" element={<UpsertVisit />} />
           <Route
             path="/callreport/visit/upsert/:id"

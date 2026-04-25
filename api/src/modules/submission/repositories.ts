@@ -222,34 +222,17 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
           activities: JSON.stringify(savedSub.activities),
         },
       });
-      const incomingFileIds = Product.ProductType.ProductTypeFile.flatMap(
-        (ptf: any) => (ptf.Files || []).map((f: any) => f.id),
-      ).filter((fileId: any) => fileId); // pastikan ID tidak null/undefined
-
-      // 2. Hapus file di database yang terkait dengan submission ini tapi TIDAK ADA di list kiriman frontend
-      await tx.files.deleteMany({
-        where: {
-          submissionId: id as string,
-          id: { notIn: incomingFileIds },
-        },
-      });
       for (const productTypeFile of Product.ProductType.ProductTypeFile) {
         if (productTypeFile.Files) {
           for (const file of productTypeFile.Files) {
             const { id: fileId, ...fileData } = file;
 
             await tx.files.upsert({
-              where: { id: fileId || "" }, // Jika file baru, id biasanya kosong
-              update: {
-                ...fileData,
-                submissionId: id as string,
-                productTypeFileId: productTypeFile.id,
-              },
+              where: { id: fileId, productTypeFileId: productTypeFile.id }, // Jika file baru, id biasanya kosong
+              update: { name: fileData.name },
               create: {
                 ...fileData,
-                id: fileId || undefined, // Biarkan prisma/db generate jika tidak ada
-                submissionId: id as string,
-                productTypeFileId: productTypeFile.id,
+                id: undefined,
               },
             });
           }

@@ -1,38 +1,25 @@
 import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
-import type { UserCost } from "@prisma/client";
+import type { Prisma, UserCost } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
   let { page = 1, limit = 50, search, roleId, positionId } = req.query;
   page = Number(page);
   limit = Number(limit);
   const skip = (page - 1) * limit;
-  const currentUserId = (req as any).user?.id;
 
   try {
-    // Check if current user's role has data_status restriction
-    let userIdFilter: any = undefined;
-    if (currentUserId) {
-      const currentUser = await prisma.user.findUnique({
-        where: { id: currentUserId },
-        include: { Role: true },
-      });
-
-      if (currentUser?.Role?.data_status === "USER") {
-        // If role is USER, can only see own data
-        userIdFilter = currentUserId;
-      }
-    }
-
+    const querywhere: Prisma.UserWhereInput = {
+      status: true,
+      ...(search && { fullname: { contains: search as string } }),
+      ...(roleId && { roleId: roleId as string }),
+      ...(positionId && { positionId: positionId as string }),
+      ...(req.user?.Role.data_status === "USER" && { id: req.user.id }),
+    };
     const data = await prisma.user.findMany({
-      where: {
-        status: true,
-        ...(userIdFilter && { id: userIdFilter }),
-        ...(search && { fullname: { contains: search as string } }),
-        ...(roleId && { roleId: roleId as string }),
-        ...(positionId && { positionId: positionId as string }),
-      },
+      where: querywhere,
       skip: skip,
       take: limit,
       include: {
@@ -44,13 +31,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     });
 
     const total = await prisma.user.count({
-      where: {
-        status: true,
-        ...(userIdFilter && { id: userIdFilter }),
-        ...(search && { name: { contains: search as string } }),
-        ...(roleId && { roleId: roleId as string }),
-        ...(positionId && { positionId: positionId as string }),
-      },
+      where: querywhere,
     });
     return ResponseServer(res, 200, {
       msg: "GET /user",
@@ -73,10 +54,11 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
   const { id, UserCost, Absence, Position, Role, ...usersaved } = body;
   try {
     const genId = await generateId();
-
+    const hashed = await bcrypt.hash(usersaved.password, 10);
     const saved = await prisma.user.create({
       data: {
         ...usersaved,
+        password: hashed,
         id: body.id && body.id !== "" ? body.id : genId,
       },
     });
@@ -109,11 +91,12 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
       });
     const find = await prisma.user.findFirst({ where: { id: id as string } });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
-
+    const hashed = await bcrypt.hash(usersaved.password, 10);
     const saved = await prisma.user.update({
       where: { id: find.id },
       data: {
         ...usersaved,
+        password: usersaved.password.length < 20 ? hashed : find.password,
         updated_at: new Date(),
       },
     });

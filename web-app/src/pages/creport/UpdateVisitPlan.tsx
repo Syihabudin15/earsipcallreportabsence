@@ -2,9 +2,9 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react"; // Tambahkan ini
 import api from "../../libs/api";
 import type { IVisit } from "../../libs/interface";
-import UpsertVisit from "./UpsertVisit";
+import UpsertVisitPlan from "./UpsertVisitPlan";
 
-export default function UpdateVisit() {
+export default function UpdateVisitPlan() {
   const { id } = useParams();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -43,5 +43,5 @@ export default function UpdateVisit() {
       </div>
     );
 
-  return <UpsertVisit record={data as unknown as IVisit} />;
+  return <UpsertVisitPlan record={data as unknown as IVisit} />;
 }

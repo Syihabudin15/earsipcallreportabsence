@@ -272,6 +272,7 @@ model PermitFile {
   id            String        @id @default(uuid())
   action        String
   description   String?
+  approv_desc   String?
   permit_status EPermitStatus @default(PENDING)
   process_at    DateTime?
 
@@ -345,7 +346,7 @@ model Visit {
   Debitur         Debitur       @relation(fields: [debiturId], references: [id], onUpdate: Cascade)
   User            User          @relation(fields: [userId], references: [id], onUpdate: Cascade)
   VisitCategory   VisitCategory @relation(fields: [visitCategoryId], references: [id], onUpdate: Cascade)
-  VisitStatus     VisitStatus   @relation(fields: [visitStatusId], references: [id], onUpdate: Cascade)
+  VisitStatus     VisitStatus?  @relation(fields: [visitStatusId], references: [id], onUpdate: Cascade)
   VisitPurpose    VisitPurpose? @relation(fields: [visitPurposeId], references: [id])
   Submission      Submission?   @relation(fields: [submissionId], references: [id], onUpdate: Cascade)
   ApproverBy      User?         @relation("VisitApprover", fields: [approverById], references: [id], onUpdate: Cascade)
@@ -354,7 +355,7 @@ model Visit {
   debiturId       String
   userId          String
   visitCategoryId String
-  visitStatusId   String
+  visitStatusId   String?
   visitPurposeId  String?
 }
 

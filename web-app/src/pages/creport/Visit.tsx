@@ -6,9 +6,6 @@ import {
   Select,
   Table,
   type TableProps,
-  Card,
-  Row,
-  Col,
 } from "antd";
 import {
   Plus,
@@ -17,10 +14,6 @@ import {
   Filter,
   CalendarArrowUp,
   CalendarArrowDownIcon,
-  CheckCircle,
-  XCircle,
-  Clock,
-  FileText,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
@@ -52,21 +45,10 @@ export default function DataVisit() {
     visitCategoryId: "",
     visitStatusId: "",
     visitPurposeId: "",
-    approve_status: "",
     submissionTypeId: "",
     backdate: "",
   });
 
-  // Calculate statistics from data
-  const stats = {
-    total: pageprops.total,
-    approved: pageprops.data.filter((v) => v.approve_status === "APPROVED")
-      .length,
-    rejected: pageprops.data.filter((v) => v.approve_status === "REJECTED")
-      .length,
-    pending: pageprops.data.filter((v) => v.approve_status === "PENDING")
-      .length,
-  };
   const [action, setAction] = useState<IActionPage<IVisit>>({
     upsert: false,
     delete: false,
@@ -91,8 +73,6 @@ export default function DataVisit() {
       params.append("visitStatusId", pageprops.visitStatusId);
     if (pageprops.visitPurposeId)
       params.append("visitPurposeId", pageprops.visitPurposeId);
-    if (pageprops.approve_status)
-      params.append("approve_status", pageprops.approve_status);
     if (pageprops.backdate) params.append("backdate", pageprops.backdate);
     if (pageprops.submissionTypeId)
       params.append("submissionTypeId", pageprops.submissionTypeId);
@@ -108,7 +88,6 @@ export default function DataVisit() {
           visitCategoryId: pageprops.visitCategoryId,
           visitStatusId: pageprops.visitStatusId,
           visitPurposeId: pageprops.visitPurposeId,
-          approve_status: pageprops.approve_status,
           backdate: pageprops.backdate,
           submissionTypeId: pageprops.submissionTypeId,
         },
@@ -164,7 +143,6 @@ export default function DataVisit() {
     pageprops.visitCategoryId,
     pageprops.visitStatusId,
     pageprops.visitPurposeId,
-    pageprops.approve_status,
     pageprops.submissionTypeId,
     pageprops.backdate,
   ]);
@@ -232,7 +210,7 @@ export default function DataVisit() {
           <div>
             <div className="flex gap-2 items-center">
               <CalendarArrowUp size={10} />{" "}
-              {moment(record.date).format("DD/MM/YY HH:mm")}
+              {moment(record.date_plan).format("DD/MM/YY HH:mm")}
             </div>
             <div className="text-xs opacity-80 flex gap-2 items-center">
               <CalendarArrowDownIcon size={10} />{" "}
@@ -286,40 +264,14 @@ export default function DataVisit() {
       },
     },
     {
-      title: "Status",
-      key: "status",
-      dataIndex: "status",
+      title: "Petugas",
+      key: "user",
+      dataIndex: "user",
       render(_value, record, _index) {
-        const statusConfig = {
-          APPROVED: {
-            color: "green",
-            label: "✅ DISETUJUI",
-            bgColor: "bg-green-100",
-            textColor: "text-green-700",
-          },
-          REJECTED: {
-            color: "red",
-            label: "❌ DITOLAK",
-            bgColor: "bg-red-100",
-            textColor: "text-red-700",
-          },
-          PENDING: {
-            color: "orange",
-            label: "⏳ MENUNGGU",
-            bgColor: "bg-orange-100",
-            textColor: "text-orange-700",
-          },
-        };
-        const config =
-          statusConfig[record.approve_status as keyof typeof statusConfig] ||
-          statusConfig.PENDING;
         return (
-          <div className="flex justify-center">
-            <span
-              className={`${config.bgColor} ${config.textColor} px-3 py-1 rounded-full text-sm font-semibold`}
-            >
-              {config.label}
-            </span>
+          <div>
+            <div>{record.User.fullname}</div>
+            <div className="text-xs opacity-80">@{record.User.username}</div>
           </div>
         );
       },
@@ -454,30 +406,6 @@ export default function DataVisit() {
       </div>
       <div className="flex flex-col w-full">
         <label className="mb-1 font-semibold text-gray-700 flex items-center gap-2">
-          <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-          Status Kunjungan
-        </label>
-        <Select
-          placeholder="Pilih status kunjungan..."
-          className="w-full"
-          options={[
-            { label: "🟡 PENDING", value: "PENDING" },
-            { label: "✅ APPROVED", value: "APPROVED" },
-            { label: "❌ REJECTED", value: "REJECTED" },
-          ]}
-          onChange={(val) =>
-            setPageprops({ ...pageprops, approve_status: val })
-          }
-          allowClear
-          value={pageprops.approve_status}
-          optionFilterProp={"label"}
-          showSearch
-          size="small"
-        />
-      </div>
-
-      <div className="flex flex-col w-full">
-        <label className="mb-1 font-semibold text-gray-700 flex items-center gap-2">
           <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
           Periode Tanggal
         </label>
@@ -506,7 +434,6 @@ export default function DataVisit() {
               visitCategoryId: "",
               visitStatusId: "",
               visitPurposeId: "",
-              approve_status: "",
               backdate: "",
               submissionTypeId: "",
             })
@@ -530,84 +457,6 @@ export default function DataVisit() {
           </p>
         </div>
       </div>
-
-      {/* --- STATISTICS CARDS --- */}
-      <Row gutter={[12, 12]}>
-        <Col xs={12} sm={12} lg={6}>
-          <Card
-            className="shadow-sm border-l-4 border-l-blue-500 hover:shadow-md transition-shadow"
-            styles={{
-              body: { padding: "10px" },
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-gray-500 text-xs font-semibold">
-                  Total Kunjungan
-                </div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {stats.total}
-                </div>
-              </div>
-              <FileText className="text-blue-200" size={32} />
-            </div>
-          </Card>
-        </Col>
-        <Col xs={12} sm={12} lg={6}>
-          <Card
-            className="shadow-sm border-l-4 border-l-green-500 hover:shadow-md transition-shadow"
-            styles={{ body: { padding: 10 } }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-gray-500 text-xs font-semibold">
-                  Disetujui
-                </div>
-                <div className="text-2xl font-bold text-green-600">
-                  {stats.approved}
-                </div>
-              </div>
-              <CheckCircle className="text-green-200" size={32} />
-            </div>
-          </Card>
-        </Col>
-        <Col xs={12} sm={12} lg={6}>
-          <Card
-            className="shadow-sm border-l-4 border-l-orange-500 hover:shadow-md transition-shadow"
-            styles={{ body: { padding: "10px" } }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-gray-500 text-xs font-semibold">
-                  Menunggu
-                </div>
-                <div className="text-2xl font-bold text-orange-600">
-                  {stats.pending}
-                </div>
-              </div>
-              <Clock className="text-orange-200" size={32} />
-            </div>
-          </Card>
-        </Col>
-        <Col xs={12} sm={12} lg={6}>
-          <Card
-            className="shadow-sm border-l-4 border-l-red-500 hover:shadow-md transition-shadow"
-            styles={{ body: { padding: "10px" } }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-gray-500 text-xs font-semibold">
-                  Ditolak
-                </div>
-                <div className="text-2xl font-bold text-red-600">
-                  {stats.rejected}
-                </div>
-              </div>
-              <XCircle className="text-red-200" size={32} />
-            </div>
-          </Card>
-        </Col>
-      </Row>
 
       {/* --- FILTER & SEARCH --- */}
       <div className="bg-white p-2 rounded-lg shadow-sm">
@@ -650,7 +499,6 @@ export default function DataVisit() {
                   pageprops.visitCategoryId ||
                   pageprops.visitStatusId ||
                   pageprops.visitPurposeId ||
-                  pageprops.approve_status ||
                   pageprops.backdate
                     ? "primary"
                     : "default"
@@ -693,17 +541,8 @@ export default function DataVisit() {
           }}
         />
       </div>
-      {/* <UpsertData
-        open={action.upsert}
-        setOpen={(val: boolean) =>
-          setAction({ ...action, upsert: val, record: undefined })
-        }
-        record={action.record}
-        getData={getData}
-        hook={modal}
-        key={action.record ? "upsert" + action.record.id : "upsert"}
-      />
-      {action.delete && action.record && (
+
+      {/* {action.delete && action.record && (
         <DeleteData
           open={action.delete}
           setOpen={(val: boolean) =>

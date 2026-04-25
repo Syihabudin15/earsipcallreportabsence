@@ -436,7 +436,7 @@ const UpsertData = ({
         display: "flex",
         flexDirection: "column",
         gap: "16px",
-        maxHeight: "100vh",
+        // maxHeight: "100vh",
         overflow: "hidden",
       }}
     >
@@ -483,7 +483,7 @@ const UpsertData = ({
       </div>
 
       {/* Main Content - Scrollable */}
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div style={{ flex: 1 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <Card
             size="small"

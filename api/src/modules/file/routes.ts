@@ -8,5 +8,6 @@ const upload = multer({ storage: storage });
 
 router.post("/", upload.single("file"), fileRepo.POST);
 router.delete("/", fileRepo.DELETE);
+router.patch("/", fileRepo.PATCH);
 
 export default router;

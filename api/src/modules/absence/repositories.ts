@@ -2,31 +2,16 @@ import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 import moment from "moment";
+import type { Prisma } from "@prisma/client";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
   let { page = 1, limit = 50, search, date } = req.query;
   page = Number(page);
   limit = Number(limit);
   const skip = (page - 1) * limit;
-  const currentUserId = (req as any).user?.id;
 
   try {
-    // Check if current user's role has data_status restriction
-    let userIdFilter: any = undefined;
-    if (currentUserId) {
-      const currentUser = await prisma.user.findUnique({
-        where: { id: currentUserId },
-        include: { Role: true },
-      });
-
-      if (currentUser?.Role?.data_status === "USER") {
-        // If role is USER, can only see own absence data
-        userIdFilter = currentUserId;
-      }
-    }
-
-    const where: any = {
-      ...(userIdFilter && { userId: userIdFilter }),
+    const where: Prisma.AbsenceWhereInput = {
       ...(date && {
         check_in: {
           gte: moment(date as string)
@@ -36,12 +21,11 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
             .endOf("day")
             .toDate(),
         },
+        ...(req.user?.Role.data_status === "USER" && { userId: req.user.id }),
       }),
       ...(search && {
         OR: [
           { method: { contains: search as string } },
-          { absence_status: { contains: search as string } },
-          { description: { contains: search as string } },
           {
             User: {
               OR: [

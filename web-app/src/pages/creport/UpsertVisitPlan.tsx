@@ -2,12 +2,12 @@ import { App, Button, Card, Col, Divider, Row, Spin } from "antd";
 import type {
   IComments,
   IDebitur,
+  ISubmission,
   ISubType,
   IUser,
   IVisit,
   IVisitCategory,
   IVisitPurpose,
-  IVisitStatus,
 } from "../../libs/interface";
 import { IDRFormat, IDRToNumber, InputUtil } from "../utils/utilForm";
 import { InputFileUploadVisitAuto } from "../utils/InputFileUploadVisitAuto";
@@ -19,12 +19,14 @@ import api from "../../libs/api";
 import useContext from "../../libs/context";
 import { Link } from "react-router-dom";
 
-export default function UpsertVisit({ record }: { record?: IVisit }) {
+export default function UpsertVisitPlan({ record }: { record?: IVisit }) {
   const [loading, setLoading] = useState(false);
   const [visitCategories, setVisitCategories] = useState<IVisitCategory[]>([]);
-  const [visitStatuses, setVisitStatuses] = useState<IVisitStatus[]>([]);
   const [visitPurposes, setVisitPurposes] = useState<IVisitPurpose[]>([]);
   const [subType, setSubType] = useState<ISubType[]>([]);
+  const [submissions, setSubmissions] = useState<ISubmission[]>(
+    record ? record.Debitur.Submission : [],
+  );
   const [users, setUsers] = useState<IUser[]>([]);
   const [search, setSearch] = useState("");
   const { user, hasAccess } = useContext((state: any) => state);
@@ -51,12 +53,6 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
           url: "/visit_category",
         })
         .then((res) => setVisitCategories(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: "/visit_status",
-        })
-        .then((res) => setVisitStatuses(res.data.data));
       await api
         .request({
           method: "GET",
@@ -118,6 +114,9 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             Debitur: res.data.data,
             debiturId: res.data.data.id,
           }));
+          if (res.data.data.Submission.length > 0) {
+            setSubmissions(res.data.data.Submission);
+          }
         } else {
           alert(res.data.msg || "Data tidak ditemukan");
         }
@@ -129,34 +128,11 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
     setLoading(false);
   };
 
-  const getGeoLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setData((prev) => ({
-          ...prev,
-          geo: `${position.coords.latitude},${position.coords.longitude}`,
-        }));
-      },
-      (err) => {
-        alert("Izin lokasi ditolak atau terjadi kesalahan.");
-        console.error(err);
-      },
-    );
-  };
-
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      alert("Browser Anda tidak mendukung geolokasi.");
-      return;
-    }
-    if (!record) getGeoLocation();
-  }, []);
-
   return (
     <Spin spinning={loading}>
       <div className="bg-white p-4 rounded">
         <p className="font-bold text-lg">
-          {record ? "UPDATE" : "TAMBAH"} DATA KUNJUNGAN
+          {record ? "UPDATE" : "BUAT"} RENCANA KUNJUNGAN
         </p>
         <div className="ml-8 text-xs opacity-80 my-4">
           <ul className="list-disc">
@@ -325,19 +301,6 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             </Col>
             <Col xs={12} md={8}>
               <InputUtil
-                label="Tanggal Pelaksanaan Kunjungan"
-                value={moment(data.date_action).format("YYYY-MM-DD")}
-                onchage={(e: string) => {
-                  setData({
-                    ...data,
-                    date_action: new Date(e),
-                  });
-                }}
-                type="date"
-              />
-            </Col>
-            <Col xs={12} md={8}>
-              <InputUtil
                 label="Jenis Kunjungan"
                 required
                 value={data.VisitCategory?.id}
@@ -386,52 +349,22 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
                 type="text"
               />
             </Col>
-            <Col xs={12} md={8}>
-              <InputUtil
-                label="Hasil Kunjungan"
-                required
-                value={data.VisitStatus?.id}
-                onchage={(e: string) => {
-                  const find = visitStatuses.find((u) => u.id === e);
-                  setData({
-                    ...data,
-                    VisitStatus: find as IVisitStatus,
-                    visitStatusId: e,
-                  });
-                }}
-                options={visitStatuses.map((s) => ({
-                  label: s.name,
-                  value: s.id,
-                }))}
-                type="option"
-              />
-            </Col>
-            <Col xs={24} md={24}>
-              <InputUtil
-                label="Ringkasan Pembicaraan"
-                value={data.summary}
-                onchage={(e: string) =>
-                  setData({
-                    ...data,
-                    summary: e,
-                  })
-                }
-                type="area"
-              />
-            </Col>
-            <Col xs={24} md={24}>
-              <InputUtil
-                label="Tindak Lanjut"
-                value={data.next_action}
-                onchage={(e: string) =>
-                  setData({
-                    ...data,
-                    next_action: e,
-                  })
-                }
-                type="area"
-              />
-            </Col>
+            {submissions.length !== 0 && (
+              <Col xs={12} md={8}>
+                <InputUtil
+                  label="Data Permohonan"
+                  value={data.submissionId}
+                  options={submissions.map((s) => ({
+                    label: `${s.id} (${s.Product.name}-${s.Product.ProductType?.name})`,
+                    value: s.id,
+                  }))}
+                  onchage={(e: string) => {
+                    setData({ ...data, submissionId: e });
+                  }}
+                  type="option"
+                />
+              </Col>
+            )}
           </Row>
         </Card>
         <Card
@@ -554,7 +487,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
         <Card
           title={
             <div className="flex gap-2 items-center">
-              <FolderOpen size={18} /> Lokasi dan Berkas
+              <FolderOpen size={18} /> Berkas
             </div>
           }
           style={{ marginTop: 15, marginBottom: 15 }}
@@ -571,32 +504,23 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
               filetype="image/*"
             />
           </Col>
-          <Col xs={24} md={24} className="border rounded border-slate-300 p-1">
-            <div className="flex justify-end p-2">
-              <Button type="primary" onClick={() => getGeoLocation()}>
-                Refresh Maps
-              </Button>
-            </div>
-            <section className="h-96 w-full bg-slate-200 overflow-hidden rounded-xl shadow-inner">
-              <iframe
-                title="Lokasi Kantor"
-                src={`https://maps.google.com/maps?q=${data.geo}&z=17&output=embed`}
-                className="w-full h-full border-0  transition-all duration-700"
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              ></iframe>
-            </section>
-          </Col>
         </Card>
         <div className="flex gap-4 justify-end">
-          <Link to={"/app/callreport/visit"}>
+          <Link to={"/app/callreport/visit_plan"}>
             <Button danger>Cancel</Button>
           </Link>
           <Button
             type="primary"
             onClick={() => handleSubmit()}
             loading={loading}
+            disabled={
+              !data.Debitur?.fullname ||
+              !data.Debitur?.nik ||
+              !data.Debitur?.submissionTypeId ||
+              !data.Debitur?.birthdate ||
+              !data.visitCategoryId ||
+              !data.userId
+            }
           >
             Submit
           </Button>
@@ -611,11 +535,12 @@ const defaultData: IVisit = {
   value: 0,
   date_plan: new Date(),
   summary: "",
-  date_action: new Date(),
+  date_action: null,
   geo: "",
   files: [],
   next_action: "",
   coments: [],
+
   status: true,
   created_at: new Date(),
   updated_at: new Date(),
@@ -624,11 +549,12 @@ const defaultData: IVisit = {
   Debitur: {} as IDebitur,
   User: {} as IUser,
   VisitCategory: {} as IVisitCategory,
-  VisitPurpose: {} as IVisitPurpose,
-  VisitStatus: {} as IVisitStatus,
+  VisitPurpose: null,
+  VisitStatus: null,
   visitCategoryId: "",
-  visitStatusId: "",
-  visitPurposeId: "",
+  visitStatusId: null,
+  visitPurposeId: null,
+  Submission: null,
 };
 
 const defaultComment: IComments = {

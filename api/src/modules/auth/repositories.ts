@@ -57,7 +57,9 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
   if (!find)
     return ResponseServer(res, 401, { msg: "Username atau password salah!" });
 
-  // Verify password
+  if (!find.status) {
+    return ResponseServer(res, 401, { msg: "User non aktif!" });
+  }
   const isValidPassword = await comparaPassword(password, find.password);
   if (!isValidPassword) {
     return ResponseServer(res, 401, { msg: "Username atau password salah!" });

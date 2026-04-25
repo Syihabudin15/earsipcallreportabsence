@@ -151,20 +151,23 @@ export interface IGuestBook {
   updated_at: Date | string;
   gBookTypeId: string;
   GbookType: IGuestBookType;
-  Participants: IParticipant[];
+  Participant: IParticipant[];
 }
 export interface IPermitFileDetail {
   id: string;
   submissionId: string;
   permitFileId: string;
   Submission?: ISubmission;
+  Files: IFile[];
 }
 export interface IPermitFile {
   id: string;
-  action: string;
+  action: "DOWNLOAD" | "DELETE";
   description: string | null;
-  permit_status: "PENDING" | "APPROVED" | "REJECTED";
+  approv_desc: string | null;
+  permit_status: EStatusSubmission;
   process_at: Date | null;
+
   requesterId: string;
   approverId: string | null;
   Requester?: IUser;
@@ -190,7 +193,7 @@ export interface IDebitur {
   updated_at: Date;
   SubmissionType: ISubType;
   Visit: IVisit[];
-  Submissions: ISubmission[];
+  Submission: ISubmission[];
   submissionTypeId: string;
 }
 export interface ISubType {
@@ -341,7 +344,7 @@ export interface IVisitPurpose {
 
 export interface IVisit {
   id: string;
-  date: Date;
+  date_plan: Date;
   value: number;
   summary?: string | null;
   coments?: IComments[];
@@ -356,14 +359,14 @@ export interface IVisit {
   Debitur: IDebitur;
   User: IUser;
   VisitCategory: IVisitCategory;
-  VisitStatus: IVisitStatus; // Di schema Anda bernama 'Visit' (relation name)
-  VisitPurpose: IVisitPurpose; // Di schema Anda bernama 'Visit' (relation name)
+  VisitStatus?: IVisitStatus | null; // Di schema Anda bernama 'Visit' (relation name)
+  VisitPurpose?: IVisitPurpose | null; // Di schema Anda bernama 'Visit' (relation name)
   Submission?: ISubmission | null;
   debiturId: string;
   userId: string;
   visitCategoryId: string;
-  visitStatusId: string;
-  visitPurposeId: string;
+  visitStatusId: string | null;
+  visitPurposeId: string | null;
   submissionId?: string | null;
 }
 

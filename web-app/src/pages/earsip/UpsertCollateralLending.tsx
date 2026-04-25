@@ -24,7 +24,7 @@ const UpsertCollateralLending = () => {
       const res = await api.request({
         url: "/submission",
         method: "GET",
-        params: { limit: 1000 },
+        params: { limit: 10000 },
       });
       if (res?.data) {
         setSubmissions(res.data.data);
@@ -39,17 +39,18 @@ const UpsertCollateralLending = () => {
     try {
       const res = await api.request({
         url: "/collateral_lending",
-        method: "GET",
+        method: "PATCH",
         params: { id },
       });
       if (res?.data) {
-        const data = res.data.data[0];
+        const data = res.data.data;
         form.setFieldsValue({
           submissionId: data.submissionId,
           description: data.description,
           start_at: dayjs(data.start_at),
           return_at: data.return_at ? dayjs(data.return_at) : null,
           end_at: data.end_at ? dayjs(data.end_at) : null,
+          file: data.file ? data.file : null,
         });
       }
     } catch (error) {
@@ -114,6 +115,8 @@ const UpsertCollateralLending = () => {
                   label: `${sub.id} - ${sub.Debitur?.fullname}`,
                   value: sub.id,
                 }))}
+                optionFilterProp={"label"}
+                showSearch
               />
             </Form.Item>
 
@@ -140,15 +143,15 @@ const UpsertCollateralLending = () => {
 
             <Form.Item
               label="Tanggal Rencana Pengembalian"
-              name="return_at"
-              rules={[{ required: false }]}
+              name="end_at"
+              rules={[{ required: true }]}
             >
               <DatePicker style={{ width: "100%" }} />
             </Form.Item>
 
             <Form.Item
               label="Tanggal Pengembalian Aktual"
-              name="end_at"
+              name="return_at"
               rules={[{ required: false }]}
             >
               <DatePicker style={{ width: "100%" }} />

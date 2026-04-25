@@ -1,25 +1,50 @@
 import { useEffect, useState } from "react";
-import { Table, Empty, Button, Space, Modal, message, Spin } from "antd";
+import {
+  Table,
+  Empty,
+  Button,
+  Space,
+  Modal,
+  message,
+  Tag,
+  Input,
+  Popover,
+  Select,
+  DatePicker,
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import api from "../../libs/api";
-import type { ICollateralLending } from "../../libs/interface";
+import type { ICollateralLending, IPageProps } from "../../libs/interface";
+import moment from "moment";
+import { CollapseText } from "../utils/utilComp";
+import { Filter } from "lucide-react";
+import dayjs from "dayjs";
+import useContext from "../../libs/context";
+const { RangePicker } = DatePicker;
 
 const CollateralLending = () => {
-  const [data, setData] = useState<ICollateralLending[]>([]);
+  const [data, setData] = useState<IPageProps<ICollateralLending>>({
+    page: 1,
+    limit: 50,
+    data: [],
+    total: 0,
+    search: "",
+    status: "",
+    backdate: "",
+  });
   const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
+  const { hasAccess } = useContext();
 
   useEffect(() => {
     fetchData();
-  }, [page, search]);
+  }, [data.page, data.limit, data.search, data.status, data.backdate]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -27,12 +52,15 @@ const CollateralLending = () => {
       const res = await api.request({
         url: "/collateral_lending",
         method: "GET",
-        params: { page, limit: 10, search },
+        params: {
+          page: data.page,
+          limit: data.limit,
+          search: data.search,
+          status: data.status,
+          backdate: data.backdate,
+        },
       });
-      if (res?.data) {
-        setData(res.data.data);
-        setTotal(res.data.total);
-      }
+      setData((prev) => ({ ...prev, data: res.data.data }));
     } catch (error) {
       message.error("Gagal mengambil data");
     } finally {
@@ -65,31 +93,91 @@ const CollateralLending = () => {
   const columns: ColumnsType<ICollateralLending> = [
     {
       title: "No",
-      render: (_, __, index) => (page - 1) * 10 + index + 1,
+      render: (_, __, index) => (data.page - 1) * data.limit + index + 1,
       width: 50,
     },
     {
       title: "Nasabah",
       dataIndex: ["Submission", "Debitur", "fullname"],
       key: "nasabah",
+      render(_value, record, _index) {
+        return (
+          <div>
+            <div>{record.Submission.Debitur.fullname}</div>
+            <div className="text-xs opacity-80">
+              @{record.Submission.Debitur.nik}
+            </div>
+          </div>
+        );
+      },
     },
     {
-      title: "NIK",
+      title: "Permohonan",
       dataIndex: ["Submission", "Debitur", "nik"],
       key: "nik",
+      render(_value, record, _index) {
+        return (
+          <div>
+            <div>ID {record.Submission.id}</div>
+            <div className="text-xs opacity-80">
+              {record.Submission.Product.name} (
+              {record.Submission.Product.ProductType?.name})
+            </div>
+          </div>
+        );
+      },
     },
     {
-      title: "Tanggal Peminjaman",
+      title: "Tanggal Rencana",
       dataIndex: "start_at",
       key: "start_at",
-      render: (date) => new Date(date).toLocaleDateString("id-ID"),
+      render(_value, record, _index) {
+        return (
+          <div className="text-xs">
+            <div>Pinjam: {moment(record.start_at).format("DD-MM-YYYY")}</div>
+            <div>Kembali: {moment(record.end_at).format("DD-MM-YYYY")}</div>
+          </div>
+        );
+      },
     },
     {
-      title: "Tanggal Pengembalian",
+      title: "Tanggal Kembali",
+      dataIndex: "start_at",
+      key: "start_at",
+      render(_value, record, _index) {
+        return <div>{moment(record.return_at).format("DD-MM-YYYY")}</div>;
+      },
+    },
+    {
+      title: "Status",
       dataIndex: "return_at",
       key: "return_at",
-      render: (date) =>
-        date ? new Date(date).toLocaleDateString("id-ID") : "-",
+      render(_value, record, _index) {
+        return (
+          <div className="flex justify-center">
+            <Tag
+              style={{ width: 80, textAlign: "center" }}
+              color={record.return_at ? "green" : "orange"}
+              variant="solid"
+            >
+              {record.return_at ? "KEMBALI" : "DIPINJAM"}
+            </Tag>
+          </div>
+        );
+      },
+    },
+    {
+      title: "Keterangan",
+      key: "desc",
+      dataIndex: "description",
+      width: 250,
+      render(_value, record, _index) {
+        return (
+          <div className="text-xs opacity-80">
+            <CollapseText text={record.description || ""} maxLength={40} />
+          </div>
+        );
+      },
     },
     {
       title: "Aksi",
@@ -97,17 +185,79 @@ const CollateralLending = () => {
       render: (_, record) => (
         <Space>
           <Button type="primary" size="small" icon={<EyeOutlined />} />
-          <Button type="default" size="small" icon={<EditOutlined />} />
-          <Button
-            danger
-            size="small"
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id)}
-          />
+          {hasAccess(window.location.pathname, "update") && (
+            <Button
+              type="default"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() =>
+                (window.location.href =
+                  "/app/earsip/collateral_lending/upsert/" + record.id)
+              }
+            />
+          )}
+          {hasAccess(window.location.pathname, "delete") && (
+            <Button
+              danger
+              size="small"
+              disabled={record.return_at ? true : false}
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(record.id)}
+            />
+          )}
         </Space>
       ),
     },
   ];
+
+  const content = (
+    <div className="p-2 w-80">
+      <div className="flex flex-col w-full">
+        <p className="mb-1">Status Jaminan</p>
+        <Select
+          placeholder="Pilih status jaminan.."
+          className="w-full"
+          options={[
+            { label: "DIPINJAM", value: "DIPINJAM" },
+            { label: "DIKEMBALIKAN", value: "DIKEMBALIKAN" },
+          ]}
+          onChange={(val) => setData({ ...data, status: val })}
+          allowClear
+          value={data.status}
+          optionFilterProp={"label"}
+          showSearch
+          size="small"
+        />
+      </div>
+
+      <div className="flex flex-col w-full">
+        <p className="mb-1">Periode</p>
+        <RangePicker
+          value={
+            data.backdate && [dayjs(data.backdate[0]), dayjs(data.backdate[1])]
+          }
+          onChange={(_date, datestr) => setData({ ...data, backdate: datestr })}
+          size="small"
+        />
+      </div>
+      <div className="flex justify-end mt-4">
+        <Button
+          size="small"
+          danger
+          icon={<CloseOutlined />}
+          onClick={() =>
+            setData({
+              ...data,
+              backdate: "",
+              status: "",
+            })
+          }
+        >
+          Clear Filter
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -124,22 +274,53 @@ const CollateralLending = () => {
         </Button>
       </div>
 
-      <Spin spinning={loading}>
+      <div className="bg-white p-2 rounded-lg">
+        <div className="flex-1 flex items-center justify-end gap-2 mb-2">
+          <Input.Search
+            type="text"
+            placeholder="Cari Nama, NIK, atau ID Debitur..."
+            className="w-full transition-all"
+            size="small"
+            width={200}
+            style={{ width: 200 }}
+            onChange={(e) => setData({ ...data, search: e.target.value })}
+          />
+          <Popover
+            content={content}
+            title="Filter Data"
+            trigger="click"
+            placement="left"
+          >
+            <Button
+              size="small"
+              type={data.status || data.backdate ? "primary" : undefined}
+            >
+              <Filter size={14} /> Filter
+            </Button>
+          </Popover>
+        </div>
+
         <Table
           columns={columns}
-          dataSource={data}
+          dataSource={data.data}
           loading={loading}
+          size="small"
           pagination={{
-            total,
-            pageSize: 10,
-            current: page,
-            onChange: (newPage) => setPage(newPage),
+            total: data.total,
+            pageSize: data.limit,
+            current: data.page,
+            onChange: (newPage, newSize) =>
+              setData((prev) => ({ ...prev, page: newPage, limit: newSize })),
           }}
           locale={{
             emptyText: <Empty description="Tidak ada data" />,
           }}
+          scroll={{
+            x: "max-content",
+            y: window.innerWidth > 600 ? "53vh" : "65vh",
+          }}
         />
-      </Spin>
+      </div>
     </div>
   );
 };

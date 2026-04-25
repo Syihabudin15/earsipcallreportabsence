@@ -11,37 +11,36 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
   const skip = (page - 1) * limit;
 
   try {
-    const where: Prisma.LogActivitiesWhereInput = {};
-
-    // Date range filter
-    if (startDate && endDate) {
-      where.created_at = {
-        gte: moment(startDate as string)
-          .startOf("day")
-          .toDate(),
-        lte: moment(endDate as string)
-          .endOf("day")
-          .toDate(),
-      };
-    }
-
-    // Search filter
-    if (search) {
-      where.OR = [
-        { method: { contains: search as string } },
-        {
-          User: {
-            OR: [
-              { fullname: { contains: search as string } },
-              { username: { contains: search as string } },
-              { id: { contains: search as string } },
-              { nik: { contains: search as string } },
-              { nip: { contains: search as string } },
-            ],
+    const where: Prisma.LogActivitiesWhereInput = {
+      ...(startDate &&
+        endDate && {
+          created_at: {
+            gte: moment(startDate as string)
+              .startOf("day")
+              .toDate(),
+            lte: moment(endDate as string)
+              .endOf("day")
+              .toDate(),
           },
-        },
-      ];
-    }
+        }),
+      ...(search && {
+        OR: [
+          { method: { contains: search as string } },
+          {
+            User: {
+              OR: [
+                { fullname: { contains: search as string } },
+                { username: { contains: search as string } },
+                { id: { contains: search as string } },
+                { nik: { contains: search as string } },
+                { nip: { contains: search as string } },
+              ],
+            },
+          },
+        ],
+      }),
+      ...(req.user?.Role.data_status && { userId: req.user.id }),
+    };
 
     const data = await prisma.logActivities.findMany({
       where,

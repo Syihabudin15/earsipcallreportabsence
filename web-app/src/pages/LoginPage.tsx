@@ -86,9 +86,9 @@ function LoginPage() {
             </h2> */}
 
             <div className="space-y-4">
-              <p className="text-sm font-medium text-orange-100 mb-2">
+              {/* <p className="text-sm font-medium text-orange-100 mb-2">
                 PILIH APLIKASI UNTUK MASUK:
-              </p>
+              </p> */}
               {apps.map((app) => (
                 <button
                   key={app.id}

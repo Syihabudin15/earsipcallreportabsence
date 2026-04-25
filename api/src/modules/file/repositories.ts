@@ -23,7 +23,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
       `${folderName}/${file.originalname}`,
     );
 
-    await blockBlobClient.uploadData(req.file.buffer, {
+    await blockBlobClient.uploadData(req.file?.buffer as Buffer, {
       blobHTTPHeaders: {
         blobContentType: file.mimetype, // Penting agar PDF bisa langsung terbuka di browser
       },
@@ -68,4 +68,22 @@ export const DELETE = async (
       msg: (err as any).message || "Internal Server Error",
     });
   }
+};
+
+export const PATCH = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { id, allow_download } = req.query;
+  await prisma.files.update({
+    where: { id: id as string },
+    data: {
+      allow_download: (allow_download as string)
+        .split(",")
+        .filter((al) => al !== req.user?.id)
+        .join(", "),
+    },
+  });
+  return ResponseServer(res, 200, { msg: "OK" });
 };

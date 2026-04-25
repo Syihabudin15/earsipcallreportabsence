@@ -15,6 +15,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     approve_status,
     submissionTypeId,
     backdate,
+    plan,
   } = req.query;
   page = Number(page);
   limit = Number(limit);
@@ -52,6 +53,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
           submissionTypeId: submissionTypeId as string,
         },
       }),
+      date_action: plan ? null : { not: null },
       ...(backdate && {
         created_at: {
           gte: moment((backdate as string).split(",")[0])
@@ -110,13 +112,14 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
       VisitPurpose,
       User,
       Debitur,
+      Submission,
       ...saved
     } = body;
     const genId = await generateId();
     const genDebId = await generateDebiturId();
     Debitur.id = Debitur.id ? Debitur.id : genDebId;
     await prisma.$transaction(async (tx) => {
-      const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
+      const { SubmissionType, Visit, Submission, ...savedeb } = Debitur;
 
       const deb = await tx.debitur.upsert({
         where: { id: Debitur.id },
@@ -166,7 +169,7 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
     } = body;
 
     await prisma.$transaction(async (tx) => {
-      const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
+      const { SubmissionType, Visit, Submission, ...savedeb } = Debitur;
 
       const deb = await tx.debitur.update({
         where: { id: Debitur.id as string },
@@ -232,7 +235,14 @@ export const PATCH = async (
     const find = await prisma.visit.findFirst({
       where: { id: id as string },
       include: {
-        Debitur: { include: { SubmissionType: true } },
+        Debitur: {
+          include: {
+            SubmissionType: true,
+            Submission: {
+              include: { Product: { include: { ProductType: true } } },
+            },
+          },
+        },
         VisitCategory: true,
         VisitStatus: true,
         VisitPurpose: true,

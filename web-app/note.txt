@@ -1,5 +1,5 @@
 EARSIP
-- Submission = Expand Table Riwayat Visist dan CollateralLending
+- Submission = Expand Table Riwayat Visit dan CollateralLending
 
 CALLREPORT
 - Rencana Kunjungan

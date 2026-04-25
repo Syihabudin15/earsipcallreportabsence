@@ -35,7 +35,7 @@ export default function DataGuestBook() {
     data: [],
     total: 0,
     search: "",
-    date: moment().format("YYYY-MM-DD"),
+    date: "",
     gBookTypeId: "",
   });
   const [action, setAction] = useState<IActionPage<IGuestBook>>({
@@ -51,7 +51,7 @@ export default function DataGuestBook() {
     status_come: "TELAHDATANG",
     description: "",
     gBookTypeId: "",
-    Participants: [],
+    Participant: [],
   });
   const { modal, hasAccess } = useContext((state: any) => state);
 
@@ -121,7 +121,7 @@ export default function DataGuestBook() {
     }
 
     setLoading(true);
-    const participantData = (form.Participants || [])
+    const participantData = (form.Participant || [])
       .filter((item) => item.name && item.name.trim())
       .map((p) => {
         if (p.id && p.action === "delete") {
@@ -164,7 +164,7 @@ export default function DataGuestBook() {
         status_come: "TELAHDATANG",
         description: "",
         gBookTypeId: "",
-        Participants: [],
+        Participant: [],
       });
       await getGuestBooks();
     } catch (err) {
@@ -233,7 +233,7 @@ export default function DataGuestBook() {
       title: "Peserta",
       key: "participants",
       render(_, record) {
-        return <span>{record.Participants?.length || 0} orang</span>;
+        return <span>{record.Participant?.length || 0} orang</span>;
       },
     },
     {
@@ -254,7 +254,7 @@ export default function DataGuestBook() {
                     status_come: record.status_come,
                     description: record.description || "",
                     gBookTypeId: record.gBookTypeId,
-                    Participants: record.Participants || [],
+                    Participant: record.Participant || [],
                   });
                 }}
               />
@@ -295,7 +295,7 @@ export default function DataGuestBook() {
                   status_come: "TELAHDATANG",
                   description: "",
                   gBookTypeId: "",
-                  Participants: [],
+                  Participant: [],
                 });
               }}
             >
@@ -387,7 +387,7 @@ export default function DataGuestBook() {
               placeholder="Masukkan nama tamu"
               value={form.name || ""}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              size="large"
+              size="middle"
             />
           </div>
 
@@ -403,7 +403,7 @@ export default function DataGuestBook() {
                 onChange={(value) =>
                   setForm({ ...form, date: value?.toISOString() })
                 }
-                size="large"
+                size="middle"
               />
             </div>
             <div>
@@ -453,8 +453,8 @@ export default function DataGuestBook() {
                 onClick={() =>
                   setForm({
                     ...form,
-                    Participants: [
-                      ...(form.Participants || []),
+                    Participant: [
+                      ...(form.Participant || []),
                       {
                         name: "",
                         phone: "",
@@ -471,10 +471,10 @@ export default function DataGuestBook() {
             </div>
 
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {(form.Participants || [])
+              {(form.Participant || [])
                 .filter((p) => !p.action || p.action !== "delete")
                 .map((participant, index) => {
-                  const actualIndex = (form.Participants || []).findIndex(
+                  const actualIndex = (form.Participant || []).findIndex(
                     (p) =>
                       p.id === participant.id ||
                       (p.name === participant.name && !p.id),
@@ -494,7 +494,7 @@ export default function DataGuestBook() {
                           danger
                           size="small"
                           onClick={() => {
-                            const updated = [...(form.Participants || [])];
+                            const updated = [...(form.Participant || [])];
                             if (participant.id) {
                               updated[actualIndex] = {
                                 ...updated[actualIndex],
@@ -503,7 +503,7 @@ export default function DataGuestBook() {
                             } else {
                               updated.splice(actualIndex, 1);
                             }
-                            setForm({ ...form, Participants: updated });
+                            setForm({ ...form, Participant: updated });
                           }}
                         >
                           Hapus
@@ -516,12 +516,12 @@ export default function DataGuestBook() {
                           size="small"
                           value={participant.name}
                           onChange={(e) => {
-                            const updated = [...(form.Participants || [])];
+                            const updated = [...(form.Participant || [])];
                             updated[actualIndex] = {
                               ...updated[actualIndex],
                               name: e.target.value,
                             };
-                            setForm({ ...form, Participants: updated });
+                            setForm({ ...form, Participant: updated });
                           }}
                         />
                         <Input
@@ -529,12 +529,12 @@ export default function DataGuestBook() {
                           size="small"
                           value={participant.phone || ""}
                           onChange={(e) => {
-                            const updated = [...(form.Participants || [])];
+                            const updated = [...(form.Participant || [])];
                             updated[actualIndex] = {
                               ...updated[actualIndex],
                               phone: e.target.value,
                             };
-                            setForm({ ...form, Participants: updated });
+                            setForm({ ...form, Participant: updated });
                           }}
                         />
                         <Input
@@ -542,12 +542,12 @@ export default function DataGuestBook() {
                           size="small"
                           value={participant.email || ""}
                           onChange={(e) => {
-                            const updated = [...(form.Participants || [])];
+                            const updated = [...(form.Participant || [])];
                             updated[actualIndex] = {
                               ...updated[actualIndex],
                               email: e.target.value,
                             };
-                            setForm({ ...form, Participants: updated });
+                            setForm({ ...form, Participant: updated });
                           }}
                         />
                       </div>

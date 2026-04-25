@@ -43,24 +43,6 @@ export const DetailVisitDebt = ({
               <p className="w-4">:</p>
               <p className="flex-1">{visit.VisitStatus.name}</p>
             </div>
-            <div className="flex gap-2">
-              <p className="w-52">Status Kunjungan</p>
-              <p className="w-4">:</p>
-              <p className="flex-1">
-                <Tag
-                  color={
-                    visit.approve_status === "APPROVED"
-                      ? "green"
-                      : visit.approve_status === "REJECTED"
-                        ? "red"
-                        : "orange"
-                  }
-                  variant="solid"
-                >
-                  {visit.approve_status}
-                </Tag>
-              </p>
-            </div>
           </div>
         ))}
       </div>
@@ -108,8 +90,8 @@ export const DetailSubmissionDebt = ({
               <p className="w-52">Jenis Pengajuan</p>
               <p className="w-4">:</p>
               <p className="flex-1">
-                {submission.Product.name} ({submission.Product.ProductType.name}
-                )
+                {submission.Product.name} (
+                {submission.Product.ProductType?.name})
               </p>
             </div>
             <div className="flex gap-2">
@@ -117,10 +99,16 @@ export const DetailSubmissionDebt = ({
               <p className="w-4">:</p>
               <p className="flex-1">
                 <Tag
-                  color={submission.is_active ? "green" : "red"}
+                  color={
+                    submission.approve_status === "SELESAI"
+                      ? "green"
+                      : submission.approve_status === "PENDING"
+                        ? "green"
+                        : "red"
+                  }
                   variant="solid"
                 >
-                  {submission.is_active ? "Aktif" : "Non Aktif"}
+                  {submission.approve_status}
                 </Tag>
               </p>
             </div>

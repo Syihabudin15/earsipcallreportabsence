@@ -1,43 +1,60 @@
 import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
-import moment from "moment";
-import type { EGuaranteeStatus } from "@prisma/client";
 import { decode } from "../../libs/auth.js";
+import type { Prisma } from "@prisma/client";
+import moment from "moment";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
-  let { page = 1, limit = 50, search, status } = req.query;
+  let { page = 1, limit = 50, search, status, backdate } = req.query;
   page = Number(page);
   limit = Number(limit);
   const skip = (page - 1) * limit;
 
   try {
-    const data = await prisma.collateralLending.findMany({
-      where: {
-        status: true,
-        ...(search && {
-          OR: [
-            { id: { contains: search as string } },
-            {
-              Submission: {
-                OR: [
-                  { id: { contains: search as string } },
-                  {
-                    Debitur: {
-                      OR: [
-                        { id: { contains: search as string } },
-                        { fullname: { contains: search as string } },
-                        { nik: { contains: search as string } },
-                        { cif: { contains: search as string } },
-                      ],
-                    },
+    const querywhere: Prisma.CollateralLendingWhereInput = {
+      status: true,
+      ...(status && {
+        return_at: status === "DIPINJAM" ? null : { not: null },
+      }),
+      ...(search && {
+        OR: [
+          { id: { contains: search as string } },
+          {
+            Submission: {
+              OR: [
+                { id: { contains: search as string } },
+                {
+                  Debitur: {
+                    OR: [
+                      { id: { contains: search as string } },
+                      { fullname: { contains: search as string } },
+                      { nik: { contains: search as string } },
+                      { cif: { contains: search as string } },
+                    ],
                   },
-                ],
-              },
+                },
+              ],
             },
-          ],
-        }),
-      },
+          },
+        ],
+      }),
+      ...(req.user?.Role.data_status === "USER" && {
+        createdById: req.user.id,
+      }),
+      ...(backdate && {
+        start_at: {
+          gte: moment((backdate as string).split(",")[0])
+            .startOf("date")
+            .toDate(),
+          lte: moment((backdate as string).split(",")[1])
+            .endOf("day")
+            .toDate(),
+        },
+      }),
+    };
+    const data = await prisma.collateralLending.findMany({
+      where: querywhere,
       include: {
         Submission: {
           include: {
@@ -54,31 +71,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     });
 
     const total = await prisma.collateralLending.count({
-      where: {
-        status: true,
-        ...(search && {
-          OR: [
-            { id: { contains: search as string } },
-            {
-              Submission: {
-                OR: [
-                  { id: { contains: search as string } },
-                  {
-                    Debitur: {
-                      OR: [
-                        { id: { contains: search as string } },
-                        { fullname: { contains: search as string } },
-                        { nik: { contains: search as string } },
-                        { cif: { contains: search as string } },
-                      ],
-                    },
-                  },
-                ],
-              },
-            },
-          ],
-        }),
-      },
+      where: querywhere,
     });
 
     return ResponseServer(res, 200, {
@@ -99,29 +92,37 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
-  const { submissionId, description, start_at, return_at, end_at } = req.body;
+  const { submissionId, description, start_at, return_at, end_at, file } =
+    req.body;
   const token = req.headers.authorization?.split(" ")[1];
   const user = decode(token as string);
 
   try {
-    const collateral = await prisma.collateralLending.create({
-      data: {
-        submissionId,
-        description,
-        start_at: new Date(start_at),
-        return_at: return_at ? new Date(return_at) : undefined,
-        end_at: end_at ? new Date(end_at) : undefined,
-        createdById: user?.id as string,
-      },
-      include: {
-        Submission: true,
-        CreatedBy: true,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.collateralLending.create({
+        data: {
+          submissionId,
+          description,
+          start_at: new Date(start_at),
+          end_at: new Date(end_at),
+          return_at: return_at ? new Date(return_at) : undefined,
+          file,
+          createdById: user?.id as string,
+        },
+        include: {
+          Submission: true,
+          CreatedBy: true,
+        },
+      });
+      await tx.submission.update({
+        where: { id: submissionId },
+        data: { guarantee_status: "DIPINJAM" },
+      });
+      return true;
     });
 
     return ResponseServer(res, 201, {
       msg: "Peminjaman Jaminan berhasil dibuat",
-      data: collateral,
     });
   } catch (error) {
     console.log(error);
@@ -134,28 +135,42 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
 
 export const PUT = async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.query;
-  const { description, start_at, return_at, end_at, approverById } = req.body;
+  const {
+    description,
+    start_at,
+    return_at,
+    end_at,
+    approverById,
+    submissionId,
+    file,
+  } = req.body;
 
   try {
-    const collateral = await prisma.collateralLending.update({
-      where: { id: id as string },
-      data: {
-        ...(description && { description }),
-        ...(start_at && { start_at: new Date(start_at) }),
-        ...(return_at && { return_at: new Date(return_at) }),
-        ...(end_at && { end_at: new Date(end_at) }),
-        ...(approverById && { approverById }),
-      },
-      include: {
-        Submission: true,
-        CreatedBy: true,
-        ApproverBy: true,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.collateralLending.update({
+        where: { id: id as string },
+        data: {
+          ...(description && { description }),
+          ...(start_at && { start_at: new Date(start_at) }),
+          ...(return_at && { return_at: new Date(return_at) }),
+          ...(end_at && { end_at: new Date(end_at) }),
+          ...(approverById && { approverById }),
+          ...(file && { file }),
+        },
+        include: {
+          Submission: true,
+          CreatedBy: true,
+          ApproverBy: true,
+        },
+      });
+      await tx.submission.update({
+        where: { id: submissionId },
+        data: { guarantee_status: return_at ? "DITERIMA" : "DIPINJAM" },
+      });
     });
 
     return ResponseServer(res, 200, {
       msg: "Peminjaman Jaminan berhasil diperbarui",
-      data: collateral,
     });
   } catch (error) {
     console.log(error);
@@ -197,12 +212,10 @@ export const PATCH = async (
   next: NextFunction,
 ) => {
   const { id } = req.query;
-  const { approverById } = req.body;
 
   try {
-    const collateral = await prisma.collateralLending.update({
+    const collateral = await prisma.collateralLending.findFirst({
       where: { id: id as string },
-      data: { approverById },
       include: {
         Submission: true,
         CreatedBy: true,
@@ -211,7 +224,7 @@ export const PATCH = async (
     });
 
     return ResponseServer(res, 200, {
-      msg: "Persetujuan Peminjaman Jaminan berhasil",
+      msg: "OK",
       data: collateral,
     });
   } catch (error) {

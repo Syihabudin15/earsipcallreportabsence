@@ -14,12 +14,14 @@ import { Plus, Filter } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
   IActionPage,
+  ICollateralLending,
   IMitra,
   IPageProps,
   IProduct,
   IProductType,
   ISubmission,
   ISubType,
+  IVisit,
 } from "../../libs/interface";
 import type { HookAPI } from "antd/es/modal/useModal";
 import api from "../../libs/api";
@@ -320,13 +322,15 @@ export default function DataSubmission() {
         return (
           <div className="flex justify-center">
             <Tag
-              style={{ width: 80, textAlign: "center" }}
+              style={{ width: 100, textAlign: "center" }}
               color={
                 record.approve_status === "DITOLAK"
                   ? "red"
                   : record.approve_status === "PENDING"
                     ? "orange"
-                    : "green"
+                    : record.approve_status === "SELESAI"
+                      ? "cyan"
+                      : "green"
               }
               variant="solid"
             >
@@ -344,7 +348,7 @@ export default function DataSubmission() {
         return (
           <div className="flex justify-center">
             <Tag
-              style={{ width: 80, textAlign: "center" }}
+              style={{ width: 100, textAlign: "center" }}
               color={
                 record.guarantee_status === "DITERIMA"
                   ? "green"
@@ -352,7 +356,7 @@ export default function DataSubmission() {
                     ? "orange"
                     : record.guarantee_status === "DIPINJAM"
                       ? "blue"
-                      : "red"
+                      : "cyan"
               }
               variant="solid"
             >
@@ -650,7 +654,6 @@ export default function DataSubmission() {
           size="small"
           loading={loading}
           rowKey={"id"}
-          bordered
           scroll={{
             x: "max-content",
             y: window.innerWidth > 600 ? "53vh" : "65vh",
@@ -670,6 +673,17 @@ export default function DataSubmission() {
             },
             pageSizeOptions: [50, 100, 500, 1000],
             size: "small",
+          }}
+          expandable={{
+            expandedRowRender: (record) => (
+              <TableJaminanKunjungan
+                lendings={record.CollateralLending || []}
+                visits={record.Visit || []}
+              />
+            ),
+            rowExpandable: (record) =>
+              record.CollateralLending?.length !== 0 &&
+              record.Visit?.length !== 0,
           }}
         />
       </div>
@@ -758,5 +772,100 @@ const DeleteData = ({
         <p>Konfirmasi hapus data *{record.id}*?</p>
       </div>
     </Modal>
+  );
+};
+
+const TableJaminanKunjungan = ({
+  lendings,
+  visits,
+}: {
+  lendings: ICollateralLending[];
+  visits: IVisit[];
+}) => {
+  interface IData {
+    id: string;
+    name: string;
+    start_date: Date | null;
+    end_date: Date | null;
+    actual_date: Date | null;
+    status: string;
+  }
+  const data: IData[] = [
+    ...lendings.map((l) => ({
+      id: l.id,
+      name: "Peminjaman Jaminan",
+      start_date: l.start_at,
+      end_date: l.end_at,
+      actual_date: l.return_at,
+      status: l.return_at ? "SELESAI" : "PENDING",
+    })),
+    ...visits.map((p) => ({
+      id: p.id,
+      name: "Kunjungan",
+      start_date: p.created_at,
+      end_date: p.date,
+      actual_date: p.date_action || null,
+      status: p.date_action ? "SELESAI" : "PENDING",
+    })),
+  ];
+
+  const columns: TableProps<IData>["columns"] = [
+    {
+      title: "Kategori",
+      key: "name",
+      dataIndex: "name",
+    },
+    {
+      title: "Tanggal Rencana",
+      key: "date",
+      dataIndex: "date",
+      render(_value, record, _index) {
+        return (
+          <div className="text-xs">
+            <div>Mulai: {moment(record.start_date).format("DD-MM-YYYY")}</div>
+            <div>Selesai: {moment(record.end_date).format("DD-MM-YYYY")}</div>
+          </div>
+        );
+      },
+    },
+    {
+      title: "Tanggal Aktual",
+      key: "date",
+      dataIndex: "date",
+      render(_value, record, _index) {
+        return <div>{moment(record.actual_date).format("DD-MM-YYYY")}</div>;
+      },
+    },
+    {
+      title: "Status",
+      key: "status",
+      dataIndex: "status",
+      render(_value, record, _index) {
+        return (
+          <div className="flex justify-center">
+            <Tag
+              style={{ width: 80, textAlign: "center" }}
+              color={record.status === "SELESAI" ? "green" : "orange"}
+              variant="solid"
+            >
+              {record.status}
+            </Tag>
+          </div>
+        );
+      },
+    },
+  ];
+
+  return (
+    <div className="ml-8">
+      <Table
+        size="small"
+        rowKey={"id"}
+        bordered
+        columns={columns}
+        dataSource={data}
+        pagination={false}
+      />
+    </div>
   );
 };

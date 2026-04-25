@@ -42,9 +42,8 @@ export default function DataGbookType() {
     const params = new URLSearchParams();
     params.append("page", pageprops.page.toString());
     params.append("limit", pageprops.limit.toString());
-    if (pageprops.search) {
-      params.append("search", pageprops.search);
-    }
+    if (pageprops.search) params.append("search", pageprops.search);
+
     await api
       .request({
         url: `${import.meta.env.VITE_API_URL}/gbook_type?${params.toString()}`,

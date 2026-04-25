@@ -58,6 +58,7 @@ export const InputUtil = ({
             prefix={prefix}
             suffix={suffix}
             placeholder={placeholder}
+            style={{ color: "black" }}
           />
         );
       }
@@ -71,6 +72,7 @@ export const InputUtil = ({
             disabled={disabled}
             prefix={prefix}
             suffix={suffix}
+            style={{ color: "black" }}
             placeholder={placeholder}
           />
         );
@@ -84,6 +86,7 @@ export const InputUtil = ({
             disabled={disabled}
             prefix={prefix}
             suffix={suffix}
+            style={{ color: "black" }}
             placeholder={placeholder}
           />
         );
@@ -110,6 +113,7 @@ export const InputUtil = ({
             value={value}
             onChange={(e) => onchage && onchage(String(e.target.value))}
             disabled={disabled}
+            style={{ color: "black" }}
             placeholder={placeholder}
           />
         );
@@ -124,6 +128,7 @@ export const InputUtil = ({
             prefix={prefix}
             suffix={suffix}
             placeholder={placeholder}
+            style={{ color: "black" }}
           />
         );
       }
@@ -157,7 +162,7 @@ export const InputFileUpload = ({
   onchange,
   ondelete,
   filetype,
-  canDelete = true,
+  canDelete,
 }: {
   record: IFile;
   onchange: Function;
