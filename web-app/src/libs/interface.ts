@@ -110,20 +110,36 @@ export interface IAbsence {
   method: string;
   check_in: Date | null;
   check_out: Date | null;
-  geo_in: string | null;
-  geo_out: string | null;
   geo_in_lat?: number | null;
   geo_in_long?: number | null;
   geo_out_lat?: number | null;
   geo_out_long?: number | null;
   absence_status: "HADIR" | "TERLAMBAT" | "CUTI" | "PERDIN" | "SAKIT";
-  description: string | null;
+  late_deduction: number;
+  fast_leave_deduction: number;
+  lemburan: number;
 
+  status: boolean;
   created_at: Date;
   updated_at: Date;
   userId: string;
   User?: IUser;
 }
+export interface IAbsenceConfig {
+  id: string;
+  late_deduction: number;
+  fast_leave_deduction: number;
+  alpha_deduction: number;
+  shift_start: number;
+  shift_end: number;
+  shift_tolerance: number;
+  last_shift: number;
+  geo_status: boolean;
+  geo_location: string | null;
+  meter_tolerance: number | null;
+  updated_at: Date;
+}
+
 export interface IGuestBookType {
   id: string;
   name: string;
@@ -137,8 +153,8 @@ export interface IParticipant {
   name: string;
   phone?: string | null;
   email?: string | null;
+  note?: string | null;
   guestBookId?: string;
-  action?: "create" | "update" | "delete";
 }
 export interface IGuestBook {
   id: string;
@@ -146,11 +162,13 @@ export interface IGuestBook {
   date: Date | string;
   status_come: "AKANDATANG" | "TELAHDATANG";
   description: string | null;
+  file: string | null;
+
   status: boolean;
   created_at: Date | string;
   updated_at: Date | string;
   gBookTypeId: string;
-  GbookType: IGuestBookType;
+  GBookType: IGuestBookType;
   Participant: IParticipant[];
 }
 export interface IPermitFileDetail {

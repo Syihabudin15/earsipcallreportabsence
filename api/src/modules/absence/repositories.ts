@@ -71,7 +71,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
   let body = req.body;
   try {
-    const { id, ...saved } = body;
+    const { id, User, ...saved } = body;
     await prisma.absence.create({
       data: { ...saved, check_in: new Date() },
     });

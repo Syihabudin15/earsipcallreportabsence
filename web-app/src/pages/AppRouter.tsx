@@ -23,18 +23,11 @@ import LogActivities from "./app/LogActivities";
 import DebiturEArsip from "./earsip/Debitur";
 import DataGuestBook from "./guestbook/GuestBook";
 import DataGbookType from "./guestbook/GbookType";
-import AbsenceReport from "./absensi/AbsenceReport";
-import SelfAbsence from "./absensi/SelfAbsence";
-import AbsenceConfig from "./absensi/AbsenceConfig";
-import PermitAbsence from "./absensi/PermitAbsence";
-import AttendanceKiosk from "./absensi/AttendanceKiosk";
-import Payroll from "./absensi/Payroll";
 import UpsertProductType from "./earsip/UpsertProductType";
 import UpdateProductType from "./earsip/UpdateProductType";
 import DataMitra from "./app/Mitra";
 import DashboardEarsip from "./earsip/DashboardEarsip";
 import DashboardCallReport from "./creport/DashboardCallReport";
-import DashboardAbsensi from "./absensi/DashboardAbsensi";
 import DashboardGuestBook from "./guestbook/DashboardGuestBook";
 import CollateralLending from "./earsip/CollateralLending";
 import UpsertCollateralLending from "./earsip/UpsertCollateralLending";
@@ -44,6 +37,7 @@ import PermitDownload from "./earsip/PermitDownload";
 import PermitDelete from "./earsip/PermitDelete";
 import UpsertVisitPlan from "./creport/UpsertVisitPlan";
 import UpdateVisitPlan from "./creport/UpdateVisitPlan";
+import AbsenceConfig from "./absensi/AbsenceConfig";
 
 function AppRouter() {
   const path = window.location.pathname;
@@ -123,15 +117,7 @@ function AppRouter() {
           <Route path="/callreport/visit/:id" element={<DetailVisit />} />
 
           {/* ABSENSI */}
-          <Route path="/absensi" element={<DashboardAbsensi />} />
-          <Route path="/absensi/guestbook" element={<DataGuestBook />} />
-          <Route path="/absensi/gbook_type" element={<DataGbookType />} />
-          <Route path="/absensi/report" element={<AbsenceReport />} />
-          <Route path="/absensi/absence_config" element={<AbsenceConfig />} />
-          <Route path="/absensi/permit_absence" element={<PermitAbsence />} />
-          <Route path="/absensi/payroll" element={<Payroll />} />
-          <Route path="/absensi/attendance" element={<SelfAbsence />} />
-          <Route path="/absensi/kiosk" element={<AttendanceKiosk />} />
+          <Route path="/absensi/config" element={<AbsenceConfig />} />
 
           {/* GUESTBOOK */}
           <Route path="/guestbook/" element={<DashboardGuestBook />} />

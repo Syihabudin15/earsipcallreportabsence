@@ -1,16 +1,18 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { IPermission, IUser } from "./interface";
+import type { IAbsenceConfig, IPermission, IUser } from "./interface";
 import { menus } from "./list_app";
 import { MenuPermission } from "./helper";
 import api from "./api";
 
 interface ContextState {
   user: IUser | null;
+  absence_config: IAbsenceConfig | null;
   token: string | null;
   login: (userData: IUser, token: string) => void;
   logout: () => void;
   updatetoken: () => void;
+  updateconfig: () => void;
   hasAccess: (path: string, access: string) => boolean;
   getMenu: () => any;
 }
@@ -20,6 +22,7 @@ const useContext = create<ContextState>()(
     (set, get) => ({
       user: null,
       token: null,
+      absence_config: null,
       login: (userData, token) => {
         set({ user: userData, token });
       },
@@ -67,6 +70,19 @@ const useContext = create<ContextState>()(
               window.location.replace("/");
             });
         }
+      },
+      updateconfig: async () => {
+        await api
+          .request({
+            method: "GET",
+            url: import.meta.env.VITE_API_URL + "/absence_config",
+          })
+          .then((res) => {
+            set({ absence_config: res.data.data });
+          })
+          .catch(() => {
+            set({ absence_config: null });
+          });
       },
       getMenu: () => {
         const { user } = get();

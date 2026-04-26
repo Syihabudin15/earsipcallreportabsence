@@ -6,10 +6,11 @@ import useContext from "./libs/context";
 import { useEffect } from "react";
 
 export default function App() {
-  const { user, updatetoken } = useContext((state) => state);
+  const { user, updatetoken, updateconfig } = useContext((state) => state);
 
   useEffect(() => {
     updatetoken();
+    updateconfig();
   }, []);
 
   return (

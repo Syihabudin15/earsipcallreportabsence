@@ -1,4 +1,8 @@
-import { DeleteOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import {
+  CloudUploadOutlined,
+  DeleteOutlined,
+  PlusCircleOutlined,
+} from "@ant-design/icons";
 import { Button, Input, Select, Upload, Tooltip, type UploadProps } from "antd";
 import type { IFile, IFileVisit } from "../../libs/interface";
 import { useState } from "react";
@@ -322,6 +326,76 @@ export const InputFileUploadVisit = ({
           ></Button>
         </Upload>
       )}
+    </div>
+  );
+};
+
+export const OneFileUpload = ({
+  url,
+  onchange,
+  ondelete,
+  filetype,
+}: {
+  url: string | null;
+  onchange: Function;
+  ondelete: Function;
+  filetype: string;
+}) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleUpload = async (file: any) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    await api
+      .request({
+        url: `${import.meta.env.VITE_API_URL}/file`,
+        method: "POST",
+        data: formData,
+      })
+      .then((res) => onchange(res.data.url))
+      .catch((err) => {
+        console.log(err);
+        alert(err);
+      });
+    setLoading(false);
+  };
+
+  const props: UploadProps = {
+    beforeUpload: async (file) => {
+      setLoading(true);
+      await handleUpload(file);
+      setLoading(false);
+      return false; // prevent automatic upload
+    },
+    showUploadList: false, // sembunyikan default list
+    accept: filetype,
+  };
+
+  return (
+    <div className="flex gap-2 justify-between items-center">
+      <div className="flex-1">Upload File</div>
+      <div className="flex-1 flex justify-end">
+        {url ? (
+          <Button
+            size="small"
+            icon={<DeleteOutlined />}
+            danger
+            onClick={() => ondelete()}
+            loading={loading}
+          ></Button>
+        ) : (
+          <Upload {...props}>
+            <Button
+              size="small"
+              icon={<CloudUploadOutlined />}
+              type="primary"
+              loading={loading}
+            >
+              Browse
+            </Button>
+          </Upload>
+        )}
+      </div>
     </div>
   );
 };

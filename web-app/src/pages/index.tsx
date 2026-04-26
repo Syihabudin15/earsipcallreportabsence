@@ -8,12 +8,14 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
+  Calendar,
 } from "lucide-react";
 import AppRouter from "./AppRouter";
 import { menus } from "../libs/list_app";
 import useContext from "../libs/context";
 import { Modal, Dropdown } from "antd";
 import { Link, useNavigate } from "react-router-dom";
+import AbsenceWidget from "./absensi/AbsenceWidget";
 // import HeaderAbsenceButton from "../components/HeaderAbsenceButton";
 
 const APP_COLOR = import.meta.env.VITE_APP_COLOR || "#F58220";
@@ -28,7 +30,10 @@ export default function MainLayout({
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const [openLogout, setOpenLogout] = useState(false);
   const navigate = useNavigate();
-  const { user, getMenu, logout } = useContext((state: any) => state);
+  const { user, getMenu, logout, absence_config } = useContext(
+    (state: any) => state,
+  );
+  const [openAbsen, setOpenAbse] = useState(false);
 
   const toggleSubMenu = (name: string) => {
     setOpenMenus((prev) => ({
@@ -169,8 +174,15 @@ export default function MainLayout({
             {/* SEARCH DIHAPUS - Area ini sekarang kosong atau bisa untuk Breadcrumbs */}
           </div>
 
-          <div className="flex items-center gap-3 lg:gap-6">
-            <button className="relative p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl">
+          <div className="flex items-center gap-2 lg:gap-4">
+            <button
+              className="relative p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl cursor-pointer"
+              onClick={() => setOpenAbse(!openAbsen)}
+            >
+              <Calendar size={20} />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            </button>
+            <button className="relative p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl cursor-pointer">
               <Bell size={20} />
               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
@@ -254,6 +266,14 @@ export default function MainLayout({
       >
         <p>Apakah anda yakin untuk keluar?</p>
       </Modal>
+      {user && (
+        <AbsenceWidget
+          open={openAbsen}
+          setOpen={(v: boolean) => setOpenAbse(v)}
+          user={user}
+          config={absence_config}
+        />
+      )}
     </div>
   );
 }

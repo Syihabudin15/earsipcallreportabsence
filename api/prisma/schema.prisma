@@ -393,10 +393,10 @@ model Absence {
   method               String
   check_in             DateTime? // jam masuk
   check_out            DateTime? // jam pulang
-  geo_in_lat           Float?
-  geo_in_long          Float?
-  geo_out_lat          Float?
-  geo_out_long         Float?
+  geo_in_lat           Decimal?
+  geo_in_long          Decimal?
+  geo_out_lat          Decimal?
+  geo_out_long         Decimal?
   late_deduction       Int            @default(0)
   fast_leave_deduction Int            @default(0)
   lemburan             Int            @default(0)
@@ -512,12 +512,13 @@ model GuestBook {
   date        DateTime
   status_come EGBookStatus @default(TELAHDATANG)
   description String?      @db.Text
+  file        String?
 
   status     Boolean  @default(true)
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
 
-  GbookType   GBookType     @relation(fields: [gBookTypeId], references: [id], onUpdate: Cascade)
+  GBookType   GBookType     @relation(fields: [gBookTypeId], references: [id], onUpdate: Cascade)
   gBookTypeId String
   Participant Participant[]
 }

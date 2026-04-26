@@ -74,8 +74,6 @@ app.use("/producttype", middleware, productTypeRoute);
 app.use("/submission", middleware, submissionRoute);
 app.use("/permit_download", middleware, permitDownloadRoute);
 app.use("/permit_delete", middleware, permitDeleteRoute);
-app.use("/guestbook", middleware, guestBookRoute);
-app.use("/gbook_type", middleware, gbookTypeRoute);
 app.use("/participant", middleware, participantRoute);
 app.use("/collateral_lending", middleware, collateralLendingRoute);
 
@@ -91,6 +89,10 @@ app.use("/absence", middleware, absenceRoute);
 app.use("/permit_absence", middleware, permitAbsenceRoute);
 app.use("/payroll", middleware, payrollRoute);
 app.use("/log-activities", middleware, logActivitiesRoute);
+
+// BUKU TAMU
+app.use("/guestbook", middleware, guestBookRoute);
+app.use("/gbook_type", middleware, gbookTypeRoute);
 
 const PORT = process.env.APP_PORT || 5000;
 app.listen(PORT, () => {

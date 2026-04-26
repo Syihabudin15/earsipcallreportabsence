@@ -2,14 +2,14 @@ import { type Response, type Request, type NextFunction } from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 import moment from "moment";
-import type { EGBookStatus } from "@prisma/client";
+import type { EGBookStatus, Prisma } from "@prisma/client";
 
 export const GET = async (req: Request, res: Response, next: NextFunction) => {
   let {
     page = 1,
     limit = 50,
     search,
-    date,
+    backdate,
     status_come,
     gBookTypeId,
   } = req.query;
@@ -19,28 +19,48 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
   const skip = (page - 1) * limit;
 
   try {
-    const where: any = {
+    const where: Prisma.GuestBookWhereInput = {
       status: true,
       ...(status_come && { status_come: status_come as EGBookStatus }),
       ...(gBookTypeId && { gBookTypeId: gBookTypeId as string }),
-      ...(date && {
-        date: {
-          gte: moment(date as string)
-            .startOf("day")
-            .toDate(),
-          lte: moment(date as string)
-            .endOf("day")
-            .toDate(),
-        },
+      ...(backdate && {
+        OR: [
+          {
+            created_at: {
+              gte: moment(backdate as string)
+                .startOf("day")
+                .toDate(),
+              lte: moment(backdate as string)
+                .endOf("day")
+                .toDate(),
+            },
+          },
+          {
+            date: {
+              gte: moment(backdate as string)
+                .startOf("day")
+                .toDate(),
+              lte: moment(backdate as string)
+                .endOf("day")
+                .toDate(),
+            },
+          },
+        ],
       }),
       ...(search && {
         OR: [
           { name: { contains: search as string } },
           { description: { contains: search as string } },
-          { GbookType: { name: { contains: search as string } } },
+          { GBookType: { name: { contains: search as string } } },
           {
             Participant: {
-              some: { name: { contains: search as string } },
+              some: {
+                OR: [
+                  { name: { contains: search as string } },
+                  { phone: { contains: search as string } },
+                  { email: { contains: search as string } },
+                ],
+              },
             },
           },
         ],
@@ -53,7 +73,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       take: limit,
       orderBy: { date: "desc" },
       include: {
-        GbookType: true,
+        GBookType: true,
         Participant: true,
       },
     });
@@ -65,7 +85,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       page,
       limit,
       search,
-      date,
+      backdate,
       status_come,
       gBookTypeId,
       data,
@@ -82,25 +102,23 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
   const body = req.body;
   try {
-    const { id, Participants, ...saved } = body;
-
-    // Filter out any participants without a name
-    const validParticipants = (Participants || [])
-      .filter((p: any) => p.name && p.name.trim())
-      .map((p: any) => {
-        const { id, action, ...participant } = p;
-        return participant;
-      });
+    const { id, Participant, GBookType, ...saved } = body;
 
     const data = await prisma.guestBook.create({
       data: {
         ...saved,
-        ...(validParticipants.length > 0 && {
-          Participant: { create: validParticipants },
+        ...(Participant.length > 0 && {
+          Participant: {
+            create: Participant.map((p: any) => ({
+              name: p.name,
+              phone: p.phone,
+              email: p.email,
+              note: p.note,
+            })),
+          },
         }),
       },
       include: {
-        GbookType: true,
         Participant: true,
       },
     });
@@ -119,7 +137,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
 
 export const PUT = async (req: Request, res: Response, next: NextFunction) => {
   let { id } = req.query;
-  const body = req.body;
+  const { Participant, GBookType, ...saved } = req.body;
 
   try {
     if (!id)
@@ -130,73 +148,26 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
 
     const find = await prisma.guestBook.findFirst({
       where: { id: id as string },
-      include: { Participant: true },
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
-    const { Participants, ...saved } = body;
-
-    // Handle participants if provided
-    if (Participants) {
-      const createParticipants: any[] = [];
-      const updateParticipants: any[] = [];
-      const deleteParticipantIds: string[] = [];
-
-      // Process each participant based on action
-      for (const participant of Participants) {
-        if (!participant.name || !participant.name.trim()) continue;
-
-        if (participant.action === "delete" && participant.id) {
-          deleteParticipantIds.push(participant.id);
-        } else if (participant.action === "update" && participant.id) {
-          const { id: pId, action, ...data } = participant;
-          updateParticipants.push({ id: pId, data });
-        } else {
-          // Create new (action: "create" or no action + no id)
-          const { id: pId, action, ...data } = participant;
-          createParticipants.push({
-            ...data,
-            guestBookId: find.id,
-          });
-        }
-      }
-
-      // Delete removed participants
-      if (deleteParticipantIds.length > 0) {
-        await prisma.participant.deleteMany({
-          where: { id: { in: deleteParticipantIds } },
-        });
-      }
-
-      // Update existing participants
-      for (const { id: pId, data } of updateParticipants) {
-        await prisma.participant.update({
-          where: { id: pId },
-          data,
-        });
-      }
-
-      // Create new participants
-      if (createParticipants.length > 0) {
-        await prisma.participant.createMany({
-          data: createParticipants,
-        });
-      }
-    }
-
-    // Update guestbook
-    const data = await prisma.guestBook.update({
-      where: { id: find.id },
-      data: { ...saved, updated_at: new Date() },
-      include: {
-        GbookType: true,
-        Participant: true,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.guestBook.update({ where: { id: find.id }, data: { ...saved } });
+      await tx.participant.deleteMany({ where: { guestBookId: find.id } });
+      await tx.participant.createMany({
+        data: Participant.map((p: any) => ({
+          name: p.name,
+          phone: p.phone,
+          email: p.email,
+          note: p.note,
+          guestBookId: find.id,
+        })),
+      });
+      return true;
     });
 
     return ResponseServer(res, 200, {
       msg: "Data berhasil dirubah",
-      data,
     });
   } catch (err) {
     console.log(err);

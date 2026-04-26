@@ -803,7 +803,7 @@ const TableJaminanKunjungan = ({
       id: p.id,
       name: "Kunjungan",
       start_date: p.created_at,
-      end_date: p.date,
+      end_date: p.date_plan,
       actual_date: p.date_action || null,
       status: p.date_action ? "SELESAI" : "PENDING",
     })),
