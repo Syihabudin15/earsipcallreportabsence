@@ -23,10 +23,7 @@ import permitDeleteRoute from "./modules/permit_delete/routes.js";
 import guestBookRoute from "./modules/guestbook/routes.js";
 import gbookTypeRoute from "./modules/gbook_type/routes.js";
 import fileRoute from "./modules/file/routes.js";
-import permitAbsenceRoute from "./modules/permit_absence/routes.js";
 import logActivitiesRoute from "./modules/log-activities/routes.js";
-import payrollRoute from "./modules/payroll/routes.js";
-import participantRoute from "./modules/participant/routes.js";
 import collateralLendingRoute from "./modules/collateral_lending/routes.js";
 import { MainDashboard } from "./modules/route.js";
 import type { Role, User } from "@prisma/client";
@@ -74,7 +71,6 @@ app.use("/producttype", middleware, productTypeRoute);
 app.use("/submission", middleware, submissionRoute);
 app.use("/permit_download", middleware, permitDownloadRoute);
 app.use("/permit_delete", middleware, permitDeleteRoute);
-app.use("/participant", middleware, participantRoute);
 app.use("/collateral_lending", middleware, collateralLendingRoute);
 
 // CALLREPORT
@@ -86,13 +82,13 @@ app.use("/visit", middleware, visitRoute);
 // ABSENSI
 app.use("/absence_config", middleware, absConfigRoute);
 app.use("/absence", middleware, absenceRoute);
-app.use("/permit_absence", middleware, permitAbsenceRoute);
-app.use("/payroll", middleware, payrollRoute);
-app.use("/log-activities", middleware, logActivitiesRoute);
 
 // BUKU TAMU
 app.use("/guestbook", middleware, guestBookRoute);
 app.use("/gbook_type", middleware, gbookTypeRoute);
+
+// LOGS
+app.use("/log-activities", middleware, logActivitiesRoute);
 
 const PORT = process.env.APP_PORT || 5000;
 app.listen(PORT, () => {

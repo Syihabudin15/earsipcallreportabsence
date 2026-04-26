@@ -564,7 +564,7 @@ const UpsertData = ({
                   setData({
                     ...data,
                     Participant: data.Participant.filter(
-                      (dp, dpi) => dpi !== i,
+                      (_dp, dpi) => dpi !== i,
                     ),
                   })
                 }

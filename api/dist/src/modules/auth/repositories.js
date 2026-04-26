@@ -1,7 +1,8 @@
 import {} from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
-import { decode, signIn } from "../../libs/auth.js";
+import { decode, signIn, comparaPassword } from "../../libs/auth.js";
+import moment from "moment";
 // MY INFO
 export const GET = async (req, res, next) => {
     const token = req.headers.authorization?.split(" ")[1];
@@ -10,7 +11,25 @@ export const GET = async (req, res, next) => {
     const user = decode(token);
     if (!user)
         return ResponseServer(res, 401, { msg: "Unauthorized" });
-    return ResponseServer(res, 200, { msg: "OK", data: user });
+    const find = await prisma.user.findFirst({
+        where: { id: user.id, status: true },
+        include: {
+            Absence: {
+                where: {
+                    check_in: {
+                        gte: moment().startOf("day").toDate(),
+                        lte: moment().endOf("day").toDate(),
+                    },
+                },
+            },
+            Position: true,
+            Role: true,
+        },
+    });
+    if (!find)
+        return ResponseServer(res, 401, { msg: "Unauthorized" });
+    const tokens = await signIn(user);
+    return ResponseServer(res, 200, { msg: "OK", data: find, token: tokens });
 };
 // LOGIN
 export const POST = async (req, res, next) => {
@@ -20,13 +39,40 @@ export const POST = async (req, res, next) => {
             msg: "Mohon isi username dan password!",
         });
     const find = await prisma.user.findFirst({
-        where: { username },
-        include: { Role: true, Position: true },
+        where: { username, status: true },
+        include: {
+            Role: true,
+            Position: true,
+            Absence: {
+                where: {
+                    check_in: {
+                        gte: moment().startOf("day").toDate(),
+                        lte: moment().endOf("day").toDate(),
+                    },
+                },
+            },
+        },
     });
     if (!find)
         return ResponseServer(res, 401, { msg: "Username atau password salah!" });
-    const token = await signIn(find);
-    return ResponseServer(res, 200, { msg: "Berhasil login", token, data: find });
+    if (!find.status) {
+        return ResponseServer(res, 401, { msg: "User non aktif!" });
+    }
+    const isValidPassword = await comparaPassword(password, find.password);
+    if (!isValidPassword) {
+        return ResponseServer(res, 401, { msg: "Username atau password salah!" });
+    }
+    const tokens = await signIn({
+        id: find.id,
+        username: find.username,
+        email: find.email,
+        Role: { id: find.roleId },
+    });
+    return ResponseServer(res, 200, {
+        msg: "Berhasil login",
+        token: tokens,
+        data: find,
+    });
 };
 // USER INFO
 export const PATCH = async (req, res, next) => {
@@ -45,4 +91,9 @@ export const PATCH = async (req, res, next) => {
     if (!find)
         return ResponseServer(res, 400, { msg: "Not found" });
     return ResponseServer(res, 200, { msg: "OK", data: find });
+};
+// LOGOUT
+export const DELETE = async (req, res, next) => {
+    const token = req.headers.authorization?.split(" ")[1];
+    return ResponseServer(res, 200, { msg: "Logged out successfully" });
 };

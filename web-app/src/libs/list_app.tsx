@@ -14,7 +14,6 @@ import {
   User,
   BriefcaseBusiness,
   ChartBarBig,
-  SquareChartGantt,
 } from "lucide-react";
 import type { IMenu } from "./interface";
 import { BranchesOutlined } from "@ant-design/icons";

@@ -3,53 +3,58 @@ import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 import moment from "moment";
 export const GET = async (req, res, next) => {
-    let { page = 1, limit = 50, search, visitCategoryId, visitStatusId, visitPurposeId, approve_status, submissionTypeId, backdate, } = req.query;
+    let { page = 1, limit = 50, search, visitCategoryId, visitStatusId, visitPurposeId, approve_status, submissionTypeId, backdate, plan, } = req.query;
     page = Number(page);
     limit = Number(limit);
     const skip = (page - 1) * limit;
     try {
-        const data = await prisma.visit.findMany({
-            where: {
-                status: true,
-                ...(search && {
-                    OR: [
-                        { id: { contains: search } },
-                        {
-                            Debitur: {
-                                OR: [
-                                    { fullname: { contains: search } },
-                                    { cif: { contains: search } },
-                                    { nik: { contains: search } },
-                                    { id: { contains: search } },
-                                ],
-                            },
+        const querywhere = {
+            status: true,
+            ...(search && {
+                OR: [
+                    { id: { contains: search } },
+                    {
+                        Debitur: {
+                            OR: [
+                                { fullname: { contains: search } },
+                                { cif: { contains: search } },
+                                { nik: { contains: search } },
+                                { id: { contains: search } },
+                            ],
                         },
-                    ],
-                }),
-                ...(visitCategoryId && { visitCategoryId: visitCategoryId }),
-                ...(visitStatusId && { visitStatusId: visitStatusId }),
-                ...(visitPurposeId && { visitPurposeId: visitPurposeId }),
-                ...(approve_status && {
-                    approve_status: approve_status,
-                }),
-                ...(submissionTypeId && {
-                    Debitur: {
-                        submissionTypeId: submissionTypeId,
                     },
-                }),
-                ...(backdate && {
-                    created_at: {
-                        gte: moment(backdate.split(",")[0])
-                            .startOf("date")
-                            .toDate(),
-                        lte: moment(backdate.split(",")[1])
-                            .endOf("day")
-                            .toDate(),
-                    },
-                }),
-            },
+                ],
+            }),
+            ...(visitCategoryId && { visitCategoryId: visitCategoryId }),
+            ...(visitStatusId && { visitStatusId: visitStatusId }),
+            ...(visitPurposeId && { visitPurposeId: visitPurposeId }),
+            ...(approve_status && {
+                approve_status: approve_status,
+            }),
+            ...(req.user?.Role.data_status === "USER"
+                ? { userId: req.user?.id }
+                : {}),
+            ...(submissionTypeId && {
+                Debitur: {
+                    submissionTypeId: submissionTypeId,
+                },
+            }),
+            date_action: plan ? null : { not: null },
+            ...(backdate && {
+                created_at: {
+                    gte: moment(backdate.split(",")[0])
+                        .startOf("date")
+                        .toDate(),
+                    lte: moment(backdate.split(",")[1])
+                        .endOf("day")
+                        .toDate(),
+                },
+            }),
+        };
+        const data = await prisma.visit.findMany({
+            where: querywhere,
             include: {
-                Debitur: true,
+                Debitur: { include: { SubmissionType: true } },
                 VisitCategory: true,
                 VisitStatus: true,
                 VisitPurpose: true,
@@ -59,45 +64,7 @@ export const GET = async (req, res, next) => {
             take: limit,
         });
         const total = await prisma.visit.count({
-            where: {
-                status: true,
-                ...(search && {
-                    OR: [
-                        { id: { contains: search } },
-                        {
-                            Debitur: {
-                                OR: [
-                                    { fullname: { contains: search } },
-                                    { cif: { contains: search } },
-                                    { nik: { contains: search } },
-                                    { id: { contains: search } },
-                                ],
-                            },
-                        },
-                    ],
-                }),
-                ...(visitCategoryId && { visitCategoryId: visitCategoryId }),
-                ...(visitStatusId && { visitStatusId: visitStatusId }),
-                ...(visitPurposeId && { visitPurposeId: visitPurposeId }),
-                ...(approve_status && {
-                    approve_status: approve_status,
-                }),
-                ...(submissionTypeId && {
-                    Debitur: {
-                        submissionTypeId: submissionTypeId,
-                    },
-                }),
-                ...(backdate && {
-                    created_at: {
-                        gte: moment(backdate.split(",")[0])
-                            .startOf("date")
-                            .toDate(),
-                        lte: moment(backdate.split(",")[1])
-                            .endOf("day")
-                            .toDate(),
-                    },
-                }),
-            },
+            where: querywhere,
         });
         return ResponseServer(res, 200, {
             msg: "GET /visit",
@@ -122,13 +89,13 @@ export const GET = async (req, res, next) => {
 export const POST = async (req, res, next) => {
     let body = req.body;
     try {
-        const { id, VisitCategory, VisitStatus, VisitPurpose, User, Debitur, ...saved } = body;
+        const { id, VisitCategory, VisitStatus, VisitPurpose, User, Debitur, Submission, ...saved } = body;
         const genId = await generateId();
         const genDebId = await generateDebiturId();
         Debitur.id = Debitur.id ? Debitur.id : genDebId;
         await prisma.$transaction(async (tx) => {
-            const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
-            await tx.debitur.upsert({
+            const { SubmissionType, Visit, Submission, ...savedeb } = Debitur;
+            const deb = await tx.debitur.upsert({
                 where: { id: Debitur.id },
                 update: { ...savedeb },
                 create: { ...savedeb },
@@ -139,6 +106,7 @@ export const POST = async (req, res, next) => {
                     coments: JSON.stringify(saved.coments || []),
                     files: JSON.stringify(saved.files || []),
                     id: body.id && body.id !== "" ? body.id : genId,
+                    debiturId: deb.id,
                 },
             });
         });
@@ -167,8 +135,8 @@ export const PUT = async (req, res, next) => {
             return ResponseServer(res, 404, { msg: "Not found data" });
         const { VisitCategory, VisitStatus, VisitPurpose, User, Debitur, ...saved } = body;
         await prisma.$transaction(async (tx) => {
-            const { SubmissionType, Visit, Submissions, ...savedeb } = Debitur;
-            await tx.debitur.update({
+            const { SubmissionType, Visit, Submission, ...savedeb } = Debitur;
+            const deb = await tx.debitur.update({
                 where: { id: Debitur.id },
                 data: savedeb,
             });
@@ -179,6 +147,7 @@ export const PUT = async (req, res, next) => {
                     coments: JSON.stringify(body.coments || []),
                     files: JSON.stringify(body.files || []),
                     updated_at: new Date(),
+                    debiturId: deb.id,
                 },
             });
         });
@@ -222,7 +191,14 @@ export const PATCH = async (req, res, next) => {
         const find = await prisma.visit.findFirst({
             where: { id: id },
             include: {
-                Debitur: true,
+                Debitur: {
+                    include: {
+                        SubmissionType: true,
+                        Submission: {
+                            include: { Product: { include: { ProductType: true } } },
+                        },
+                    },
+                },
                 VisitCategory: true,
                 VisitStatus: true,
                 VisitPurpose: true,

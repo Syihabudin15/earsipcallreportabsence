@@ -30,18 +30,20 @@ export const DetailVisitDebt = ({
               <p className="w-52">Tanggal Kunjungan</p>
               <p className="w-4">:</p>
               <p className="flex-1">
-                {new Date(visit.date).toLocaleDateString()}
+                {visit.date_action
+                  ? new Date(visit.date_action).toLocaleDateString()
+                  : "-"}
               </p>
             </div>
             <div className="flex gap-2">
               <p className="w-52">Tujuan Kunjungan</p>
               <p className="w-4">:</p>
-              <p className="flex-1">{visit.VisitPurpose.name}</p>
+              <p className="flex-1">{visit.VisitPurpose?.name}</p>
             </div>
             <div className="flex gap-2">
               <p className="w-52">Hasil Kunjungan</p>
               <p className="w-4">:</p>
-              <p className="flex-1">{visit.VisitStatus.name}</p>
+              <p className="flex-1">{visit.VisitStatus?.name}</p>
             </div>
           </div>
         ))}

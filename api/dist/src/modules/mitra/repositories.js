@@ -2,35 +2,32 @@ import {} from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 export const GET = async (req, res, next) => {
-    let { page = 1, limit = 50, search, productTypeId } = req.query;
+    let { page = 1, limit = 50, search } = req.query;
     page = Number(page);
     limit = Number(limit);
     const skip = (page - 1) * limit;
     try {
-        const data = await prisma.product.findMany({
+        const data = await prisma.mitra.findMany({
             where: {
                 status: true,
                 ...(search && { name: { contains: search } }),
-                ...(productTypeId && { productTypeId: productTypeId }),
             },
             skip: skip,
             take: limit,
-            include: { ProductType: { include: { ProductTypeFile: true } } },
+            include: { Submission: true },
             orderBy: { id: "asc" },
         });
-        const total = await prisma.product.count({
+        const total = await prisma.mitra.count({
             where: {
                 status: true,
                 ...(search && { name: { contains: search } }),
-                ...(productTypeId && { productTypeId: productTypeId }),
             },
         });
         return ResponseServer(res, 200, {
-            msg: "GET /product",
+            msg: "GET /mitra",
             page,
             limit,
             search,
-            productTypeId,
             data,
             total,
         });
@@ -45,9 +42,9 @@ export const GET = async (req, res, next) => {
 export const POST = async (req, res, next) => {
     let body = req.body;
     try {
-        const genId = await generateId(body.productTypeId);
-        const { id, ProductType, ...saved } = body;
-        await prisma.product.create({
+        const genId = await generateId();
+        const { id, Submission, ...saved } = body;
+        await prisma.mitra.create({
             data: {
                 ...saved,
                 id: body.id && body.id !== "" ? body.id : genId,
@@ -71,13 +68,13 @@ export const PUT = async (req, res, next) => {
                 msg: "ID Not found",
                 params: req.params,
             });
-        const find = await prisma.product.findFirst({
+        const find = await prisma.mitra.findFirst({
             where: { id: id },
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const { ProductType, ...saved } = body;
-        await prisma.product.update({
+        const { Submission, ...saved } = body;
+        await prisma.mitra.update({
             where: { id: find.id },
             data: {
                 ...saved,
@@ -98,12 +95,12 @@ export const DELETE = async (req, res, next) => {
     try {
         if (!id)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const find = await prisma.product.findFirst({
+        const find = await prisma.mitra.findFirst({
             where: { id: id },
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        await prisma.product.update({
+        await prisma.mitra.update({
             where: { id: find.id },
             data: { status: false },
         });
@@ -116,11 +113,9 @@ export const DELETE = async (req, res, next) => {
         });
     }
 };
-async function generateId(typeId) {
-    const prefix = "P";
+async function generateId() {
+    const prefix = "MITRA";
     const padLength = 2;
-    const lastRecord = await prisma.product.count({
-        where: { productTypeId: typeId },
-    });
-    return `${prefix}${typeId}${String(lastRecord + 1).padStart(padLength, "0")}`;
+    const lastRecord = await prisma.mitra.count();
+    return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
 }

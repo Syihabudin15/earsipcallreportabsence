@@ -2,45 +2,57 @@ import {} from "express";
 import { ResponseServer } from "../../libs/util.js";
 import prisma from "../../libs/prisma.js";
 export const GET = async (req, res, next) => {
-    let { page = 1, limit = 50, search } = req.query;
+    let { page = 1, limit = 50, search, submissionTypeId } = req.query;
     page = Number(page);
     limit = Number(limit);
     const skip = (page - 1) * limit;
     try {
+        const querywhere = {
+            status: true,
+            ...(search && {
+                OR: [
+                    { fullname: { contains: search } },
+                    { cif: { contains: search } },
+                    { nik: { contains: search } },
+                    { id: { contains: search } },
+                ],
+            }),
+            ...(submissionTypeId && {
+                submissionTypeId: submissionTypeId,
+            }),
+        };
         const data = await prisma.debitur.findMany({
-            where: {
-                status: true,
-                ...(search && {
-                    OR: [
-                        { fullname: { contains: search } },
-                        { cif: { contains: search } },
-                        { nik: { contains: search } },
-                        { id: { contains: search } },
-                    ],
-                }),
-            },
+            where: querywhere,
             skip: skip,
             take: limit,
             include: {
                 SubmissionType: true,
-                Submissions: {
+                Submission: {
+                    where: {
+                        status: true,
+                        ...(req.user?.Role.data_status === "USER"
+                            ? { userId: req.user?.id }
+                            : {}),
+                    },
                     include: { Product: { include: { ProductType: true } } },
                 },
-                Visit: true,
+                Visit: {
+                    where: {
+                        status: true,
+                        ...(req.user?.Role.data_status === "USER"
+                            ? { userId: req.user?.id }
+                            : {}),
+                    },
+                    include: {
+                        VisitCategory: true,
+                        VisitStatus: true,
+                        VisitPurpose: true,
+                    },
+                },
             },
         });
         const total = await prisma.debitur.count({
-            where: {
-                status: true,
-                ...(search && {
-                    OR: [
-                        { fullname: { contains: search } },
-                        { cif: { contains: search } },
-                        { nik: { contains: search } },
-                        { id: { contains: search } },
-                    ],
-                }),
-            },
+            where: querywhere,
         });
         return ResponseServer(res, 200, {
             msg: "GET /debitur",
@@ -147,7 +159,7 @@ export const PATCH = async (req, res, next) => {
             },
             include: {
                 SubmissionType: true,
-                Submissions: {
+                Submission: {
                     include: { Product: { include: { ProductType: true } } },
                 },
                 Visit: true,

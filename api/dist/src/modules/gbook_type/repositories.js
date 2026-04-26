@@ -7,22 +7,24 @@ export const GET = async (req, res, next) => {
     limit = Number(limit);
     const skip = (page - 1) * limit;
     try {
-        const data = await prisma.visitPurpose.findMany({
-            where: {
-                status: true,
-                ...(search && { name: { contains: search } }),
-            },
-            skip: skip,
+        const where = {
+            status: true,
+            ...(search && {
+                OR: [
+                    { name: { contains: search } },
+                    { description: { contains: search } },
+                ],
+            }),
+        };
+        const data = await prisma.gBookType.findMany({
+            where,
+            skip,
             take: limit,
+            orderBy: { created_at: "desc" },
         });
-        const total = await prisma.visitPurpose.count({
-            where: {
-                status: true,
-                ...(search && { name: { contains: search } }),
-            },
-        });
+        const total = await prisma.gBookType.count({ where });
         return ResponseServer(res, 200, {
-            msg: "GET /visit-purpose",
+            msg: "GET /gbook_type",
             page,
             limit,
             search,
@@ -38,15 +40,10 @@ export const GET = async (req, res, next) => {
     }
 };
 export const POST = async (req, res, next) => {
-    let body = req.body;
+    const body = req.body;
     try {
-        const { id, Visit, ...saved } = body;
-        const genId = await generateId();
-        await prisma.visitPurpose.create({
-            data: {
-                ...saved,
-                id: body.id && body.id !== "" ? body.id : genId,
-            },
+        await prisma.gBookType.create({
+            data: { ...body, id: body.id ? body.id : await generateId() },
         });
         return ResponseServer(res, 200, { msg: "Data berhasil ditambahkan" });
     }
@@ -59,25 +56,21 @@ export const POST = async (req, res, next) => {
 };
 export const PUT = async (req, res, next) => {
     let { id } = req.query;
-    let body = req.body;
+    const body = req.body;
     try {
         if (!id)
             return ResponseServer(res, 404, {
                 msg: "ID Not found",
                 params: req.params,
             });
-        const find = await prisma.visitPurpose.findFirst({
+        const find = await prisma.gBookType.findFirst({
             where: { id: id },
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const { Visit, ...saved } = body;
-        await prisma.visitPurpose.update({
+        await prisma.gBookType.update({
             where: { id: find.id },
-            data: {
-                ...saved,
-                updated_at: new Date(),
-            },
+            data: { ...body, updated_at: new Date() },
         });
         return ResponseServer(res, 200, { msg: "Data berhasil dirubah" });
     }
@@ -93,14 +86,14 @@ export const DELETE = async (req, res, next) => {
     try {
         if (!id)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const find = await prisma.visitPurpose.findFirst({
+        const find = await prisma.gBookType.findFirst({
             where: { id: id },
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        await prisma.visitPurpose.update({
+        await prisma.gBookType.update({
             where: { id: find.id },
-            data: { status: false },
+            data: { status: false, updated_at: new Date() },
         });
         return ResponseServer(res, 200, { msg: "Data berhasil dihapus" });
     }
@@ -112,8 +105,8 @@ export const DELETE = async (req, res, next) => {
     }
 };
 async function generateId() {
-    const prefix = "VP";
+    const prefix = "GTYPE";
     const padLength = 2;
-    const lastRecord = await prisma.visitPurpose.count({});
+    const lastRecord = await prisma.gBookType.count({});
     return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
 }

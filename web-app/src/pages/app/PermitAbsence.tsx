@@ -109,10 +109,15 @@ const PermitAbsence: React.FC = () => {
       // Add other fields
       Object.keys(values).forEach((key) => {
         if (key !== "file") {
-          if (values[key] instanceof dayjs) {
-            formData.append(key, values[key].format("YYYY-MM-DD HH:mm:ss"));
+          // 1. Capture the value in a variable
+          const value = values[key];
+
+          // 2. Perform the instanceof check on that variable
+          if (dayjs.isDayjs(value)) {
+            // TypeScript now knows 'value' is a Dayjs object
+            formData.append(key, value.format("YYYY-MM-DD HH:mm:ss"));
           } else {
-            formData.append(key, values[key]);
+            formData.append(key, value);
           }
         }
       });

@@ -8,14 +8,7 @@ import {
   Tooltip,
   type TableProps,
 } from "antd";
-import {
-  Plus,
-  Edit,
-  Trash,
-  Filter,
-  CalendarArrowUp,
-  CalendarArrowDownIcon,
-} from "lucide-react";
+import { Plus, Trash, Filter, CalendarArrowUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import type {
   IActionPage,
@@ -27,7 +20,7 @@ import type {
   IVisitStatus,
 } from "../../libs/interface";
 import useContext from "../../libs/context";
-import { CollapseList, CollapseText } from "../utils/utilComp";
+import { CollapseList } from "../utils/utilComp";
 import moment from "moment";
 import { Link } from "react-router-dom";
 import dayjs from "dayjs";

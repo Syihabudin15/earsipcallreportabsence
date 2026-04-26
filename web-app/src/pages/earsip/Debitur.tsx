@@ -164,7 +164,7 @@ export default function DebiturEArsip() {
       key: "visitCount",
       dataIndex: "Visit",
       render(_value, record, _index) {
-        const visitCount = record.Submissions ? record.Submissions.length : 0;
+        const visitCount = record.Submission ? record.Submission.length : 0;
         return (
           <div className="flex items-center justify-center gap-1">
             <Calendar size={14} className="text-blue-600" />
@@ -208,7 +208,7 @@ export default function DebiturEArsip() {
         return (
           <div className="text-xs">
             <div className="font-semibold">
-              {record.Product.ProductType.name}
+              {record.Product.ProductType?.name}
             </div>
             <div className="opacity-80">@{record.Product.name}</div>
           </div>
@@ -250,13 +250,15 @@ export default function DebiturEArsip() {
             <div className="flex gap-2 items-center">
               Permohonan{" "}
               <span
-                className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                  record.is_active
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
+                className={`text-xs text-white font-semibold px-2 py-1 rounded-full ${
+                  record.approve_status === "DITOLAK"
+                    ? "bg-red-500"
+                    : record.approve_status === "PENDING"
+                      ? "bg-orange-500"
+                      : "bg-green-500"
                 }`}
               >
-                {record.is_active ? "Aktif" : "Tidak Aktif"}
+                {record.approve_status}
               </span>
             </div>
             <div className="flex gap-2 items-center">
@@ -403,7 +405,7 @@ export default function DebiturEArsip() {
           className="rounded-lg overflow-hidden"
           expandable={{
             expandedRowRender: (record) => {
-              const visits = record.Submissions || [];
+              const visits = record.Submission || [];
               if (visits.length === 0) {
                 return (
                   <div className="p-4 text-center text-gray-500">
@@ -429,7 +431,7 @@ export default function DebiturEArsip() {
               );
             },
             rowExpandable(record) {
-              return record.Submissions && record.Submissions.length > 0;
+              return record.Submission && record.Submission.length > 0;
             },
           }}
           pagination={{

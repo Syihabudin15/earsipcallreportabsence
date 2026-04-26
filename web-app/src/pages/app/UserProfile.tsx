@@ -335,7 +335,7 @@ export default function UserProfile() {
                     {userData?.ptkp || "-"}
                   </Descriptions.Item>
                   <Descriptions.Item label="Metode Absensi">
-                    {userData?.absence_method === "FACE"
+                    {userData?.absen_method === "FACE"
                       ? "Face Recognition"
                       : "Button"}
                   </Descriptions.Item>

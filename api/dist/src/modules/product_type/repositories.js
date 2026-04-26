@@ -14,7 +14,7 @@ export const GET = async (req, res, next) => {
             },
             skip: skip,
             take: limit,
-            include: { ProductTypeFile: true },
+            include: { ProductTypeFile: true, Product: true },
         });
         const total = await prisma.productType.count({
             where: {
@@ -41,7 +41,7 @@ export const GET = async (req, res, next) => {
 export const POST = async (req, res, next) => {
     let body = req.body;
     try {
-        const { id, ProductTypeFile, ...savedProductType } = body;
+        const { id, ProductTypeFile, Product, ...savedProductType } = body;
         const genId = await generateId();
         const saved = await prisma.productType.create({
             data: {
@@ -54,6 +54,14 @@ export const POST = async (req, res, next) => {
                 data: ProductTypeFile.map((p) => {
                     const { Files, ...pFile } = p;
                     return { ...pFile, productTypeId: saved.id };
+                }),
+            });
+        }
+        if (Product.length !== 0) {
+            await prisma.product.createMany({
+                data: Product.map((p) => {
+                    const { Submission, ...prod } = p;
+                    return { ...prod, productTypeId: saved.id };
                 }),
             });
         }
@@ -80,7 +88,7 @@ export const PUT = async (req, res, next) => {
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const { ProductTypeFile, ...savedProductType } = body;
+        const { ProductTypeFile, Product, ...savedProductType } = body;
         const saved = await prisma.productType.update({
             where: { id: find.id },
             data: {
@@ -90,21 +98,21 @@ export const PUT = async (req, res, next) => {
         });
         if (savedProductType.length !== 0) {
             for (const p of ProductTypeFile) {
-                const find = await prisma.productTypeFile.findFirst({
-                    where: { id: p.id },
-                });
                 const { Files, ...pFiles } = p;
-                if (find) {
-                    await prisma.productTypeFile.update({
-                        where: { id: p.id },
-                        data: { ...pFiles, productTypeId: saved.id },
-                    });
-                }
-                else {
-                    await prisma.productTypeFile.create({
-                        data: { ...pFiles, productTypeId: saved.id },
-                    });
-                }
+                await prisma.productTypeFile.upsert({
+                    where: { id: p.id },
+                    update: { ...pFiles, productTypeId: saved.id },
+                    create: { ...pFiles, productTypeId: saved.id },
+                });
+            }
+        }
+        if (Product.length !== 0) {
+            for (const p of Product) {
+                await prisma.product.upsert({
+                    where: { id: p.id },
+                    create: { ...p, productTypeId: saved.id },
+                    update: { ...p, productTypeId: saved.id },
+                });
             }
         }
         return ResponseServer(res, 200, { msg: "Data berhasil dirubah" });
@@ -144,16 +152,13 @@ export const PATCH = async (req, res, next) => {
     if (!id)
         return ResponseServer(res, 404, { msg: "Not found data" });
     try {
-        const find = await prisma.productTypeFile.findFirst({
+        const find = await prisma.productType.findFirst({
             where: { id: id },
+            include: { ProductTypeFile: true, Product: true },
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        await prisma.productTypeFile.update({
-            where: { id: id },
-            data: { status: false },
-        });
-        return ResponseServer(res, 200, { msg: "Data berhasil dihapus" });
+        return ResponseServer(res, 200, { msg: "OK", data: find });
     }
     catch (err) {
         console.log(err);

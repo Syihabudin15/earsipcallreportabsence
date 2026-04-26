@@ -40,7 +40,7 @@ export const GET = async (req, res, next) => {
 export const POST = async (req, res, next) => {
     let body = req.body;
     try {
-        const { id, ...saved } = body;
+        const { id, Visit, ...saved } = body;
         const genId = await generateId();
         await prisma.visitStatus.create({
             data: {
@@ -71,7 +71,7 @@ export const PUT = async (req, res, next) => {
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const { ...saved } = body;
+        const { Visit, ...saved } = body;
         await prisma.visitStatus.update({
             where: { id: find.id },
             data: {

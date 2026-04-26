@@ -62,7 +62,7 @@ const Dashboard = () => {
   const totalVisit = data.visitCategory.flatMap((d) => d.Visit).length;
   const totalValue = data.productType
     .flatMap((item) => item.Product.flatMap((pd) => pd.Submission))
-    .reduce((acc, submission) => acc + (submission.value || 0), 0);
+    .reduce((acc, submission) => acc + (submission?.value || 0), 0);
 
   // Generate real growth chart data from visits
   const generateGrowthData = () => {
@@ -89,7 +89,7 @@ const Dashboard = () => {
       });
 
       const weeklySubs = allSubmissions.filter((s) => {
-        const d = new Date(s.created_at); // Sesuaikan nama field date dari DB Anda
+        const d = new Date(s?.created_at || new Date()); // Sesuaikan nama field date dari DB Anda
         return d >= start && d < end;
       });
 

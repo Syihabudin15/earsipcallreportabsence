@@ -1,4 +1,4 @@
-import { App, Button, Card, Divider, Input, Select, Spin } from "antd";
+import { App, Button, Card, Input, Select, Spin } from "antd";
 import { useState } from "react";
 import type {
   IProduct,

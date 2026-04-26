@@ -264,7 +264,6 @@ export interface IProduct {
 }
 
 export interface IMitra {
-  ProductType: any;
   id: string;
   name: string;
   code: string | null;

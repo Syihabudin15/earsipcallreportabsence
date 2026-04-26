@@ -31,8 +31,8 @@ import { Link } from "react-router-dom";
 export default function UpsertSubmission({ record }: { record?: ISubmission }) {
   const [loading, setLoading] = useState(false);
   const [subType, setSubType] = useState<ISubType[]>([]);
-  const [mitras, setMitras] = useState<IProduct[]>([]);
-  const [products, setProducts] = useState<IMitra[]>([]);
+  const [mitras, setMitras] = useState<IMitra[]>([]);
+  const [products, setProducts] = useState<IProduct[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [search, setSearch] = useState("");
   const [activities, setActivities] = useState<IActivities[]>([]);
