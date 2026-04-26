@@ -121,7 +121,7 @@ export default function AbsenceWidget({
             .request({
               method: "PUT",
               url: import.meta.env.VITE_API_URL + "/user?id=" + user.id,
-              data: { face: JSON.stringify(imageData) },
+              data: { ...user, face: JSON.stringify(imageData) },
             })
             .then(() => {
               message.success("Berhasil mendaftarkan wajah. mohon absen ulang");
