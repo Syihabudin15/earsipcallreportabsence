@@ -44,39 +44,35 @@ export default function UpsertVisitPlan({ record }: { record?: IVisit }) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      await api
-        .request({
-          method: "GET",
-          url: "/visit_category",
-        })
-        .then((res) => setVisitCategories(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: "/visit_purpose",
-        })
-        .then((res) => setVisitPurposes(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: "/user",
-          params: { limit: 1000 },
-        })
-        .then((res) => setUsers(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: "/mitra",
-          params: { limit: 1000 },
-        })
-        .then((res) => setMitras(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: "/debitur",
-          params: { limit: 10000 },
-        })
-        .then((res) => setDebts(res.data.data));
+      try {
+        await Promise.all([
+          api
+            .request({ method: "GET", url: "/visit_category" })
+            .then((res) => setVisitCategories(res.data.data)),
+
+          api
+            .request({ method: "GET", url: "/visit_purpose" })
+            .then((res) => setVisitPurposes(res.data.data)),
+
+          api
+            .request({ method: "GET", url: "/user", params: { limit: 500 } })
+            .then((res) => setUsers(res.data.data)),
+
+          api
+            .request({ method: "GET", url: "/mitra", params: { limit: 500 } })
+            .then((res) => setMitras(res.data.data)),
+
+          api
+            .request({
+              method: "GET",
+              url: "/debitur",
+              params: { limit: 10000 },
+            })
+            .then((res) => setDebts(res.data.data)),
+        ]);
+      } catch (error) {
+        console.log(error);
+      }
       setLoading(false);
     })();
   }, []);

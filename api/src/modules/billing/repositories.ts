@@ -236,11 +236,19 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
     // =========================================================================
     const missingProducts = new Set<string>();
     const missingMitras = new Set<string>();
+    const missingUsers = new Set<string>();
 
     for (let i = 0; i < jsonData.length; i++) {
       const anyData = jsonData[i] as any;
       const produkName = String(anyData["SEGMENTASI"] || "").trim();
       const mitraName = String(anyData["INSTANSI"] || "").trim();
+      const aoName = String(anyData["NAMA_AO"] || "")
+        .trim()
+        .toLowerCase();
+
+      if (aoName && !userMap.has(aoName.toLowerCase())) {
+        missingUsers.add(aoName);
+      }
 
       if (produkName && !productMap.has(produkName.toLowerCase())) {
         missingProducts.add(produkName);
@@ -248,6 +256,44 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
       if (mitraName && !mitraMap.has(mitraName.toLowerCase())) {
         missingMitras.add(mitraName);
       }
+    }
+
+    if (missingUsers.size > 0) {
+      const userDataToInsert: Prisma.UserCreateManyInput[] = Array.from(
+        missingUsers,
+      ).map((fullname) => ({
+        fullname,
+        username: fullname.toLowerCase().replace(/\s+/g, "."),
+        password: "123456", // sesuaikan dengan model User kamu
+        status: true,
+        salary: 0,
+        ptkp: "TK0",
+        absen_method: "BUTTON",
+        roleId: "RL02",
+      }));
+
+      await prisma.user.createMany({
+        data: userDataToInsert,
+        skipDuplicates: true,
+      });
+
+      const newUsers = await prisma.user.findMany({
+        where: {
+          fullname: {
+            in: Array.from(missingUsers),
+          },
+        },
+        select: {
+          id: true,
+          fullname: true,
+        },
+      });
+
+      newUsers.forEach((u) => {
+        if (u.fullname) {
+          userMap.set(u.fullname.trim().toLowerCase(), u.id);
+        }
+      });
     }
 
     // Bulk Insert Produk Baru jika ada, lalu masukkan ke productMap

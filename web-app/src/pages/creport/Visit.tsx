@@ -18,6 +18,7 @@ import {
 import { useEffect, useState } from "react";
 import type {
   IActionPage,
+  IFileVisit,
   IPageProps,
   ISubType,
   IVisit,
@@ -30,9 +31,14 @@ import { CollapseList, CollapseText } from "../utils/utilComp";
 import moment from "moment";
 import { Link } from "react-router-dom";
 import dayjs from "dayjs";
-import { CloseOutlined, FolderOutlined } from "@ant-design/icons";
+import {
+  CloseOutlined,
+  FolderOutlined,
+  PrinterOutlined,
+} from "@ant-design/icons";
 import api from "../../libs/api";
 import { IDRFormat } from "../utils/utilForm";
+import { ExportData } from "../../libs/helper";
 const { RangePicker } = DatePicker;
 
 export default function DataVisit() {
@@ -487,6 +493,37 @@ export default function DataVisit() {
                 </Button>
               </Link>
             )}
+            <Button
+              size="small"
+              type="primary"
+              icon={<PrinterOutlined />}
+              onClick={() =>
+                ExportData(
+                  pageprops.data.map((d) => ({
+                    nasabah: d.Submission?.Debitur.fullname,
+                    cif: d.Submission?.Debitur.cif,
+                    rekening: d.Submission?.account_number,
+                    produk: d.Submission?.Product.name,
+                    kategori_kunjungan: d.VisitCategory?.name,
+                    tujuan_kunjungan: d.VisitPurpose?.name,
+                    hasil_kunjungan: d.VisitStatus?.name,
+                    tanggal: moment(d.date_action).format("DD/MM/YYYY HH:mm"),
+                    nilai: d.value,
+                    nilai_realisasi: d.realize_value,
+                    pembicaraan: d.summary,
+                    tindak_lanjut: d.next_action,
+                    petugas: d.User.fullname,
+                    geo_location: d.geo,
+                    files: ((d.files as IFileVisit[]) || [])
+                      .map((f) => f.url)
+                      .join(", "),
+                  })),
+                  "kunjungan",
+                )
+              }
+            >
+              Export
+            </Button>
           </div>
           <div className="flex-1 flex items-center gap-2 justify-end flex-wrap">
             <Input.Search

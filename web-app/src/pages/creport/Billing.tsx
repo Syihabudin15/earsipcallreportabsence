@@ -229,6 +229,19 @@ export default function DataBilling() {
       },
     },
     {
+      title: "AO",
+      key: "ao",
+      dataIndex: "ao",
+      render(_value, record) {
+        return (
+          <div className="">
+            <div>{record.User?.fullname}</div>
+            <div>{record.User?.nip}</div>
+          </div>
+        );
+      },
+    },
+    {
       title: "Aksi",
       key: "action",
       dataIndex: "action",
@@ -364,7 +377,7 @@ export default function DataBilling() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-            Data Tagihan
+            Daftar Tagihan
           </h1>
         </div>
       </div>
@@ -790,6 +803,9 @@ const ProcessData = ({
   onSuccess: Function;
 }) => {
   const [loading, setLoading] = useState(false);
+  const [billStatus, setBillStatus] = useState<
+    "BAYAR" | "PARTIAL" | "BELUMBAYAR"
+  >("BAYAR");
 
   const handleSubmit = async () => {
     if (selectedRows.length === 0) {
@@ -810,7 +826,7 @@ const ProcessData = ({
           data: {
             paid_date: new Date(today),
             realize_value: record.value,
-            bill_status: "BAYAR",
+            bill_status: billStatus,
           },
           headers: { "Content-Type": "Application/json" },
         }),
@@ -865,7 +881,21 @@ const ProcessData = ({
         <ul className="text-sm space-y-2 ml-4 list-disc">
           <li>Tanggal Pembayaran: Hari ini</li>
           <li>Nilai Realisasi: Sesuai nilai tagihan</li>
-          <li>Status: BAYAR</li>
+          <li className="flex items-center gap-4">
+            Status:
+            <Select
+              value={billStatus}
+              onChange={(value) =>
+                setBillStatus(value as "BAYAR" | "PARTIAL" | "BELUMBAYAR")
+              }
+              size="small"
+              options={[
+                { label: "BAYAR", value: "BAYAR" },
+                { label: "PARTIAL", value: "PARTIAL" },
+                { label: "BELUMBAYAR", value: "BELUMBAYAR" },
+              ]}
+            />
+          </li>
         </ul>
         <div className="bg-yellow-50 p-3 rounded text-sm text-yellow-700 border border-yellow-200">
           <strong>Perhatian:</strong> Proses ini tidak dapat dibatalkan setelah
@@ -948,12 +978,13 @@ const UpdateData = ({
       okText="Simpan"
       cancelText="Batal"
       width={500}
+      style={{ top: 20 }}
     >
       <div className="p-5 space-y-4">
         <div>
           <label className="block text-sm font-medium mb-1">Nama Nasabah</label>
           <Input
-            type="number"
+            type="text"
             value={formData.name || ""}
             onChange={(e) =>
               setFormData({
@@ -961,6 +992,7 @@ const UpdateData = ({
                 name: e.target.value,
               })
             }
+            disabled
             placeholder="Masukkan nama nasabah"
           />
         </div>

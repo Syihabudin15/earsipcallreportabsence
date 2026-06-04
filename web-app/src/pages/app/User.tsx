@@ -431,7 +431,7 @@ const UpsertData = ({
   positions: IPosition[];
 }) => {
   const [data, setData] = useState<IUser>(
-    record ? { ...record, password: "" } : defaultData,
+    record ? { ...record, password: "" } : { ...defaultData, password: "" },
   );
   const [loading, setLoading] = useState(false);
 
@@ -503,255 +503,261 @@ const UpsertData = ({
           !data.absen_method,
       }}
     >
-      <div className="flex gap-4 flex-col sm:flex-row">
-        <div className="flex-1 flex flex-col gap-2">
-          <InputUtil
-            label="ID"
-            value={data.id}
-            placeholder="Kosongkan untuk otomatis"
-            type="text"
-            layout="horizontal"
-            onchage={(value: string) => setData({ ...data, id: value })}
-          />
-          <InputUtil
-            label="Nama Lengkap"
-            value={data.fullname}
-            required
-            type="text"
-            layout="horizontal"
-            onchage={(value: string) => setData({ ...data, fullname: value })}
-          />
-          <InputUtil
-            label="NIK"
-            value={data.nik || ""}
-            type="text"
-            layout="horizontal"
-            onchage={(value: string) => setData({ ...data, nik: value })}
-          />
-          <InputUtil
-            label="NIP"
-            value={data.nip || ""}
-            required
-            type="text"
-            layout="horizontal"
-            onchage={(value: string) => setData({ ...data, nip: value })}
-          />
-          <InputUtil
-            label="Username"
-            value={data.username}
-            required
-            type="text"
-            layout="horizontal"
-            onchage={(value: string) => setData({ ...data, username: value })}
-          />
-          <InputUtil
-            label="Email"
-            value={data.email || ""}
-            required
-            type="text"
-            layout="horizontal"
-            onchage={(value: string) => setData({ ...data, email: value })}
-          />
-          <InputUtil
-            label="No Telepon"
-            value={data.phone || ""}
-            required
-            type="text"
-            layout="horizontal"
-            onchage={(value: string) => setData({ ...data, phone: value })}
-          />
-          <InputUtil
-            label="Password"
-            value={data.password}
-            required
-            type="password"
-            layout="horizontal"
-            onchage={(value: string) => setData({ ...data, password: value })}
-          />
-          <InputUtil
-            label="Gaji Pokok"
-            value={IDRFormat(data.salary)}
-            required
-            type="text"
-            layout="horizontal"
-            onchage={(value: string) =>
-              setData({ ...data, salary: IDRToNumber(value) })
-            }
-          />
-          <InputUtil
-            label="Status PTKP"
-            value={data.ptkp}
-            type="option"
-            options={PTKPDetail.map((p) => ({
-              label: `${p.name} - ${p.desc}`,
-              value: p.name,
-            }))}
-            layout="horizontal"
-            onchage={(value: string) => setData({ ...data, ptkp: value })}
-          />
-          <InputUtil
-            label="Jabatan"
-            value={data.positionId || ""}
-            type="option"
-            options={positions.map((p) => ({ label: p.name, value: p.id }))}
-            layout="horizontal"
-            onchage={(value: string) => setData({ ...data, positionId: value })}
-          />
-          <InputUtil
-            label="Role"
-            value={data.roleId || ""}
-            type="option"
-            options={roles.map((p) => ({ label: p.name, value: p.id }))}
-            layout="horizontal"
-            onchage={(value: string) => setData({ ...data, roleId: value })}
-          />
-          <InputUtil
-            label="Metode Absen"
-            value={data.absen_method}
-            type="option"
-            options={[
-              { label: "BUTTON", value: "BUTTON" },
-              { label: "FACE", value: "FACE" },
-            ]}
-            layout="horizontal"
-            onchage={(value: string) =>
-              setData({ ...data, absen_method: value as any })
-            }
-          />
-        </div>
-        <div className="flex-1 flex flex-col gap-2">
-          <Divider style={{ margin: 5 }}>Tunjangan & Potongan</Divider>
-          <div className="flex flex-col gap-2">
-            {data.UserCost?.filter((u) => !u.end_at).map((uc, uci) => (
-              <div
-                key={"allowance" + uci}
-                className="flex gap-2 flex-wrap justify-between items-center"
-              >
-                <div className="flex-1">
-                  <Select
-                    style={{ width: "100%" }}
-                    value={uc.type}
-                    options={[
-                      { label: "Tunjangan", value: "PENAMBAHAN" },
-                      { label: "Potongan", value: "PENGURANGAN" },
-                    ]}
-                    onChange={(e) =>
-                      setData({
-                        ...data,
-                        UserCost: data.UserCost?.map((u, i) => ({
-                          ...u,
-                          ...(uci === i && { type: e }),
-                        })),
-                      })
-                    }
-                  />
-                </div>
-                <div className="flex-1">
-                  <Input
-                    width={"100%"}
-                    placeholder="Nama"
-                    value={uc.name}
-                    onChange={(e) =>
-                      setData({
-                        ...data,
-                        UserCost: data.UserCost?.map((u, i) => ({
-                          ...u,
-                          ...(uci === i && { name: e.target.value }),
-                        })),
-                      })
-                    }
-                  />
-                </div>
-                <div className="flex-1">
-                  <Select
-                    style={{ width: "100%" }}
-                    value={uc.nominal_type}
-                    options={[
-                      { label: "Rupiah", value: "RUPIAH" },
-                      { label: "Persentase", value: "PERCENT" },
-                    ]}
-                    onChange={(e) =>
-                      setData({
-                        ...data,
-                        UserCost: data.UserCost?.map((u, i) => ({
-                          ...u,
-                          ...(uci === i && { nominal_type: e }),
-                        })),
-                      })
-                    }
-                  />
-                </div>
-                <div className="flex-1">
-                  <Input
-                    width={"100%"}
-                    placeholder="Nominal"
-                    type={"text"}
-                    value={
-                      uc.nominal_type === "RUPIAH"
-                        ? IDRFormat(uc.nominal)
-                        : uc.nominal
-                    }
-                    onChange={(e) => {
-                      const inputValue = e.target.value;
-                      // Ganti koma ke titik untuk parsing
-                      const normalizedValue = inputValue.replace(",", ".");
+      <form autoComplete="off">
+        <div className="flex gap-4 flex-col sm:flex-row">
+          <div className="flex-1 flex flex-col gap-2">
+            <InputUtil
+              label="ID"
+              value={data.id}
+              placeholder="Kosongkan untuk otomatis"
+              type="text"
+              layout="horizontal"
+              onchage={(value: string) => setData({ ...data, id: value })}
+            />
+            <InputUtil
+              label="Nama Lengkap"
+              value={data.fullname}
+              required
+              type="text"
+              layout="horizontal"
+              onchage={(value: string) => setData({ ...data, fullname: value })}
+            />
+            <InputUtil
+              label="NIK"
+              value={data.nik || ""}
+              type="text"
+              layout="horizontal"
+              onchage={(value: string) => setData({ ...data, nik: value })}
+            />
+            <InputUtil
+              label="NIP"
+              value={data.nip || ""}
+              required
+              type="text"
+              layout="horizontal"
+              onchage={(value: string) => setData({ ...data, nip: value })}
+            />
+            <InputUtil
+              label="Username"
+              value={data.username}
+              required
+              type="text"
+              layout="horizontal"
+              onchage={(value: string) => setData({ ...data, username: value })}
+            />
+            <InputUtil
+              label="Email"
+              value={data.email || ""}
+              required
+              type="text"
+              layout="horizontal"
+              onchage={(value: string) => setData({ ...data, email: value })}
+            />
+            <InputUtil
+              label="No Telepon"
+              value={data.phone || ""}
+              required
+              type="text"
+              layout="horizontal"
+              onchage={(value: string) => setData({ ...data, phone: value })}
+            />
+            <InputUtil
+              label="Password"
+              value={data.password}
+              required
+              type="password"
+              layout="horizontal"
+              onchage={(value: string) => setData({ ...data, password: value })}
+            />
+            <InputUtil
+              label="Gaji Pokok"
+              value={IDRFormat(data.salary)}
+              required
+              type="text"
+              layout="horizontal"
+              onchage={(value: string) =>
+                setData({ ...data, salary: IDRToNumber(value) })
+              }
+            />
+            <InputUtil
+              label="Status PTKP"
+              value={data.ptkp}
+              type="option"
+              options={PTKPDetail.map((p) => ({
+                label: `${p.name} - ${p.desc}`,
+                value: p.name,
+              }))}
+              layout="horizontal"
+              onchage={(value: string) => setData({ ...data, ptkp: value })}
+            />
+            <InputUtil
+              label="Jabatan"
+              value={data.positionId || ""}
+              type="option"
+              options={positions.map((p) => ({ label: p.name, value: p.id }))}
+              layout="horizontal"
+              onchage={(value: string) =>
+                setData({ ...data, positionId: value })
+              }
+            />
+            <InputUtil
+              label="Role"
+              value={data.roleId || ""}
+              type="option"
+              options={roles.map((p) => ({ label: p.name, value: p.id }))}
+              layout="horizontal"
+              onchage={(value: string) => setData({ ...data, roleId: value })}
+            />
+            <InputUtil
+              label="Metode Absen"
+              value={data.absen_method}
+              type="option"
+              options={[
+                { label: "BUTTON", value: "BUTTON" },
+                { label: "FACE", value: "FACE" },
+              ]}
+              layout="horizontal"
+              onchage={(value: string) =>
+                setData({ ...data, absen_method: value as any })
+              }
+            />
+          </div>
+          <div className="flex-1 flex flex-col gap-2">
+            <Divider style={{ margin: 5 }}>Tunjangan & Potongan</Divider>
+            <div className="flex flex-col gap-2">
+              {data.UserCost?.filter((u) => !u.end_at).map((uc, uci) => (
+                <div
+                  key={"allowance" + uci}
+                  className="flex gap-2 flex-wrap justify-between items-center"
+                >
+                  <div className="flex-1">
+                    <Select
+                      style={{ width: "100%" }}
+                      value={uc.type}
+                      options={[
+                        { label: "Tunjangan", value: "PENAMBAHAN" },
+                        { label: "Potongan", value: "PENGURANGAN" },
+                      ]}
+                      onChange={(e) =>
+                        setData({
+                          ...data,
+                          UserCost: data.UserCost?.map((u, i) => ({
+                            ...u,
+                            ...(uci === i && { type: e }),
+                          })),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      width={"100%"}
+                      placeholder="Nama"
+                      value={uc.name}
+                      onChange={(e) =>
+                        setData({
+                          ...data,
+                          UserCost: data.UserCost?.map((u, i) => ({
+                            ...u,
+                            ...(uci === i && { name: e.target.value }),
+                          })),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Select
+                      style={{ width: "100%" }}
+                      value={uc.nominal_type}
+                      options={[
+                        { label: "Rupiah", value: "RUPIAH" },
+                        { label: "Persentase", value: "PERCENT" },
+                      ]}
+                      onChange={(e) =>
+                        setData({
+                          ...data,
+                          UserCost: data.UserCost?.map((u, i) => ({
+                            ...u,
+                            ...(uci === i && { nominal_type: e }),
+                          })),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      width={"100%"}
+                      placeholder="Nominal"
+                      type={"text"}
+                      value={
+                        uc.nominal_type === "RUPIAH"
+                          ? IDRFormat(uc.nominal)
+                          : uc.nominal
+                      }
+                      onChange={(e) => {
+                        const inputValue = e.target.value;
+                        // Ganti koma ke titik untuk parsing
+                        const normalizedValue = inputValue.replace(",", ".");
 
-                      setData({
-                        ...data,
-                        UserCost: data.UserCost?.map((u, i) => {
-                          if (uci === i) {
-                            if (u.nominal_type === "RUPIAH") {
-                              return {
-                                ...u,
-                                nominal: Number(IDRToNumber(inputValue || "0")), // Pastikan Number
-                              };
-                            } else {
-                              // Regex untuk mengizinkan angka dan satu titik/koma desimal
-                              if (
-                                /^-?\d*[.,]?\d*$/.test(inputValue) ||
-                                inputValue === ""
-                              ) {
+                        setData({
+                          ...data,
+                          UserCost: data.UserCost?.map((u, i) => {
+                            if (uci === i) {
+                              if (u.nominal_type === "RUPIAH") {
                                 return {
                                   ...u,
-                                  // Gunakan Number() atau parseFloat()
-                                  // Jika input kosong, set ke 0
-                                  nominal:
-                                    inputValue === ""
-                                      ? 0
-                                      : Number(normalizedValue),
+                                  nominal: Number(
+                                    IDRToNumber(inputValue || "0"),
+                                  ), // Pastikan Number
                                 };
+                              } else {
+                                // Regex untuk mengizinkan angka dan satu titik/koma desimal
+                                if (
+                                  /^-?\d*[.,]?\d*$/.test(inputValue) ||
+                                  inputValue === ""
+                                ) {
+                                  return {
+                                    ...u,
+                                    // Gunakan Number() atau parseFloat()
+                                    // Jika input kosong, set ke 0
+                                    nominal:
+                                      inputValue === ""
+                                        ? 0
+                                        : Number(normalizedValue),
+                                  };
+                                }
                               }
                             }
-                          }
-                          return u;
-                        }),
-                      });
-                    }}
-                  />
+                            return u;
+                          }),
+                        });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Button
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      danger
+                      onClick={() => {
+                        // Langsung hapus dari array, baik item baru maupun yang sudah ada
+                        setData({
+                          ...data,
+                          UserCost: data.UserCost?.filter((_, i) => i !== uci),
+                        });
+                      }}
+                    ></Button>
+                  </div>
                 </div>
-                <div>
-                  <Button
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    danger
-                    onClick={() => {
-                      // Langsung hapus dari array, baik item baru maupun yang sudah ada
-                      setData({
-                        ...data,
-                        UserCost: data.UserCost?.filter((_, i) => i !== uci),
-                      });
-                    }}
-                  ></Button>
-                </div>
+              ))}
+              {AddButton("PENAMBAHAN")}
+              <div className="text-blue-500 italic text-xs mt-4">
+                !Kosongkan password jika tidak ingin dirubah
               </div>
-            ))}
-            {AddButton("PENAMBAHAN")}
-            <div className="text-blue-500 italic text-xs mt-4">
-              !Kosongkan password jika tidak ingin dirubah
             </div>
           </div>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 };

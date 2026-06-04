@@ -7,7 +7,6 @@ import {
   FormInput,
   ClipboardPlus,
   Hash,
-  Calendars,
   Key,
   SquareDashedKanbanIcon,
   Users,
@@ -17,6 +16,8 @@ import {
   Gift,
   FormInputIcon,
   Calendar,
+  HandCoins,
+  NotebookPen,
 } from "lucide-react";
 import type { IMenu } from "./interface";
 import {
@@ -155,9 +156,9 @@ export const menus: IMenu[] = [
     ],
   },
   {
-    name: "Call Report",
+    name: "Collection Management",
     path: "/app/callreport",
-    icon: <ClipboardPlus size={20} />,
+    icon: <HandCoins size={20} />,
     need_access: true,
     children: [
       {
@@ -168,61 +169,70 @@ export const menus: IMenu[] = [
         can_access: ["read"],
       },
       {
+        name: "Daftar Tagihan",
+        path: "/app/callreport/tagihan",
+        icon: <TagsOutlined size={15} />,
+        need_access: true,
+        can_access: ["read", "write", "update", "delete"],
+      },
+      {
+        name: "Call Report",
+        path: "/app/callreport/",
+        icon: <NotebookPen size={15} />,
+        need_access: true,
+        children: [
+          {
+            name: "Jenis Kunjungan",
+            path: "/app/callreport/category",
+            icon: <Hash size={15} />,
+            need_access: true,
+            can_access: ["read", "write", "update", "delete"],
+          },
+          {
+            name: "Tujuan Kunjungan",
+            path: "/app/callreport/purpose",
+            icon: <Hash size={15} />,
+            need_access: true,
+            can_access: ["read", "write", "update", "delete"],
+          },
+          {
+            name: "Status Kunjungan",
+            path: "/app/callreport/status",
+            icon: <Hash size={15} />,
+            need_access: true,
+            can_access: ["read", "write", "update", "delete"],
+          },
+          {
+            name: "Rencana Kunjungan",
+            path: "/app/callreport/visit_plan",
+            icon: <FormInput size={15} />,
+            need_access: true,
+            can_access: ["read", "write", "update", "delete"],
+          },
+          {
+            name: "Hasil Kunjungan",
+            path: "/app/callreport/visit",
+            icon: <FormInput size={15} />,
+            need_access: true,
+            can_access: ["read", "write", "update", "delete", "download"],
+          },
+        ],
+      },
+      {
         name: "Laporan Kredit",
         path: "/app/callreport/laporan",
         icon: <FileText size={15} />,
         need_access: true,
         can_access: ["read", "download"],
       },
-      {
-        name: "Jenis Kunjungan",
-        path: "/app/callreport/category",
-        icon: <Hash size={15} />,
-        need_access: true,
-        can_access: ["read", "write", "update", "delete"],
-      },
-      {
-        name: "Tujuan Kunjungan",
-        path: "/app/callreport/purpose",
-        icon: <Hash size={15} />,
-        need_access: true,
-        can_access: ["read", "write", "update", "delete"],
-      },
-      {
-        name: "Status Kunjungan",
-        path: "/app/callreport/status",
-        icon: <Hash size={15} />,
-        need_access: true,
-        can_access: ["read", "write", "update", "delete"],
-      },
-      {
-        name: "Rencana Kunjungan",
-        path: "/app/callreport/visit_plan",
-        icon: <FormInput size={15} />,
-        need_access: true,
-        can_access: ["read", "write", "update", "delete"],
-      },
-      {
-        name: "Hasil Kunjungan",
-        path: "/app/callreport/visit",
-        icon: <FormInput size={15} />,
-        need_access: true,
-        can_access: ["read", "write", "update", "delete", "download"],
-      },
-      {
-        name: "Daftar Tagihan",
-        path: "/app/callreport/debitur",
-        icon: <Calendars size={15} />,
-        need_access: true,
-        can_access: ["read", "write", "update", "delete"],
-      },
-      {
-        name: "Tagihan",
-        path: "/app/callreport/tagihan",
-        icon: <TagsOutlined size={15} />,
-        need_access: true,
-        can_access: ["read", "write", "update", "delete"],
-      },
+
+      // {
+      //   name: "Daftar Tagihan",
+      //   path: "/app/callreport/debitur",
+      //   icon: <Calendars size={15} />,
+      //   need_access: true,
+      //   can_access: ["read", "write", "update", "delete"],
+      // },
     ],
   },
   {

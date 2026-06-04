@@ -10,7 +10,6 @@ import {
   Calendar,
 } from "lucide-react";
 import AppRouter from "./AppRouter";
-import { menus } from "../libs/list_app";
 import useContext from "../libs/context";
 import { Modal, Dropdown } from "antd";
 import { Link, useNavigate } from "react-router-dom";
@@ -32,10 +31,10 @@ export default function MainLayout({
   );
   const [openAbsen, setOpenAbse] = useState(false);
 
-  const toggleSubMenu = (name: string) => {
+  const toggleSubMenu = (key: string) => {
     setOpenMenus((prev) => ({
       ...prev,
-      [name]: !prev[name], // Sekarang TypeScript tahu ini boolean
+      [key]: !prev[key],
     }));
   };
 
@@ -97,61 +96,15 @@ export default function MainLayout({
 
         {/* NAVIGATION */}
         <nav className="flex-1 px-4 mt-4 space-y-2 overflow-y-auto custom-scrollbar">
-          {menus &&
-            getMenu().map((m: any, i: any) => {
-              const hasChildren = m.children && m.children.length > 0;
-              const isOpen = openMenus[m.name];
-
-              return (
-                <div key={i} className="w-full">
-                  {/* Menu Utama atau Toggle Parent */}
-                  <Link
-                    to={hasChildren ? "#" : m.path}
-                    onClick={(e) => {
-                      if (hasChildren) {
-                        e.preventDefault();
-                        toggleSubMenu(m.name);
-                      }
-                    }}
-                    className={`
-              w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold transition-all 
-              text-slate-500! hover:bg-slate-50 hover:text-slate-800!
-              ${isCollapsed ? "justify-center" : "justify-between"}
-              ${!hasChildren && !isCollapsed ? "" : ""}
-            `}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="shrink-0">{m.icon}</span>
-                      {!isCollapsed && <span>{m.name}</span>}
-                    </div>
-
-                    {/* Icon Panah untuk Children */}
-                    {hasChildren && !isCollapsed && (
-                      <ChevronRight
-                        size={14}
-                        className={`transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
-                      />
-                    )}
-                  </Link>
-
-                  {/* Rendering Sub-Menu (Children) */}
-                  {hasChildren && isOpen && !isCollapsed && (
-                    <div className="mt-1 ml-9 flex flex-col gap-1 border-l border-slate-100 pl-2">
-                      {m.children &&
-                        m.children.map((child: any, idx: number) => (
-                          <Link
-                            key={idx}
-                            to={child.path}
-                            className="px-3 py-2 text-xs font-semibold text-slate-400! hover:text-orange-500! transition-colors rounded-lg hover:bg-orange-50 flex gap-2 items-center"
-                          >
-                            {child.icon} <span>{child.name}</span>
-                          </Link>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          {getMenu().map((m: any, i: number) => (
+            <SidebarMenuItem
+              key={`${m.path}-${m.name}-${i}`}
+              item={m}
+              isCollapsed={isCollapsed}
+              openMenus={openMenus}
+              toggleSubMenu={toggleSubMenu}
+            />
+          ))}
         </nav>
 
         {/* LOGOUT BUTTON REMOVED - MOVED TO HEADER */}
@@ -270,6 +223,77 @@ export default function MainLayout({
           user={user}
           config={absence_config}
         />
+      )}
+    </div>
+  );
+}
+
+function SidebarMenuItem({
+  item,
+  level = 0,
+  isCollapsed,
+  openMenus,
+  toggleSubMenu,
+}: {
+  item: any;
+  level?: number;
+  isCollapsed: boolean;
+  openMenus: Record<string, boolean>;
+  toggleSubMenu: (key: string) => void;
+}) {
+  const hasChildren = item.children && item.children.length > 0;
+
+  // Pakai path + name supaya key tidak bentrok kalau ada nama menu yang sama
+  const menuKey = `${item.path}-${item.name}`;
+  const isOpen = openMenus[menuKey];
+
+  return (
+    <div className="w-full">
+      <Link
+        to={hasChildren ? "#" : item.path}
+        onClick={(e) => {
+          if (hasChildren) {
+            e.preventDefault();
+            toggleSubMenu(menuKey);
+          }
+        }}
+        className={`
+          w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-bold transition-all
+          text-slate-500! hover:bg-slate-50 hover:text-slate-800!
+          ${isCollapsed ? "justify-center" : "justify-between"}
+        `}
+        style={{
+          paddingLeft: !isCollapsed ? `${12 + level * 14}px` : undefined,
+        }}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="shrink-0">{item.icon}</span>
+          {!isCollapsed && <span className="truncate">{item.name}</span>}
+        </div>
+
+        {hasChildren && !isCollapsed && (
+          <ChevronRight
+            size={14}
+            className={`transition-transform duration-200 ${
+              isOpen ? "rotate-90" : ""
+            }`}
+          />
+        )}
+      </Link>
+
+      {hasChildren && isOpen && !isCollapsed && (
+        <div className="mt-1 flex flex-col gap-1 border-l border-slate-100">
+          {item.children.map((child: any, idx: number) => (
+            <SidebarMenuItem
+              key={`${child.path}-${child.name}-${idx}`}
+              item={child}
+              level={level + 1}
+              isCollapsed={isCollapsed}
+              openMenus={openMenus}
+              toggleSubMenu={toggleSubMenu}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

@@ -109,9 +109,9 @@ export default function DashboardEarsip() {
         const matrixReport = producttype.map((pt: any) => {
           let typeSubmissionCount = 0;
           let typeTotalValue = 0;
-          const isFunding =
-            pt.name.toUpperCase().includes("TABUNGAN") ||
-            pt.name.toUpperCase().includes("DEPOSITO");
+          // const isFunding =
+          //   pt.name.toUpperCase().includes("TABUNGAN") ||
+          //   pt.name.toUpperCase().includes("DEPOSITO");
 
           // Ambil aturan jumlah file wajib pada tipe produk ini
           const requiredFileCount = pt.ProductTypeFile?.length || 0;
@@ -124,15 +124,14 @@ export default function DashboardEarsip() {
             subList.forEach((s: ISubmission) => {
               const val = s.value || 0;
               productValue += val;
+              totalFunding += val;
 
               // Masuk kalkulasi file compliance
               totalRequiredFiles += requiredFileCount;
               totalUploadedFiles += s.Files?.length || 0;
 
               // Akumulasi nominal global berdasarkan jenis produk
-              if (isFunding) {
-                totalFunding += val;
-              } else {
+              if (s.approve_status !== "LUNAS") {
                 totalLending += val;
               }
 
@@ -164,7 +163,12 @@ export default function DashboardEarsip() {
           };
         });
 
-        setPortfolioMatrix(matrixReport);
+        setPortfolioMatrix(
+          matrixReport.sort(
+            (a: { totalValue: number }, b: { totalValue: number }) =>
+              b.totalValue - a.totalValue,
+          ),
+        );
 
         // ==================================================
         // 2. ANALISIS ENTITAS EKSTERNAL (MITRA, INS, PAY OFFICE)
@@ -185,9 +189,24 @@ export default function DashboardEarsip() {
             .filter((e) => e.volume > 0);
 
         setExternalEntities({
-          mitraDist: formatExternal(mitra),
-          asuransiDist: formatExternal(asuransi),
-          payOfficeDist: formatExternal(payoffice),
+          mitraDist: formatExternal(
+            mitra.sort(
+              (a: any, b: any) =>
+                b.Submission?.length - a.Submission?.length || 0,
+            ),
+          ),
+          asuransiDist: formatExternal(
+            asuransi.sort(
+              (a: any, b: any) =>
+                b.Submission?.length - a.Submission?.length || 0,
+            ),
+          ),
+          payOfficeDist: formatExternal(
+            payoffice.sort(
+              (a: any, b: any) =>
+                b.Submission?.length - a.Submission?.length || 0,
+            ),
+          ),
         });
 
         // ==================================================
@@ -253,8 +272,7 @@ export default function DashboardEarsip() {
             Dashboard Ekosistem Portofolio & E-Arsip
           </h2>
           <p className="text-xs text-slate-400">
-            Analisis matriks komparatif produk Funding (Tabungan, Deposito) vs
-            Lending (Kredit) & Tata Kelola Dokumen
+            Analisis matriks komparatif produk Kredit & Tata Kelola Dokumen
           </p>
         </div>
         <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm self-start">
@@ -271,7 +289,7 @@ export default function DashboardEarsip() {
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
           <div className="space-y-1">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Total CIF Debitur
+              Total Nasabah Kredit
             </p>
             <h3 className="text-2xl font-bold text-slate-800">
               {globalMetrics.totalDebitur}{" "}
@@ -288,7 +306,7 @@ export default function DashboardEarsip() {
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
           <div className="space-y-1">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Total Rekening Arsip
+              Total Rekening Kredit
             </p>
             <h3 className="text-2xl font-bold text-slate-800">
               {globalMetrics.totalSubmission}{" "}
@@ -304,13 +322,13 @@ export default function DashboardEarsip() {
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
           <div className="space-y-1">
             <p className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">
-              Volume Funding (DPK)
+              Total Plafond Kredit
             </p>
             <h3 className="text-xl font-bold text-slate-800">
               {formatIDR(globalMetrics.totalValueFunding)}
             </h3>
             <p className="text-[10px] text-slate-400 font-medium">
-              Akumulasi Tabungan + Deposito
+              Plafond Penyaluran Kredit
             </p>
           </div>
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
@@ -328,7 +346,7 @@ export default function DashboardEarsip() {
               {formatIDR(globalMetrics.totalValueLending)}
             </h3>
             <p className="text-[10px] text-slate-400 font-medium">
-              Plafond Penyaluran Kredit
+              Plafond Kredit Aktif
             </p>
           </div>
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
@@ -428,8 +446,8 @@ export default function DashboardEarsip() {
       <div className="bg-slate-100/50 p-5 rounded-2xl border border-slate-200/60 space-y-4">
         <div className="px-1">
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-slate-500" /> 4 Pilar Utama
-            Kontrol Status Administrasi Arsip
+            <CheckCircle2 className="w-4 h-4 text-slate-500" />
+            Kontrol Status Administrasi Arsip Kredit
           </h3>
         </div>
 
@@ -437,7 +455,7 @@ export default function DashboardEarsip() {
           {/* Pilar 1: Approve Status Nasabah */}
           <div className="bg-white p-4 rounded-xl shadow-sm flex flex-col justify-between">
             <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-              1. Status Nasabah (Approve)
+              1. Status Kredit
             </h4>
             <div className="h-28">
               <ResponsiveContainer width="100%" height="100%">
@@ -478,7 +496,7 @@ export default function DashboardEarsip() {
           {/* Pilar 2: Status Dokumen */}
           <div className="bg-white p-4 rounded-xl shadow-sm flex flex-col justify-between">
             <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-              2. Status Validasi Dokumen
+              2. Status Dokumen Kredit
             </h4>
             <div className="h-28">
               <ResponsiveContainer width="100%" height="100%">
@@ -560,7 +578,7 @@ export default function DashboardEarsip() {
           {/* Pilar 4: Status Flagging */}
           <div className="bg-white p-4 rounded-xl shadow-sm flex flex-col justify-between">
             <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-              4. Status Flagging Berkas
+              4. Status Flagging
             </h4>
             <div className="h-28">
               <ResponsiveContainer width="100%" height="100%">

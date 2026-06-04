@@ -507,7 +507,7 @@ export interface IFileVisit {
 }
 
 export interface IExportData {
-  [key: string]: string | number | null | undefined;
+  [key: string]: any;
 }
 
 export interface IPTKP {

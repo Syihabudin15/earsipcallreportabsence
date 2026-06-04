@@ -68,6 +68,10 @@ export const InputUtil = ({
             disabled={disabled}
             prefix={prefix}
             suffix={suffix}
+            autoComplete=""
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             placeholder={placeholder}
             style={{ color: "black" }}
             allowClear
@@ -99,6 +103,10 @@ export const InputUtil = ({
             disabled={disabled}
             prefix={prefix}
             suffix={suffix}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             style={{ color: "black" }}
             placeholder={placeholder}
             allowClear
@@ -154,6 +162,10 @@ export const InputUtil = ({
             disabled={disabled}
             prefix={prefix}
             suffix={suffix}
+            autoComplete=""
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             placeholder={placeholder}
             style={{ color: "black" }}
             allowClear

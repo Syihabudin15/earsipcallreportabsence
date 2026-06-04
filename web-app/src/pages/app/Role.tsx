@@ -845,23 +845,25 @@ const UpsertData = ({
   );
 };
 
-const defaultMenu: IPermission[] = menus
-  .filter((u) => u.need_access)
-  .flatMap((m) => {
-    if (m.children && m.children.length > 0) {
-      return m.children
-        .filter((c) => c.need_access)
-        .map((c) => ({
-          ...c,
-          access: [],
-        }));
-    } else {
-      return {
-        ...m,
-        access: [],
-      };
-    }
+const flattenMenus = (items: any[]): IPermission[] => {
+  return items.flatMap((item) => {
+    const current =
+      item.need_access && item.can_access
+        ? [
+            {
+              ...item,
+              access: [],
+            },
+          ]
+        : [];
+
+    const children = item.children ? flattenMenus(item.children) : [];
+
+    return [...current, ...children];
   });
+};
+
+const defaultMenu: IPermission[] = flattenMenus(menus);
 function MergeMenu(allmenus: IPermission[], usermenus: IPermission[]) {
   const mergedMenu = allmenus.map((item) => {
     const found = usermenus.find((r) => r.path === item.path);

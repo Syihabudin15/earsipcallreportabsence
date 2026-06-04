@@ -44,51 +44,53 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      await api
-        .request({
-          method: "GET",
-          url: "/submission",
-        })
-        .then((res) => setSubmissions(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: "/visit_category",
-        })
-        .then((res) => setVisitCategories(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: "/visit_status",
-        })
-        .then((res) => setVisitStatuses(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: "/visit_purpose",
-        })
-        .then((res) => setVisitPurposes(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: "/user",
-          params: { limit: 1000 },
-        })
-        .then((res) => setUsers(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: "/mitra",
-          params: { limit: 1000 },
-        })
-        .then((res) => setMitras(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: "/debitur",
-          params: { limit: 10000 },
-        })
-        .then((res) => setDebts(res.data.data));
+      await Promise.all([
+        api
+          .request({
+            method: "GET",
+            url: "/submission",
+          })
+          .then((res) => setSubmissions(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: "/visit_category",
+          })
+          .then((res) => setVisitCategories(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: "/visit_status",
+          })
+          .then((res) => setVisitStatuses(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: "/visit_purpose",
+          })
+          .then((res) => setVisitPurposes(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: "/user",
+            params: { limit: 500 },
+          })
+          .then((res) => setUsers(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: "/mitra",
+            params: { limit: 500 },
+          })
+          .then((res) => setMitras(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: "/debitur",
+            params: { limit: 10000 },
+          })
+          .then((res) => setDebts(res.data.data)),
+      ]);
       setLoading(false);
     })();
   }, []);
@@ -345,7 +347,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
           </Col>
           <Col xs={12} md={8}>
             <InputUtil
-              label="Email"
+              label="Kolektibilitas"
               value={data.col}
               onchage={(e: string) => {
                 setData({ ...data, col: e });
