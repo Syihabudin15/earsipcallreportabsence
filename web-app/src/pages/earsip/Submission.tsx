@@ -316,6 +316,20 @@ export default function DataSubmission() {
       },
     },
     {
+      title: "Tgl Jaminan",
+      key: "guarantee_date",
+      dataIndex: "guarantee_date",
+      render(_value, record, _index) {
+        return (
+          <div>
+            {record.guarantee_date
+              ? moment(record.guarantee_date).format("DD/MM/YYYY")
+              : "-"}
+          </div>
+        );
+      },
+    },
+    {
       title: "Files",
       key: "files",
       dataIndex: "files",

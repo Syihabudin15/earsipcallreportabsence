@@ -72,6 +72,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       where: querywhere,
       include: {
         Debitur: { include: { SubmissionType: true } },
+        Submission: { include: { Debitur: true, Product: true } },
         VisitCategory: true,
         VisitStatus: true,
         VisitPurpose: true,

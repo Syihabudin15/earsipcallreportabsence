@@ -273,7 +273,16 @@ const generate = (record: IVisit) => {
         ${GeoHtml}
         ${photosHtml}
       </div>
-
+      ${
+        record.files && record.files.length !== 0
+          ? `<div>
+        <p class="italic">List link files:</p>
+        <ul>
+            ${(record.files || []).map((f) => `<li>${f.name} : <a href="${f.url}">${f.url}</a></li>`).join()}
+        </ul>
+      </div>`
+          : ""
+      }
     </body>
     </html>
   `;

@@ -495,7 +495,6 @@ export default function DataVisit() {
             )}
             <Button
               size="small"
-              type="primary"
               icon={<PrinterOutlined />}
               onClick={() =>
                 ExportData(
@@ -508,7 +507,7 @@ export default function DataVisit() {
                     tujuan_kunjungan: d.VisitPurpose?.name,
                     hasil_kunjungan: d.VisitStatus?.name,
                     tanggal: moment(d.date_action).format("DD/MM/YYYY HH:mm"),
-                    nilai: d.value,
+                    nilai_tagihan: d.value,
                     nilai_realisasi: d.realize_value,
                     pembicaraan: d.summary,
                     tindak_lanjut: d.next_action,

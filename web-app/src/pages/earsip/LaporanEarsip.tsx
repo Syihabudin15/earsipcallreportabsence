@@ -354,7 +354,7 @@ export default function LaporanEarsip() {
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
           <div className="space-y-1">
             <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider">
-              Outstanding Lending
+              Total Outstanding
             </p>
             <h3 className="text-xl font-bold text-slate-800">
               {formatIDR(globalMetrics.totalValueLending)}

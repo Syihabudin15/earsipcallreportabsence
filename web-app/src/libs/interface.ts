@@ -399,6 +399,7 @@ export interface ISubmission {
   approve_status: EArsipStatus;
   flagging_status: EFlaggingStatus;
   drawer_code: string;
+  guarantee_date: Date | null;
 
   status: boolean;
   created_at: Date;

@@ -626,6 +626,26 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
             </Col>
             <Col xs={12} md={8}>
               <InputUtil
+                label="Tanggal Jatuh Tempo Jaminan"
+                required
+                value={moment(data.guarantee_date).format("YYYY-MM-DD")}
+                onchage={(e: string) => {
+                  setData({
+                    ...data,
+                    guarantee_date: new Date(e),
+                  });
+                  record &&
+                    handleChangeRecord(
+                      "edit tgl jatemp jaminan",
+                      activities,
+                      setActivities,
+                    );
+                }}
+                type="date"
+              />
+            </Col>
+            <Col xs={12} md={8}>
+              <InputUtil
                 label="Mitra"
                 value={data.mitraId}
                 onchage={(e: string) => {
@@ -988,6 +1008,7 @@ const defaultData: ISubmission = {
   doc_status: "PENDING",
   approve_status: "PENDING",
   flagging_status: "PENDING",
+  guarantee_date: null,
   status: true,
   created_at: new Date(),
   updated_at: new Date(),

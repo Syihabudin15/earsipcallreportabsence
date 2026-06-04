@@ -242,6 +242,7 @@ model Submission {
   doc_status       EGuaranteeStatus @default(PENDING)
   approve_status   EArsipStatus     @default(PENDING)
   flagging_status  EFlaggingStatus  @default(PENDING)
+  guarantee_date   DateTime?
 
   status            Boolean             @default(true)
   created_at        DateTime            @default(now())
