@@ -6,8 +6,8 @@ moment.locale("id");
 
 const generate = (record: IVisit) => {
   const safeStr = (str?: string | null) => str || "-";
+  const logoSrc = "/assets/logo.png";
 
-  // Generate Comments HTML
   const commentsHtml = record.coments?.length
     ? `
       <div class="section">
@@ -30,7 +30,6 @@ const generate = (record: IVisit) => {
       </div>`
     : "";
 
-  // Generate Photos HTML
   const photosHtml = record.files?.length
     ? `
       <div class="section" style="page-break-inside: avoid;">
@@ -50,7 +49,6 @@ const generate = (record: IVisit) => {
       </div>`
     : "";
 
-  // Perbaikan Geo HTML menggunakan iframe
   const GeoHtml = record.geo
     ? `
       <div class="section" style="page-break-inside: avoid;">
@@ -81,8 +79,8 @@ const generate = (record: IVisit) => {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Detail Kunjungan - ${safeStr(record.Debitur?.fullname)}</title>
       <style>
-        /* Base Print Styles */
         @page { size: A4 portrait; margin: 10mm 15mm; }
+
         body { 
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
           color: #1f2937; 
@@ -93,29 +91,67 @@ const generate = (record: IVisit) => {
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
+
         * { box-sizing: border-box; }
-        
-        /* Header */
+
         .header { 
           background-color: #1d4ed8; 
           color: white; 
-          padding: 15px 20px; 
+          padding: 14px 18px; 
           border-radius: 8px; 
           margin-bottom: 15px; 
           display: flex;
           justify-content: space-between;
           align-items: center;
+          gap: 16px;
         }
-        .header h1 { margin: 0; font-size: 20px; font-weight: 600; }
-        .header-info { text-align: right; font-size: 11px; opacity: 0.9; }
-        .header-info p { margin: 2px 0; }
 
-        /* Grid Layouts */
+        .brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+        }
+
+        .brand-logo {
+          width: 52px;
+          height: 52px;
+          object-fit: contain;
+          background: #ffffff;
+          border-radius: 8px;
+          padding: 5px;
+          flex-shrink: 0;
+        }
+
+        .brand-title h1 {
+          margin: 0;
+          font-size: 19px;
+          font-weight: 700;
+          line-height: 1.2;
+        }
+
+        .brand-title p {
+          margin: 3px 0 0;
+          font-size: 11px;
+          opacity: 0.9;
+        }
+
+        .header-info {
+          text-align: right;
+          font-size: 11px;
+          opacity: 0.95;
+          flex-shrink: 0;
+        }
+
+        .header-info p {
+          margin: 2px 0;
+        }
+
         .grid { display: grid; gap: 12px; }
+        .grid-1 { grid-template-columns: 1fr; }
         .grid-2 { grid-template-columns: repeat(2, 1fr); }
         .grid-4 { grid-template-columns: repeat(4, 1fr); }
-        
-        /* Sections */
+
         .section { 
           border: 1px solid #e5e7eb; 
           border-radius: 8px; 
@@ -123,6 +159,7 @@ const generate = (record: IVisit) => {
           background: #fff;
           page-break-inside: avoid;
         }
+
         .section-title { 
           background-color: #f1f5f9; 
           font-weight: 600; 
@@ -133,9 +170,9 @@ const generate = (record: IVisit) => {
           border-top-left-radius: 8px;
           border-top-right-radius: 8px;
         }
+
         .section-content { padding: 12px 15px; }
-        
-        /* Typography & Fields */
+
         .field-label { 
           font-size: 9px; 
           text-transform: uppercase; 
@@ -145,40 +182,153 @@ const generate = (record: IVisit) => {
           display: block;
           letter-spacing: 0.5px;
         }
-        .field-value { font-size: 12px; font-weight: 500; color: #0f172a; }
-        .text-muted { color: #64748b; font-size: 10px; }
-        
-        /* Badges & Special Boxes */
+
+        .field-value {
+          font-size: 12px;
+          font-weight: 500;
+          color: #0f172a;
+        }
+
+        .text-muted {
+          color: #64748b;
+          font-size: 10px;
+        }
+
         .badge { 
-          display: inline-block; padding: 3px 6px; border-radius: 4px; 
-          font-size: 10px; font-weight: 600; border: 1px solid #e5e7eb; background: #f8fafc;
+          display: inline-block;
+          padding: 3px 6px;
+          border-radius: 4px; 
+          font-size: 10px;
+          font-weight: 600;
+          border: 1px solid #e5e7eb;
+          background: #f8fafc;
+          margin-right: 4px;
+          margin-top: 2px;
         }
+
         .info-box {
-          background-color: #f8fafc; padding: 10px; border-radius: 6px; 
-          border: 1px solid #e2e8f0; white-space: pre-wrap; font-size: 11px;
+          background-color: #f8fafc;
+          padding: 10px;
+          border-radius: 6px; 
+          border: 1px solid #e2e8f0;
+          white-space: pre-wrap;
+          font-size: 11px;
         }
-        .status-box { border-left: 4px solid #22c55e; background-color: #f0fdf4; }
-        .action-box { border-left: 4px solid #f97316; background-color: #fff7ed; }
-        .value-highlight { font-size: 15px; font-weight: 700; color: #4338ca; }
 
-        /* Comments */
+        .status-box {
+          border-left: 4px solid #22c55e;
+          background-color: #f0fdf4;
+        }
+
+        .action-box {
+          border-left: 4px solid #f97316;
+          background-color: #fff7ed;
+        }
+
+        .value-highlight {
+          font-size: 15px;
+          font-weight: 700;
+          color: #4338ca;
+        }
+
         .comment-item { 
-          border-left: 3px solid #cbd5e1; padding-left: 10px; margin-bottom: 10px; 
+          border-left: 3px solid #cbd5e1;
+          padding-left: 10px;
+          margin-bottom: 10px; 
         }
-        .comment-item:last-child { margin-bottom: 0; }
-        .comment-header { display: flex; justify-content: space-between; margin-bottom: 3px; }
-        .comment-body { color: #334155; white-space: pre-wrap; }
 
-        /* Photos Grid */
-        .photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .photo-item { border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px; text-align: center; }
-        .photo-item img { width: 100%; height: 100px; object-fit: cover; border-radius: 4px; margin-bottom: 4px; }
-        .photo-name { font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #475569;}
+        .comment-item:last-child {
+          margin-bottom: 0;
+        }
+
+        .comment-header {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 3px;
+          gap: 10px;
+        }
+
+        .comment-body {
+          color: #334155;
+          white-space: pre-wrap;
+        }
+
+        .photo-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 10px;
+        }
+
+        .photo-item {
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          padding: 4px;
+          text-align: center;
+        }
+
+        .photo-item img {
+          width: 100%;
+          height: 100px;
+          object-fit: cover;
+          border-radius: 4px;
+          margin-bottom: 4px;
+        }
+
+        .photo-name {
+          font-size: 9px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          color: #475569;
+        }
+
+        .file-list {
+          margin-top: 8px;
+          font-size: 10px;
+          color: #334155;
+        }
+
+        .file-list p {
+          margin: 0 0 4px;
+          font-style: italic;
+        }
+
+        .file-list ul {
+          margin: 0;
+          padding-left: 18px;
+        }
+
+        .file-list li {
+          margin-bottom: 3px;
+          word-break: break-all;
+        }
+
+        @media print {
+          .header,
+          .section,
+          .info-box,
+          .badge {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          a {
+            color: #1d4ed8;
+            text-decoration: none;
+          }
+        }
       </style>
     </head>
     <body>
       <div class="header">
-        <h1>Laporan Detail Kunjungan</h1>
+        <div class="brand">
+          <img src="${logoSrc}" alt="Logo" class="brand-logo" />
+          <div class="brand-title">
+            <h1>Laporan Detail Kunjungan</h1>
+            <p>Dokumen hasil kunjungan lapangan</p>
+          </div>
+        </div>
+
         <div class="header-info">
           <p><strong>ID Kunjungan:</strong> ${safeStr(record.id?.toString())}</p>
           <p><strong>Dicetak:</strong> ${moment().format("DD MMM YYYY HH:mm")}</p>
@@ -188,23 +338,29 @@ const generate = (record: IVisit) => {
       <div class="section">
         <div class="section-title">Informasi Debitur & Kunjungan</div>
         <div class="section-content grid grid-2">
-          <!-- Kolom Kiri -->
           <div class="grid grid-1" style="gap: 10px;">
             <div>
               <span class="field-label">Nama Debitur</span>
-              <div class="field-value" style="font-size: 14px;">${safeStr(record.Debitur?.fullname?.toUpperCase())}</div>
-              <div class="text-muted mt-1">NIK: ${safeStr(record.Debitur?.nik)} | CIF: ${safeStr(record.Debitur?.cif)}</div>
+              <div class="field-value" style="font-size: 14px;">
+                ${safeStr(record.Debitur?.fullname?.toUpperCase())}
+              </div>
+              <div class="text-muted mt-1">
+                NIK: ${safeStr(record.Debitur?.nik)} | CIF: ${safeStr(record.Debitur?.cif)}
+              </div>
             </div>
+
             <div>
               <span class="field-label">Alamat Rencana Kunjungan</span>
               <div class="field-value">${safeStr(record.Debitur?.address)}</div>
             </div>
+
             <div class="grid grid-2">
               <div>
                 <span class="field-label">Kategori / Tujuan</span>
                 <span class="badge">${safeStr(record.VisitCategory?.name)}</span>
                 <span class="badge">${safeStr(record.VisitPurpose?.name)}</span>
               </div>
+
               <div>
                 <span class="field-label">Petugas Lapangan</span>
                 <div class="field-value">${safeStr(record.User?.fullname)}</div>
@@ -212,36 +368,42 @@ const generate = (record: IVisit) => {
             </div>
           </div>
           
-          <!-- Kolom Kanan -->
           <div class="grid grid-1" style="gap: 10px;">
             <div class="grid grid-2">
               <div>
                 <span class="field-label">Tgl. Rencana</span>
                 <div class="field-value">${moment(record.date_plan).format("DD MMM YYYY")}</div>
               </div>
+
               <div>
                 <span class="field-label">Waktu Aktual</span>
                 <div class="field-value">${moment(record.date_action).format("DD MMM YYYY HH:mm")}</div>
               </div>
             </div>
+
             <div class="grid grid-2">
               <div>
                 <span class="field-label">Kontak Debitur</span>
                 <div class="field-value">📞 ${safeStr(record.Debitur?.phone)}</div>
               </div>
+
               <div>
                 <span class="field-label">Jenis Pemohon</span>
                 <span class="badge">${safeStr(record.Debitur?.SubmissionType?.name)}</span>
               </div>
             </div>
+
             <div class="grid grid-2">
               <div>
                 <span class="field-label">Nilai Tagihan</span>
                 <div class="value-highlight">Rp. ${IDRFormat(record.value || 0)}</div>
               </div>
+
               <div>
                 <span class="field-label">Nilai Realisasi</span>
-                <div class="value-highlight" style="color: #15803d;">Rp. ${IDRFormat(record.realize_value || 0)}</div>
+                <div class="value-highlight" style="color: #15803d;">
+                  Rp. ${IDRFormat(record.realize_value || 0)}
+                </div>
               </div>
             </div>
           </div>
@@ -257,11 +419,16 @@ const generate = (record: IVisit) => {
           <div class="grid grid-2">
             <div class="info-box status-box">
               <span class="field-label" style="color: #166534;">Status Kunjungan</span>
-              <div class="field-value" style="color: #15803d; font-size: 14px;">${safeStr(record.VisitStatus?.name)}</div>
+              <div class="field-value" style="color: #15803d; font-size: 14px;">
+                ${safeStr(record.VisitStatus?.name)}
+              </div>
             </div>
+
             <div class="info-box action-box">
               <span class="field-label" style="color: #c2410c;">Rencana Tindak Lanjut</span>
-              <div class="field-value" style="color: #b45309; font-size: 14px;">${safeStr(record.next_action)}</div>
+              <div class="field-value" style="color: #b45309; font-size: 14px;">
+                ${safeStr(record.next_action)}
+              </div>
             </div>
           </div>
         </div>
@@ -273,14 +440,21 @@ const generate = (record: IVisit) => {
         ${GeoHtml}
         ${photosHtml}
       </div>
+
       ${
         record.files && record.files.length !== 0
-          ? `<div>
-        <p class="italic">List link files:</p>
-        <ul>
-            ${(record.files || []).map((f) => `<li>${f.name} : <a href="${f.url}">${f.url}</a></li>`).join()}
-        </ul>
-      </div>`
+          ? `
+          <div class="file-list">
+            <p>List link files:</p>
+            <ul>
+              ${(record.files || [])
+                .map(
+                  (f) =>
+                    `<li>${safeStr(f.name)} : <a href="${f.url}">${f.url}</a></li>`,
+                )
+                .join("")}
+            </ul>
+          </div>`
           : ""
       }
     </body>
@@ -292,6 +466,7 @@ export const printDetailVisit = (record: IVisit) => {
   const htmlContent = generate(record);
 
   const w = window.open("", "_blank");
+
   if (!w) {
     alert("Popup diblokir. Mohon izinkan popup dari browser Anda.");
     return;
@@ -301,10 +476,10 @@ export const printDetailVisit = (record: IVisit) => {
   w.document.write(htmlContent);
   w.document.close();
 
-  // Beri waktu sedikit lebih lama (500ms) agar iframe Google Maps sempat ter-load sebelum print dialog muncul
   w.onload = function () {
     setTimeout(() => {
+      w.focus();
       w.print();
-    }, 500);
+    }, 700);
   };
 };

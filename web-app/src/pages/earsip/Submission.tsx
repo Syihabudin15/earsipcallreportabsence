@@ -46,7 +46,7 @@ export default function DataSubmission() {
   const [loading, setLoading] = useState(false);
   const [pageprops, setPageprops] = useState<IPageProps<ISubmission>>({
     page: 1,
-    limit: 50,
+    limit: 10,
     data: [],
     total: 0,
     search: "",
@@ -849,7 +849,7 @@ export default function DataSubmission() {
                 limit: pageSize,
               }));
             },
-            pageSizeOptions: [50, 100, 500, 1000, 10000],
+            pageSizeOptions: [10, 25, 50, 100, 500, 1000, 10000],
             size: "small",
           }}
           expandable={{

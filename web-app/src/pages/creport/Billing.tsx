@@ -20,6 +20,7 @@ import type {
   IMitra,
   IPageProps,
   IProduct,
+  IUser,
 } from "../../libs/interface";
 import type { HookAPI } from "antd/es/modal/useModal";
 import api from "../../libs/api";
@@ -61,6 +62,7 @@ export default function DataBilling() {
   const [showProcess, setShowProcess] = useState(false);
   const [showUpdate, setShowUpdate] = useState(false);
   const [updateRecord, setUpdateRecord] = useState<IBilling | undefined>();
+  const [users, setUsers] = useState<IUser[]>([]);
   const { modal } = App.useApp();
   const { hasAccess } = useContext((state: any) => state);
 
@@ -120,7 +122,7 @@ export default function DataBilling() {
         .request({
           method: "GET",
           url: "/mitra",
-          params: { limit: 10000 },
+          params: { limit: 5000 },
         })
         .then((res) => setMitras(res.data.data));
       await api
@@ -131,6 +133,13 @@ export default function DataBilling() {
         .then((res) =>
           setProducts(res.data.data.flatMap((d: any) => d.Product)),
         );
+      await api
+        .request({
+          method: "GET",
+          url: "/user",
+          params: { limit: 500 },
+        })
+        .then((res) => setUsers(res.data.data));
     })();
   }, []);
 
@@ -559,6 +568,7 @@ export default function DataBilling() {
           record={updateRecord}
           getData={getData}
           hook={modal}
+          users={users}
         />
       )}
     </div>
@@ -818,14 +828,12 @@ const ProcessData = ({
 
     setLoading(true);
     try {
-      const today = new Date().toISOString().split("T")[0];
       const updatePromises = selectedRows.map((record) =>
         api.request({
           url: `${import.meta.env.VITE_API_URL}/billing/${record.id}`,
           method: "PUT",
           data: {
-            paid_date: new Date(today),
-            realize_value: record.value,
+            realize_value: billStatus === "BAYAR" ? record.realize_value : 0,
             bill_status: billStatus,
           },
           headers: { "Content-Type": "Application/json" },
@@ -884,6 +892,7 @@ const ProcessData = ({
           <li className="flex items-center gap-4">
             Status:
             <Select
+              style={{ width: 200 }}
               value={billStatus}
               onChange={(value) =>
                 setBillStatus(value as "BAYAR" | "PARTIAL" | "BELUMBAYAR")
@@ -912,16 +921,19 @@ const UpdateData = ({
   record,
   getData,
   hook,
+  users,
 }: {
   open: boolean;
   setOpen: Function;
   record: IBilling;
   getData: Function;
   hook: HookAPI;
+  users: IUser[];
 }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: record.name,
+    userId: record.userId,
     value: record.value || 0,
     realize_value: record.realize_value || 0,
     bill_date: record.bill_date ? moment(record.bill_date) : moment(),
@@ -936,6 +948,7 @@ const UpdateData = ({
         method: "PUT",
         data: {
           name: formData.name,
+          userId: formData.userId,
           value: formData.value,
           realize_value: formData.realize_value,
           bill_date: formData.bill_date.toISOString(),
@@ -1044,6 +1057,24 @@ const UpdateData = ({
               })
             }
             className="w-full px-3 py-2 border border-gray-300 rounded"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">AO</label>
+          <Select
+            optionFilterProp={"label"}
+            value={formData.userId}
+            options={users.map((u) => ({
+              label: `${u.fullname} (${u.nip})`,
+              value: u.id,
+            }))}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                userId: e,
+              })
+            }
+            style={{ width: "100%" }}
           />
         </div>
 

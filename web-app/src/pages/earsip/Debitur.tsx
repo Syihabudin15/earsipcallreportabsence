@@ -27,7 +27,7 @@ export default function DebiturEArsip() {
   const [loading, setLoading] = useState(false);
   const [pageprops, setPageprops] = useState<IPageProps<IDebitur>>({
     page: 1,
-    limit: 50,
+    limit: 10,
     data: [],
     total: 0,
     search: "",
@@ -449,7 +449,7 @@ export default function DebiturEArsip() {
                 limit: pageSize,
               }));
             },
-            pageSizeOptions: [50, 100, 500, 1000],
+            pageSizeOptions: [10, 25, 50, 100, 500, 1000],
             size: "small",
           }}
         />

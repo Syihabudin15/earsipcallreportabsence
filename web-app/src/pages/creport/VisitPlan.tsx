@@ -38,7 +38,7 @@ export default function DataVisitPlan() {
   const [loading, setLoading] = useState(false);
   const [pageprops, setPageprops] = useState<IPageProps<IVisit>>({
     page: 1,
-    limit: 50,
+    limit: 10,
     data: [],
     total: 0,
     search: "",
@@ -520,7 +520,7 @@ export default function DataVisitPlan() {
                 limit: pageSize,
               }));
             },
-            pageSizeOptions: [50, 100, 500, 1000, 10000],
+            pageSizeOptions: [10, 25, 50, 100, 500, 1000, 10000],
             size: "small",
             showSizeChanger: true,
           }}

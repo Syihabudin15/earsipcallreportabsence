@@ -705,6 +705,8 @@ export const IMPORT = async (
 
         const submissionData: any[] = [];
 
+        let nextSubmissionNumber = await prisma.submission.count({});
+
         for (const row of validRows) {
           const accountKey = normalize(row.no_rekening);
 
@@ -723,9 +725,23 @@ export const IMPORT = async (
           const insur = insuranceMap.get(normalize(row.asuransi));
           const product = productMap.get(normalize(row.produk));
 
-          if (!usr || !debt || !product) continue;
+          if (!usr || !debt || !product) {
+            console.log("SKIP ROW:", {
+              rekening: row.no_rekening,
+              usr: !!usr,
+              debt: !!debt,
+              product: !!product,
+              nama_petugas: row.nama_petugas,
+              produk: row.produk,
+              cif: row.cif,
+              nik: row.nik,
+            });
+            continue;
+          }
 
-          const id = await generateId();
+          nextSubmissionNumber++;
+
+          const id = `SID${String(nextSubmissionNumber).padStart(4, "0")}`;
 
           submissionData.push({
             id,
@@ -746,7 +762,9 @@ export const IMPORT = async (
             flagging_status: row.status_flagging,
             account_number: row.no_rekening || "-",
             created_at: parseDate(row.tanggal_dibuat),
-            guarantee_date: row.guarantee_date,
+            guarantee_date: row.guarantee_date
+              ? parseDate(row.guarantee_date)
+              : null,
           });
 
           existingAccountSet.add(accountKey);

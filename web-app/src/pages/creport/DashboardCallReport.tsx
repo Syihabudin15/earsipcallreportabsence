@@ -435,7 +435,7 @@ export default function DashboardCallReport() {
 
         {/* Ringkasan Status Tagihan */}
         <div className="space-y-4">
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-5 rounded-2xl shadow-sm border border-emerald-200 flex justify-between items-start">
+          <div className="bg-linear-to-br from-emerald-50 to-emerald-100 p-5 rounded-2xl shadow-sm border border-emerald-200 flex justify-between items-start">
             <div className="flex-1">
               <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
                 Sudah Bayar
@@ -466,7 +466,7 @@ export default function DashboardCallReport() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-5 rounded-2xl shadow-sm border border-amber-200 flex justify-between items-start">
+          <div className="bg-linear-to-br from-amber-50 to-amber-100 p-5 rounded-2xl shadow-sm border border-amber-200 flex justify-between items-start">
             <div className="flex-1">
               <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">
                 Partial / Sebagian Bayar
@@ -495,7 +495,7 @@ export default function DashboardCallReport() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-2xl shadow-sm border border-red-200 flex justify-between items-start">
+          <div className="bg-linear-to-br from-red-50 to-red-100 p-5 rounded-2xl shadow-sm border border-red-200 flex justify-between items-start">
             <div className="flex-1">
               <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">
                 Belum Bayar

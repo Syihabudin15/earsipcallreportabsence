@@ -183,259 +183,441 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 
 export const POST = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // 1. Validasi File
     if (!req.file) {
       return res.status(400).json({ message: "Mohon unggah sebuah file!" });
     }
 
-    // 2. Baca File Excel
     const workbook = xlsx.read(req.file.buffer, {
       type: "buffer",
-      cellDates: true, // Otomatis mengubah format tanggal excel menjadi objek Date JS
+      cellDates: true,
+      dateNF: "dd/mm/yyyy",
     });
 
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const jsonData = xlsx.utils.sheet_to_json(sheet);
 
-    if (jsonData.length === 0) {
-      return res
-        .status(200)
-        .json({ message: "Tidak ada data untuk diimport.", total_data: 0 });
+    if (!jsonData.length) {
+      return res.status(200).json({
+        message: "Tidak ada data untuk diimport.",
+        total_data: 0,
+      });
     }
-    const pType = await prisma.productType.findFirst({
-      where: { name: { contains: "Kredit" } },
-    });
-    // 3. PRE-FETCH DATA MASTER & URUTAN ID (Hanya 1x query di awal)
-    const [users, products, mitras, submissions, initialCount] =
-      await Promise.all([
-        prisma.user.findMany({ select: { id: true, fullname: true } }),
-        prisma.product.findMany({ select: { id: true, name: true } }),
-        prisma.mitra.findMany({ select: { id: true, name: true } }),
-        prisma.submission.findMany({
-          select: {
-            id: true,
-            account_number: true,
-            Debitur: { select: { cif: true, fullname: true, nik: true } },
-          },
-        }),
-        prisma.billing.count(), // Mengambil urutan terakhir dari database
-      ]);
 
-    // Transformasi data master ke Map (Pencarian O(1) di memori, sangat cepat)
-    const userMap = new Map(
-      users.map((u) => [u.fullname?.toLowerCase(), u.id]),
-    );
-    const productMap = new Map(
-      products.map((p) => [p.name?.toLowerCase(), p.id]),
-    );
-    const mitraMap = new Map(mitras.map((m) => [m.name?.toLowerCase(), m.id]));
-
-    // =========================================================================
-    // 3b. DETEKSI & BUAT OTOMATIS PRODUK / MITRA BARU (Mencegah Query Duplikat)
-    // =========================================================================
-    const missingProducts = new Set<string>();
-    const missingMitras = new Set<string>();
-    const missingUsers = new Set<string>();
-
-    for (let i = 0; i < jsonData.length; i++) {
-      const anyData = jsonData[i] as any;
-      const produkName = String(anyData["SEGMENTASI"] || "").trim();
-      const mitraName = String(anyData["INSTANSI"] || "").trim();
-      const aoName = String(anyData["NAMA_AO"] || "")
+    const normalize = (value: any) =>
+      String(value ?? "")
         .trim()
         .toLowerCase();
 
-      if (aoName && !userMap.has(aoName.toLowerCase())) {
-        missingUsers.add(aoName);
+    const normalizeKey = (value: any) =>
+      String(value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/[\s\-_./]+/g, "");
+
+    const text = (value: any) => String(value ?? "").trim();
+
+    const number = (value: any) => {
+      if (value === null || value === undefined || value === "") return 0;
+
+      if (typeof value === "number") return value;
+
+      const raw = String(value).trim();
+
+      // Format Indonesia: 1.234.567,89
+      if (raw.includes(",")) {
+        return Number(raw.replace(/\./g, "").replace(/,/g, ".")) || 0;
       }
 
-      if (produkName && !productMap.has(produkName.toLowerCase())) {
-        missingProducts.add(produkName);
-      }
-      if (mitraName && !mitraMap.has(mitraName.toLowerCase())) {
-        missingMitras.add(mitraName);
-      }
+      // Format angka biasa / Excel number
+      return Number(raw.replace(/\./g, "")) || 0;
+    };
+
+    const parseDate = (value: any) => {
+      if (!value) return new Date();
+      if (value instanceof Date) return value;
+
+      const parsed = moment(String(value).trim(), [
+        "DD/MM/YYYY",
+        "D/M/YYYY",
+        "YYYY-MM-DD",
+        "MM/DD/YYYY",
+      ]);
+
+      return parsed.isValid() ? parsed.toDate() : new Date();
+    };
+
+    const getExcelValue = (row: any, keyName: string) => {
+      const targetKey = normalizeKey(keyName);
+      const actualKey = Object.keys(row).find(
+        (key) => normalizeKey(key) === targetKey,
+      );
+      return actualKey ? row[actualKey] : undefined;
+    };
+
+    const normalizeBillStatus = (value: any) => {
+      const status = normalizeEnum(text(value)).trim().toUpperCase();
+      return status || "BELUM_BAYAR";
+    };
+
+    // ==================================================
+    // 1. NORMALISASI ROW EXCEL DULU
+    // ==================================================
+    const rows = (jsonData as any[])
+      .map((item: any, index: number) => {
+        const nama = text(getExcelValue(item, "NAMA"));
+        const billDate = parseDate(getExcelValue(item, "TGL_JTH_TMP"));
+
+        return {
+          rowIndex: index + 2,
+          nama,
+          aoName: text(getExcelValue(item, "NAMA_AO")),
+          produkName: text(getExcelValue(item, "SEGMENTASI")),
+          mitraName: text(getExcelValue(item, "INSTANSI")),
+          norek: text(getExcelValue(item, "NOREK")),
+          cif: text(getExcelValue(item, "CIF")),
+          nik: text(getExcelValue(item, "NO_IDENTITAS")),
+          status: normalizeBillStatus(getExcelValue(item, "STATUS")),
+          billDate,
+          startAt: parseDate(getExcelValue(item, "TGL_BUKA")),
+          endAt: parseDate(getExcelValue(item, "TGL_AKHIR_FAS")),
+          angsuran: number(getExcelValue(item, "NILAI_TGH_ANGSURAN")),
+          plafond: number(getExcelValue(item, "NILAI_FAS_ASAL")),
+          tenor: number(getExcelValue(item, "JANGKA_BLN")),
+          tungPkk: number(getExcelValue(item, "SLD_TUNGGAK_PKK")),
+          tungBga: number(getExcelValue(item, "SLD_TUNGGAK_BGA")),
+          pkk: number(getExcelValue(item, "SISA_PKK_PINJAMAN")),
+          col: text(getExcelValue(item, "KD_KOL_EFF")),
+        };
+      })
+      .filter((row) => row.nama);
+
+    if (!rows.length) {
+      return res.status(200).json({
+        message:
+          "Tidak ada data valid untuk diimport. Kolom NAMA kosong / tidak terbaca.",
+        total_data: jsonData.length,
+        inserted_data: 0,
+        sample_header: Object.keys((jsonData as any[])[0] || {}),
+      });
     }
 
-    if (missingUsers.size > 0) {
-      const userDataToInsert: Prisma.UserCreateManyInput[] = Array.from(
-        missingUsers,
-      ).map((fullname) => ({
-        fullname,
-        username: fullname.toLowerCase().replace(/\s+/g, "."),
-        password: "123456", // sesuaikan dengan model User kamu
-        status: true,
-        salary: 0,
-        ptkp: "TK0",
-        absen_method: "BUTTON",
-        roleId: "RL02",
-      }));
+    const unique = (arr: string[]) =>
+      Array.from(
+        new Set(arr.map((v) => text(v)).filter((v) => v && v !== "-")),
+      );
 
-      await prisma.user.createMany({
-        data: userDataToInsert,
-        skipDuplicates: true,
+    const aoNames = unique(rows.map((r) => r.aoName));
+    const productNames = unique(rows.map((r) => r.produkName));
+    const mitraNames = unique(rows.map((r) => r.mitraName));
+    const accountNumbers = unique(rows.map((r) => r.norek));
+    const cifs = unique(rows.map((r) => r.cif));
+    const niks = unique(rows.map((r) => r.nik));
+
+    // ==================================================
+    // 2. PREFETCH MASTER DATA
+    // ==================================================
+    let pType = await prisma.productType.findFirst({
+      where: {
+        name: {
+          contains: "Kredit",
+        },
+      },
+    });
+
+    // Kalau product type Kredit belum ada, buat otomatis.
+    if (!pType) {
+      pType = await prisma.productType.create({
+        data: {
+          name: "Kredit",
+        },
       });
+    }
 
-      const newUsers = await prisma.user.findMany({
+    const [users, products, mitras, submissions, billings] = await Promise.all([
+      prisma.user.findMany({
+        select: {
+          id: true,
+          fullname: true,
+          username: true,
+          nip: true,
+        },
+      }),
+      prisma.product.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
+      prisma.mitra.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
+      prisma.submission.findMany({
         where: {
-          fullname: {
-            in: Array.from(missingUsers),
+          OR: [
+            { account_number: { in: accountNumbers } },
+            { Debitur: { cif: { in: cifs } } },
+            { Debitur: { nik: { in: niks } } },
+          ],
+        },
+        select: {
+          id: true,
+          account_number: true,
+          Debitur: {
+            select: {
+              cif: true,
+              fullname: true,
+              nik: true,
+            },
+          },
+        },
+      }),
+      prisma.billing.findMany({
+        where: {
+          id: {
+            startsWith: "BIL",
           },
         },
         select: {
           id: true,
-          fullname: true,
         },
-      });
+      }),
+    ]);
 
-      newUsers.forEach((u) => {
-        if (u.fullname) {
-          userMap.set(u.fullname.trim().toLowerCase(), u.id);
-        }
-      });
-    }
-
-    // Bulk Insert Produk Baru jika ada, lalu masukkan ke productMap
-    if (missingProducts.size > 0) {
-      // Solusi: Buat array murni secara eksplisit dan casting tipenya
-      const productDataToInsert: Prisma.ProductCreateManyInput[] = Array.from(
-        missingProducts,
-      ).map((name) => ({
-        name: String(name),
-        productTypeId: pType?.id || "",
-      }));
-
-      await prisma.product.createMany({
-        data: productDataToInsert,
-        skipDuplicates: true,
-      });
-
-      // Ambil ID dari produk-produk baru tersebut untuk di-update ke Map
-      const newProducts = await prisma.product.findMany({
-        where: { name: { in: Array.from(missingProducts) } },
-        select: { id: true, name: true },
-      });
-      newProducts.forEach((p) => productMap.set(p.name?.toLowerCase(), p.id));
-    }
-
-    // Bulk Insert Mitra Baru jika ada, lalu masukkan ke mitraMap
-    if (missingMitras.size > 0) {
-      const mitraDataToInsert = Array.from(missingMitras).map((name) => ({
-        name,
-      }));
-      await prisma.mitra.createMany({
-        data: mitraDataToInsert,
-        skipDuplicates: true,
-      });
-
-      // Ambil ID dari mitra-mitra baru tersebut untuk di-update ke Map
-      const newMitras = await prisma.mitra.findMany({
-        where: { name: { in: Array.from(missingMitras) } },
-        select: { id: true, name: true },
-      });
-      newMitras.forEach((m) => mitraMap.set(m.name?.toLowerCase(), m.id));
-    }
-    // =========================================================================
-
-    // Konfigurasi untuk Auto-Increment ID BIL
-    const prefix = "BIL";
-    const padLength = 4;
-    const billingDataList = [];
-
-    // 4. LOOPING DATA EXCEL (Proses murni di dalam memori/RAM)
-    for (let i = 0; i < jsonData.length; i++) {
-      const anyData = jsonData[i] as any;
-      if (!String(anyData["NAMA"])) continue;
-
-      // --- CARA AMAN: Ambil key dengan mencoba versi trim jika versi biasa tidak ketemu ---
-      const getExcelValue = (keyName: string) => {
-        const actualKey = Object.keys(anyData).find(
-          (k) => k.trim() === keyName,
-        );
-        return actualKey ? anyData[actualKey] : undefined;
-      };
-
-      const sldPinjamanPkk = getExcelValue("SLD_PINJAMAN_PKK");
-      const nilaiFasAsal = getExcelValue("NILAI_FAS_ASAL");
-
-      const nama = String(anyData["NAMA"] || "").trim();
-      const aoName = String(anyData["NAMA_AO"] || "")
-        .trim()
-        .toLowerCase();
-      const produkName = String(anyData["SEGMENTASI"] || "")
-        .trim()
-        .toLowerCase();
-      const mitraName = String(anyData["INSTANSI"] || "")
-        .trim()
-        .toLowerCase();
-      const norek = String(anyData["NOREK"] || "").trim();
-      const cif = String(anyData["CIF"] || "").trim();
-      const nik = String(anyData["NO_IDENTITAS"] || "").trim();
-      const status = String(anyData["STATUS"] || "")
-        .trim()
-        .toUpperCase();
-
-      const value = parseFloat(anyData["NILAI_TGH_ANGSURAN"] || "0");
-
-      // Relasi Map (Sekarang dijamin ketemu ID-nya karena sudah dibuat di langkah 3b)
-      const userId = userMap.get(aoName) || null;
-      const productId = productMap.get(produkName) || null;
-      const mitraId = mitraMap.get(mitraName) || null;
-
-      const matchedSub = submissions.find(
-        (sub) =>
-          sub.account_number === norek ||
-          sub.Debitur?.cif === cif ||
-          sub.Debitur?.fullname === nama ||
-          sub.Debitur?.nik === nik,
-      );
-
-      const billDate = anyData["TGL_JTH_TMP"]
-        ? moment(anyData["TGL_JTH_TMP"], "DD/MM/YYYY").toDate()
-        : new Date();
-      const tglMulai = anyData["TGL_BUKA"]
-        ? moment(anyData["TGL_BUKA"], "DD/MM/YYYY").toDate()
-        : new Date();
-      const tglAkhir = anyData["TGL_AKHIR_FAS"]
-        ? moment(anyData["TGL_AKHIR_FAS"], "DD/MM/YYYY").toDate()
-        : new Date();
-
-      const nextNumber = initialCount + 1 + i;
-      const genId = `${prefix}${String(nextNumber).padStart(padLength, "0")}`;
-
-      billingDataList.push({
-        id: genId,
-        name: nama,
-        bill_date: billDate,
-        value: value,
-        realize_value: status === "BAYAR" ? value : 0,
-        plafond: parseFloat(nilaiFasAsal || "0"),
-        tenor: parseInt(anyData["JANGKA_BLN"] || anyData["tenor"] || "0"),
-        tung_pkk: parseFloat(anyData["SLD_TUNGGAK_PKK"] || "0"),
-        tung_bga: parseFloat(anyData["SLD_TUNGGAK_BGA"] || "0"),
-        pkk: parseFloat(sldPinjamanPkk || "0"),
-        col: String(anyData["KD_KOL_EFF"] || ""),
-        bill_status: status as any,
-        start_at: tglMulai,
-        end_at: tglAkhir,
-        userId,
-        productId,
-        mitraId,
-        submissionId: matchedSub?.id || null,
-      });
-    }
-
-    // 5. BULK INSERT BILLING
-    await prisma.billing.createMany({
-      data: billingDataList,
-      skipDuplicates: true,
+    const userMap = new Map<string, any>();
+    users.forEach((user) => {
+      if (user.fullname) userMap.set(normalize(user.fullname), user);
+      if (user.username) userMap.set(normalize(user.username), user);
+      if (user.nip) userMap.set(normalize(user.nip), user);
     });
 
+    const productMap = new Map<string, any>();
+    products.forEach((product) => {
+      if (product.name) productMap.set(normalize(product.name), product);
+    });
+
+    const mitraMap = new Map<string, any>();
+    mitras.forEach((mitra) => {
+      if (mitra.name) mitraMap.set(normalize(mitra.name), mitra);
+    });
+
+    const submissionMapByNorek = new Map<string, any>();
+    const submissionMapByCif = new Map<string, any>();
+    const submissionMapByNik = new Map<string, any>();
+    const submissionMapByName = new Map<string, any>();
+
+    submissions.forEach((submission) => {
+      if (submission.account_number) {
+        submissionMapByNorek.set(
+          normalize(submission.account_number),
+          submission,
+        );
+      }
+      if (submission.Debitur?.cif) {
+        submissionMapByCif.set(normalize(submission.Debitur.cif), submission);
+      }
+      if (submission.Debitur?.nik) {
+        submissionMapByNik.set(normalize(submission.Debitur.nik), submission);
+      }
+      if (submission.Debitur?.fullname) {
+        submissionMapByName.set(
+          normalize(submission.Debitur.fullname),
+          submission,
+        );
+      }
+    });
+
+    const getLastBillingNumber = () => {
+      let max = 0;
+      billings.forEach((billing) => {
+        const match = String(billing.id || "").match(/\d+/);
+        if (match) max = Math.max(max, Number(match[0]));
+      });
+      return max;
+    };
+
+    let runningBillingNumber = getLastBillingNumber();
+
+    const skippedRows: any[] = [];
+    const billingDataList: Prisma.BillingCreateManyInput[] = [];
+
+    // ==================================================
+    // 3. TRANSACTION: BUAT MASTER JIKA BELUM ADA + INSERT BILLING
+    // ==================================================
+    const insertResult = await prisma.$transaction(
+      async (tx) => {
+        // 3a. Buat User/AO yang belum ada
+        for (const aoName of aoNames) {
+          const key = normalize(aoName);
+          if (!key || userMap.has(key)) continue;
+
+          const created = await tx.user.create({
+            data: {
+              fullname: aoName,
+              username: normalizeKey(aoName).replace(/\s+/g, ".") || key,
+              password: "123456",
+              status: true,
+              salary: 0,
+              ptkp: "TK/0",
+              absen_method: "BUTTON",
+              roleId: "RL02",
+            },
+            select: {
+              id: true,
+              fullname: true,
+              username: true,
+              nip: true,
+            },
+          });
+
+          userMap.set(normalize(created.fullname), created);
+          userMap.set(normalize(created.username), created);
+          if (created.nip) userMap.set(normalize(created.nip), created);
+        }
+
+        // 3b. Buat Product yang belum ada
+        for (const productName of productNames) {
+          const key = normalize(productName);
+          if (!key || productMap.has(key)) continue;
+
+          const created = await tx.product.create({
+            data: {
+              name: productName,
+              productTypeId: pType!.id,
+            },
+            select: {
+              id: true,
+              name: true,
+            },
+          });
+
+          productMap.set(normalize(created.name), created);
+        }
+
+        // 3c. Buat Mitra yang belum ada
+        for (const mitraName of mitraNames) {
+          const key = normalize(mitraName);
+          if (!key || mitraMap.has(key)) continue;
+
+          const created = await tx.mitra.create({
+            data: {
+              name: mitraName,
+            },
+            select: {
+              id: true,
+              name: true,
+            },
+          });
+
+          mitraMap.set(normalize(created.name), created);
+        }
+
+        // 3d. Hapus billing pada bulan yang ada di Excel supaya upload ulang bulan sama tidak dobel
+        const monthKeys = Array.from(
+          new Set(rows.map((row) => moment(row.billDate).format("YYYY-MM"))),
+        );
+
+        for (const monthKey of monthKeys) {
+          const startDate = moment(monthKey, "YYYY-MM")
+            .startOf("month")
+            .toDate();
+          const endDate = moment(monthKey, "YYYY-MM")
+            .add(1, "month")
+            .startOf("month")
+            .toDate();
+
+          await tx.billing.deleteMany({
+            where: {
+              bill_date: {
+                gte: startDate,
+                lt: endDate,
+              },
+            },
+          });
+        }
+
+        // 3e. Susun data billing
+        for (const row of rows) {
+          const user = userMap.get(normalize(row.aoName));
+          const product = productMap.get(normalize(row.produkName));
+          const mitra = mitraMap.get(normalize(row.mitraName));
+
+          if (!user) {
+            skippedRows.push({
+              row: row.rowIndex,
+              reason: "NAMA_AO kosong / user gagal dibuat",
+              nama: row.nama,
+              aoName: row.aoName,
+            });
+            continue;
+          }
+
+          if (!product) {
+            skippedRows.push({
+              row: row.rowIndex,
+              reason: "SEGMENTASI kosong / produk gagal dibuat",
+              nama: row.nama,
+              produkName: row.produkName,
+            });
+            continue;
+          }
+
+          const matchedSub =
+            submissionMapByNorek.get(normalize(row.norek)) ||
+            submissionMapByCif.get(normalize(row.cif)) ||
+            submissionMapByNik.get(normalize(row.nik)) ||
+            submissionMapByName.get(normalize(row.nama));
+
+          runningBillingNumber++;
+          const id = `BIL${String(runningBillingNumber).padStart(4, "0")}`;
+
+          billingDataList.push({
+            id,
+            name: row.nama,
+            bill_date: row.billDate,
+            value: row.angsuran,
+            realize_value: row.status === "BAYAR" ? row.angsuran : 0,
+            plafond: row.plafond,
+            tenor: row.tenor,
+            tung_pkk: row.tungPkk,
+            tung_bga: row.tungBga,
+            pkk: row.pkk,
+            col: row.col,
+            bill_status: row.status as any,
+            start_at: row.startAt,
+            end_at: row.endAt,
+            userId: user.id,
+            productId: product.id,
+            mitraId: mitra?.id || null,
+            submissionId: matchedSub?.id || null,
+          });
+        }
+
+        if (!billingDataList.length) {
+          return { count: 0 };
+        }
+
+        return tx.billing.createMany({
+          data: billingDataList,
+          skipDuplicates: true,
+        });
+      },
+      {
+        timeout: 60000 * 10,
+      },
+    );
+
     return res.status(200).json({
-      message:
-        "Data berhasil diimport dengan ID berurutan beserta Produk/Mitra otomatis!",
+      message: "Data billing berhasil diimport.",
       total_data: jsonData.length,
+      valid_data: rows.length,
+      prepared_data: billingDataList.length,
+      inserted_data: insertResult.count,
+      skipped_data: skippedRows.length,
+      skipped_rows: skippedRows.slice(0, 30),
     });
   } catch (err) {
     console.error("Import Error: ", err);
@@ -514,16 +696,21 @@ export const LAPORAN = async (
         Billing: {
           where: {
             status: true,
-            ...(month && {
-              bill_date: {
-                gte: moment(month as string)
-                  .startOf("month")
-                  .toDate(),
-                lte: moment(month as string)
-                  .endOf("month")
-                  .toDate(),
-              },
-            }),
+            bill_date: {
+              ...(month
+                ? {
+                    gte: moment(month as string)
+                      .startOf("month")
+                      .toDate(),
+                    lte: moment(month as string)
+                      .endOf("month")
+                      .toDate(),
+                  }
+                : {
+                    gte: moment().startOf("month").toDate(),
+                    lte: moment().endOf("month").toDate(),
+                  }),
+            },
           },
           include: {
             Submission: {
@@ -548,4 +735,12 @@ export const LAPORAN = async (
       error: err instanceof Error ? err.message : String(err),
     });
   }
+};
+
+const normalizeEnum = (value: any) => {
+  return String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "")
+    .replace(/_+/g, "");
 };
