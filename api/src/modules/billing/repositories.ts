@@ -287,7 +287,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
           tungPkk: number(getExcelValue(item, "SLD_TUNGGAK_PKK")),
           tungBga: number(getExcelValue(item, "SLD_TUNGGAK_BGA")),
           pkk: number(getExcelValue(item, "SISA_PKK_PINJAMAN")),
-          col: text(getExcelValue(item, "KD_KOL_EFF")),
+          col: text(getExcelValue(item, "KD_KOL_REFF")),
         };
       })
       .filter((row) => row.nama);
