@@ -33,13 +33,12 @@ import fileRoute from "./modules/file/routes.js";
 import logActivitiesRoute from "./modules/log-activities/routes.js";
 import collateralLendingRoute from "./modules/collateral_lending/routes.js";
 import callreportRoute from "./modules/callreport/routes.js";
+import notifRoute from "./modules/notif/routes.js";
 import {
   DashboardAbsensi,
-  DashboardCallreport,
   DashboardEarsip,
   GET_HOLIDAY,
   MainDashboard,
-  LaporanCallreport,
 } from "./modules/route.js";
 import type { Role, User } from "@prisma/client";
 import nodeCron from "node-cron";
@@ -77,6 +76,7 @@ app.use("/maindashboard", middleware, MainDashboard);
 app.use("/callreport", middleware, callreportRoute);
 app.use("/absensi", middleware, DashboardAbsensi);
 app.use("/earsip", middleware, DashboardEarsip);
+app.use("/notif", middleware, notifRoute);
 
 app.use("/auth", authRoute);
 app.use("/role", middleware, roleRoute);

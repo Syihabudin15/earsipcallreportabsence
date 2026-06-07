@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LogOut,
   Bell,
@@ -14,6 +14,7 @@ import useContext from "../libs/context";
 import { Modal, Dropdown } from "antd";
 import { Link, useNavigate } from "react-router-dom";
 import AbsenceWidget from "./absensi/AbsenceWidget";
+import api from "../libs/api";
 // import HeaderAbsenceButton from "../components/HeaderAbsenceButton";
 
 export default function MainLayout({
@@ -30,6 +31,32 @@ export default function MainLayout({
     (state: any) => state,
   );
   const [openAbsen, setOpenAbse] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [notifs, setNotifs] = useState({
+    downloads: 0,
+    deletes: 0,
+    absences: 0,
+  });
+  const notifications = [
+    {
+      id: 1,
+      text: "Permohonan Download",
+      href: "/app/earsip/permit_download",
+      value: notifs.downloads,
+    },
+    {
+      id: 2,
+      text: "Permohonan Hapus",
+      href: "/app/earsip/permit_delete",
+      value: notifs.deletes,
+    },
+    {
+      id: 3,
+      text: "Permohonan izin",
+      href: "/app/absensi/permit",
+      value: notifs.absences,
+    },
+  ];
 
   const toggleSubMenu = (key: string) => {
     setOpenMenus((prev) => ({
@@ -37,6 +64,30 @@ export default function MainLayout({
       [key]: !prev[key],
     }));
   };
+
+  const getNotif = async () => {
+    await api
+      .request({
+        url: import.meta.env.VITE_API_URL + "/notif",
+        method: "GET",
+      })
+      .then((res) =>
+        setNotifs({
+          downloads: res.data.downloads || 0,
+          deletes: res.data.deletes || 0,
+          absences: res.data.absences | 0,
+        }),
+      );
+  };
+
+  useEffect(() => {
+    (async () => {
+      await getNotif();
+    })();
+    setTimeout(async () => {
+      await getNotif();
+    }, 2000);
+  }, []);
 
   return (
     <div className="flex h-screen w-full bg-slate-50 text-slate-900 overflow-hidden">
@@ -132,10 +183,39 @@ export default function MainLayout({
               <Calendar size={20} />
               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
-            <button className="relative p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl cursor-pointer">
+            <button
+              className="relative p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl cursor-pointer"
+              // onMouseEnter={() => setIsOpen(true)}
+              // onMouseLeave={() => setIsOpen(false)}
+              onClick={() => setIsOpen(true)}
+            >
               <Bell size={20} />
               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
+            {isOpen && (
+              <div
+                className="absolute top-12 right-0 mt-1 w-64 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-200"
+                onMouseLeave={() => setIsOpen(false)}
+              >
+                <div className="px-4 py-2 border-b border-slate-50">
+                  <p className="text-sm font-semibold text-slate-700">
+                    Notifikasi
+                  </p>
+                </div>
+                <div className="max-h-60 overflow-y-auto">
+                  {notifications.map((item) => (
+                    <a
+                      key={item.id}
+                      href={item.href}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 text-sm text-slate-600 hover:text-slate-900 transition-colors"
+                    >
+                      <span className="truncate">{item.text}</span>
+                      <span className="truncate">{item.value}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* <HeaderAbsenceButton /> */}
             <Dropdown
               menu={{
