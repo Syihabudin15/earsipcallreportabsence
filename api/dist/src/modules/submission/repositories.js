@@ -4,7 +4,7 @@ import prisma from "../../libs/prisma.js";
 import moment from "moment";
 import xlsx from "xlsx";
 export const GET = async (req, res, next) => {
-    let { page = 1, limit = 50, search, productTypeId, productId, guarantee_status, doc_status, approve_status, flagging_status, backdate, submissionTypeId, mitraId, payOfficeId, insuranceId, } = req.query;
+    let { page = 1, limit = 50, search, productTypeId, productId, guarantee_status, doc_status, approve_status, flagging_status, backdate, submissionTypeId, mitraId, payOfficeId, insuranceId, guarantee_date, } = req.query;
     page = Number(page);
     limit = Number(limit);
     const skip = (page - 1) * limit;
@@ -58,6 +58,16 @@ export const GET = async (req, res, next) => {
                         .startOf("day")
                         .toDate(),
                     lte: moment(backdate.split(",")[1])
+                        .endOf("day")
+                        .toDate(),
+                },
+            }),
+            ...(guarantee_date && {
+                guarantee_date: {
+                    gte: moment(guarantee_date.split(",")[0])
+                        .startOf("day")
+                        .toDate(),
+                    lte: moment(guarantee_date.split(",")[1])
                         .endOf("day")
                         .toDate(),
                 },
@@ -283,94 +293,191 @@ export const IMPORT = async (req, res, next) => {
         }
         const workbook = xlsx.read(req.file.buffer, {
             type: "buffer",
-            cellDates: true, // <-- WAJIB TAMBAHKAN INI
+            cellDates: true,
             dateNF: "dd/mm/yyyy",
         });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const jsonData = xlsx.utils.sheet_to_json(sheet);
-        for (const data of jsonData) {
-            await prisma.$transaction(async (tx) => {
-                const record = {
-                    jenis_pemohon: String(data.jenis_pemohon).trim(),
-                    tipe_produk: String(data.tipe_produk).trim(),
-                    produk: String(data.produk).trim(),
-                    cif: String(data.cif).trim(),
-                    nik: String(data.nik).trim(),
-                    nama_petugas: String(data.nama_petugas).trim(),
-                    nip_petugas: String(data.nip_petugas).trim(),
-                    nama: String(data.nama).trim(),
-                    tempat_lahir: String(data.tempat_lahir).trim(),
-                    tanggal_lahir: String(data.tanggal_lahir).trim(),
-                    alamat: String(data.alamat).trim(),
-                    no_telepon: String(data.no_telepon).trim(),
-                    email: String(data.email).trim(),
-                    nama_mitra: String(data.nama_mitra).trim(),
-                    kantor_bayar: String(data.kantor_bayar).trim(),
-                    asuransi: String(data.asuransi).trim(),
-                    nilai: String(data.nilai).trim(),
-                    tenor: String(data.tenor).trim(),
-                    no_lemari: String(data.no_lemari).trim(),
-                    tujuan_penggunaan: String(data.tujuan_penggunaan).trim(),
-                    status_nasabah: String(data.status_nasabah).trim(),
-                    status_dokumen: String(data.status_dokumen).trim(),
-                    status_jaminan: String(data.status_jaminan).trim(),
-                    status_flagging: String(data.status_flagging).trim(),
-                    no_rekening: String(data.no_rekening).trim(),
-                    tanggal_dibuat: String(data.tanggal_dibuat).trim(),
-                };
-                let typeDebt = await tx.submissionType.findFirst({
-                    where: { name: record.jenis_pemohon },
-                });
-                if (!typeDebt) {
-                    const genSubTypeId = await generateSubTypeId();
-                    typeDebt = await tx.submissionType.create({
-                        data: {
-                            id: genSubTypeId,
-                            name: record.jenis_pemohon,
-                        },
+        if (!jsonData.length) {
+            return res.status(200).json({
+                message: "Tidak ada data untuk diimport.",
+                total_data: 0,
+            });
+        }
+        const normalize = (value) => String(value ?? "")
+            .trim()
+            .toLowerCase();
+        const text = (value) => String(value ?? "").trim();
+        const number = (value) => {
+            const cleaned = String(value ?? "0")
+                .replace(/\./g, "")
+                .replace(/,/g, ".");
+            return Number(cleaned) || 0;
+        };
+        const parseDate = (value) => {
+            if (!value)
+                return new Date();
+            if (value instanceof Date)
+                return value;
+            const parsed = moment(String(value).trim(), [
+                "DD/MM/YYYY",
+                "D/M/YYYY",
+                "YYYY-MM-DD",
+            ]);
+            return parsed.isValid() ? parsed.toDate() : new Date();
+        };
+        const rows = jsonData
+            .map((item) => ({
+            jenis_pemohon: text(item.jenis_pemohon),
+            tipe_produk: text(item.tipe_produk),
+            produk: text(item.produk),
+            cif: text(item.cif),
+            nik: text(item.nik),
+            nama_petugas: text(item.nama_petugas),
+            nip_petugas: text(item.nip_petugas),
+            nama: text(item.nama),
+            tempat_lahir: text(item.tempat_lahir),
+            tanggal_lahir: item.tanggal_lahir,
+            alamat: text(item.alamat),
+            no_telepon: text(item.no_telepon),
+            email: text(item.email),
+            nama_mitra: text(item.nama_mitra),
+            kantor_bayar: text(item.kantor_bayar),
+            asuransi: text(item.asuransi),
+            nilai: number(item.nilai),
+            tenor: number(item.tenor),
+            no_lemari: text(item.no_lemari),
+            tujuan_penggunaan: text(item.tujuan_penggunaan),
+            status_nasabah: normalizeEnum(text(item.status_nasabah)),
+            status_dokumen: normalizeEnum(text(item.status_dokumen)),
+            status_jaminan: normalizeEnum(text(item.status_jaminan)),
+            status_flagging: normalizeEnum(text(item.status_flagging)),
+            no_rekening: text(item.no_rekening),
+            tanggal_dibuat: item.tanggal_dibuat,
+            guarantee_date: item.tgl_jatuh_tempo_jaminan,
+        }))
+            .filter((row) => row.nama && row.no_rekening);
+        if (!rows.length) {
+            return res.status(200).json({
+                message: "Tidak ada data valid untuk diimport.",
+                total_data: 0,
+            });
+        }
+        const unique = (arr) => Array.from(new Set(arr.filter((v) => v && v !== "-")));
+        const jenisPemohonNames = unique(rows.map((r) => r.jenis_pemohon));
+        const productTypeNames = unique(rows.map((r) => r.tipe_produk));
+        const productNames = unique(rows.map((r) => r.produk));
+        const userNames = unique(rows.map((r) => r.nama_petugas));
+        const userNips = unique(rows.map((r) => r.nip_petugas));
+        const debiturCifs = unique(rows.map((r) => r.cif));
+        const debiturNiks = unique(rows.map((r) => r.nik));
+        const mitraNames = unique(rows.map((r) => r.nama_mitra));
+        const payOfficeNames = unique(rows.map((r) => r.kantor_bayar));
+        const insuranceNames = unique(rows.map((r) => r.asuransi));
+        const accountNumbers = unique(rows.map((r) => r.no_rekening));
+        const [existingSubmissionTypes, existingProductTypes, existingProducts, existingUsers, existingDebitur, existingMitras, existingPayOffices, existingInsurances, existingSubmissions,] = await Promise.all([
+            prisma.submissionType.findMany({
+                where: { name: { in: jenisPemohonNames } },
+            }),
+            prisma.productType.findMany({
+                where: { name: { in: productTypeNames } },
+            }),
+            prisma.product.findMany({
+                where: { name: { in: productNames } },
+            }),
+            prisma.user.findMany({
+                where: {
+                    OR: [{ fullname: { in: userNames } }, { nip: { in: userNips } }],
+                },
+            }),
+            prisma.debitur.findMany({
+                where: {
+                    OR: [{ cif: { in: debiturCifs } }, { nik: { in: debiturNiks } }],
+                },
+            }),
+            prisma.mitra.findMany({
+                where: { name: { in: mitraNames } },
+            }),
+            prisma.payOffice.findMany({
+                where: { name: { in: payOfficeNames } },
+            }),
+            prisma.insurance.findMany({
+                where: { name: { in: insuranceNames } },
+            }),
+            prisma.submission.findMany({
+                where: { account_number: { in: accountNumbers } },
+                select: { id: true, account_number: true },
+            }),
+        ]);
+        const submissionTypeMap = new Map(existingSubmissionTypes.map((item) => [normalize(item.name), item]));
+        const productTypeMap = new Map(existingProductTypes.map((item) => [normalize(item.name), item]));
+        const productMap = new Map(existingProducts.map((item) => [normalize(item.name), item]));
+        const userMapByName = new Map(existingUsers.map((item) => [normalize(item.fullname), item]));
+        const userMapByNip = new Map(existingUsers.map((item) => [normalize(item.nip), item]));
+        const debiturMapByCif = new Map(existingDebitur.map((item) => [normalize(item.cif), item]));
+        const debiturMapByNik = new Map(existingDebitur.map((item) => [normalize(item.nik), item]));
+        const mitraMap = new Map(existingMitras.map((item) => [normalize(item.name), item]));
+        const payOfficeMap = new Map(existingPayOffices.map((item) => [normalize(item.name), item]));
+        const insuranceMap = new Map(existingInsurances.map((item) => [normalize(item.name), item]));
+        const existingAccountSet = new Set(existingSubmissions.map((item) => normalize(item.account_number)));
+        const validRows = rows.filter((row) => !existingAccountSet.has(normalize(row.no_rekening)));
+        if (!validRows.length) {
+            return res.status(200).json({
+                message: "Semua nomor rekening sudah ada. Tidak ada data baru.",
+                total_data: jsonData.length,
+                inserted_data: 0,
+            });
+        }
+        await prisma.$transaction(async (tx) => {
+            for (const name of jenisPemohonNames) {
+                const key = normalize(name);
+                if (!submissionTypeMap.has(key)) {
+                    // const id = await generateSubTypeId();
+                    const created = await tx.submissionType.create({
+                        data: { name },
                     });
+                    submissionTypeMap.set(key, created);
                 }
-                let productType = await tx.productType.findFirst({
-                    where: { name: record.tipe_produk },
-                });
-                if (!productType) {
-                    const pTypeId = await generateProdTypeId();
-                    productType = await tx.productType.create({
-                        data: {
-                            id: pTypeId,
-                            name: record.tipe_produk,
-                        },
+            }
+            for (const name of productTypeNames) {
+                const key = normalize(name);
+                if (!productTypeMap.has(key)) {
+                    // const id = await generateProdTypeId();
+                    const created = await tx.productType.create({
+                        data: { name },
                     });
+                    productTypeMap.set(key, created);
                 }
-                let product = await tx.product.findFirst({
-                    where: { name: record.produk },
-                });
-                if (!product) {
-                    product = await tx.product.create({
+            }
+            for (const row of validRows) {
+                const key = normalize(row.produk);
+                if (!productMap.has(key)) {
+                    const productType = productTypeMap.get(normalize(row.tipe_produk));
+                    if (!productType)
+                        continue;
+                    const created = await tx.product.create({
                         data: {
-                            name: record.produk,
+                            name: row.produk,
                             productTypeId: productType.id,
                         },
                     });
+                    productMap.set(key, created);
                 }
-                let usr = await tx.user.findFirst({
-                    where: {
-                        OR: [
-                            { nip: record.nip_petugas },
-                            { fullname: record.nama_petugas },
-                        ],
-                    },
-                });
-                if (!usr) {
-                    const usdId = await generateUsrId();
-                    usr = await tx.user.create({
+            }
+            for (const row of validRows) {
+                const nameKey = normalize(row.nama_petugas);
+                const nipKey = normalize(row.nip_petugas);
+                const existingUser = userMapByNip.get(nipKey) || userMapByName.get(nameKey);
+                if (!existingUser && row.nama_petugas) {
+                    // const id = await generateUsrId();
+                    const created = await tx.user.create({
                         data: {
-                            id: usdId,
-                            fullname: record.nama_petugas,
-                            nip: record.nip_petugas,
-                            username: record.nama_petugas.toLowerCase(),
-                            password: record.nama_petugas.toLowerCase(),
+                            // id,
+                            fullname: row.nama_petugas,
+                            nip: row.nip_petugas || null,
+                            username: normalize(row.nama_petugas).replace(/\s+/g, "."),
+                            password: normalize(row.nama_petugas),
                             salary: 0,
                             absen_method: "BUTTON",
                             ptkp: "TK/0",
@@ -378,115 +485,143 @@ export const IMPORT = async (req, res, next) => {
                             // positionId: "POS02",
                         },
                     });
+                    userMapByName.set(nameKey, created);
+                    userMapByNip.set(nipKey, created);
                 }
-                let debt = await tx.debitur.findFirst({
-                    where: {
-                        OR: [{ cif: record.cif }, { nik: record.nik }],
-                    },
-                });
-                if (!debt) {
-                    const genDebtId = await generateDebiturId();
-                    debt = await tx.debitur.create({
+            }
+            for (const row of validRows) {
+                const key = normalize(row.nama_mitra);
+                if (row.nama_mitra && !mitraMap.has(key)) {
+                    // const id = await generateMitraId();
+                    const created = await tx.mitra.create({
                         data: {
-                            id: genDebtId,
-                            cif: record.cif,
-                            nik: record.nik,
-                            fullname: record.nama,
-                            birthplace: record.tempat_lahir,
-                            birthdate: moment(record.tanggal_lahir, "DD/MM/YYYY").toDate(),
-                            address: record.alamat,
-                            phone: record.no_telepon,
-                            email: record.email,
-                            submissionTypeId: typeDebt.id,
+                            // id,
+                            name: row.nama_mitra,
                         },
                     });
+                    mitraMap.set(key, created);
                 }
-                let mitra = null;
-                if (data.nama_mitra) {
-                    const mitraFind = await tx.mitra.findFirst({
-                        where: { name: record.nama_mitra },
+            }
+            for (const row of validRows) {
+                const key = normalize(row.kantor_bayar);
+                if (row.kantor_bayar && !payOfficeMap.has(key)) {
+                    // const id = await generateKbyId();
+                    const created = await tx.payOffice.create({
+                        data: {
+                            // id,
+                            name: row.kantor_bayar,
+                        },
                     });
-                    if (mitraFind) {
-                        mitra = mitraFind;
-                    }
-                    else {
-                        const mitId = await generateMitraId();
-                        mitra = await tx.mitra.create({
-                            data: {
-                                id: mitId,
-                                name: record.nama_mitra,
-                            },
-                        });
-                    }
+                    payOfficeMap.set(key, created);
                 }
-                let payOffice = null;
-                if (data.kantor_bayar) {
-                    const kabay = await tx.payOffice.findFirst({
-                        where: { name: record.kantor_bayar },
+            }
+            for (const row of validRows) {
+                const key = normalize(row.asuransi);
+                if (row.asuransi && !insuranceMap.has(key)) {
+                    // const id = await generateInscId();
+                    const created = await tx.insurance.create({
+                        data: {
+                            // id,
+                            name: row.asuransi,
+                        },
                     });
-                    if (kabay) {
-                        payOffice = kabay;
-                    }
-                    else {
-                        const kbyId = await generateKbyId();
-                        payOffice = await tx.payOffice.create({
-                            data: {
-                                id: kbyId,
-                                name: record.kantor_bayar,
-                            },
-                        });
-                    }
+                    insuranceMap.set(key, created);
                 }
-                let insur = null;
-                if (data.asuransi) {
-                    const kabay = await tx.insurance.findFirst({
-                        where: { name: record.asuransi },
+            }
+            for (const row of validRows) {
+                const cifKey = normalize(row.cif);
+                const nikKey = normalize(row.nik);
+                const existingDebt = debiturMapByCif.get(cifKey) || debiturMapByNik.get(nikKey);
+                if (!existingDebt) {
+                    // const id = await generateDebiturId();
+                    const created = await tx.debitur.create({
+                        data: {
+                            // id,
+                            cif: row.cif,
+                            nik: row.nik,
+                            fullname: row.nama,
+                            birthplace: row.tempat_lahir,
+                            birthdate: parseDate(row.tanggal_lahir),
+                            address: row.alamat,
+                            phone: row.no_telepon,
+                            email: row.email,
+                            submissionTypeId: submissionTypeMap.get(normalize(row.jenis_pemohon))?.id || "",
+                        },
                     });
-                    if (kabay) {
-                        insur = kabay;
-                    }
-                    else {
-                        const insId = await generateInscId();
-                        insur = await tx.insurance.create({
-                            data: {
-                                id: insId,
-                                name: record.asuransi,
-                            },
-                        });
-                    }
+                    debiturMapByCif.set(cifKey, created);
+                    debiturMapByNik.set(nikKey, created);
                 }
-                const genId = await generateId();
-                await tx.submission.create({
-                    data: {
-                        id: genId,
-                        debiturId: debt.id,
-                        mitraId: mitra?.id,
-                        insuranceId: insur?.id,
-                        payOfficeId: payOffice?.id,
-                        value: parseInt(record.nilai || "0"),
-                        tenor: parseInt(record.tenor || "0"),
-                        productId: product.id,
-                        userId: usr.id,
-                        createdById: usr.id,
-                        drawer_code: record.no_lemari || "-",
-                        purpose: record.tujuan_penggunaan || "-",
-                        approve_status: record.status_nasabah,
-                        doc_status: record.status_dokumen,
-                        guarantee_status: record.status_jaminan,
-                        flagging_status: record.status_flagging,
-                        account_number: record.no_rekening || "-",
-                        created_at: moment(record.tanggal_dibuat, "DD/MM/YYYY").toDate(),
-                    },
+            }
+            const submissionData = [];
+            let nextSubmissionNumber = await prisma.submission.count({});
+            for (const row of validRows) {
+                const accountKey = normalize(row.no_rekening);
+                if (existingAccountSet.has(accountKey))
+                    continue;
+                const usr = userMapByNip.get(normalize(row.nip_petugas)) ||
+                    userMapByName.get(normalize(row.nama_petugas));
+                const debt = debiturMapByCif.get(normalize(row.cif)) ||
+                    debiturMapByNik.get(normalize(row.nik));
+                const mitra = mitraMap.get(normalize(row.nama_mitra));
+                const payOffice = payOfficeMap.get(normalize(row.kantor_bayar));
+                const insur = insuranceMap.get(normalize(row.asuransi));
+                const product = productMap.get(normalize(row.produk));
+                if (!usr || !debt || !product) {
+                    console.log("SKIP ROW:", {
+                        rekening: row.no_rekening,
+                        usr: !!usr,
+                        debt: !!debt,
+                        product: !!product,
+                        nama_petugas: row.nama_petugas,
+                        produk: row.produk,
+                        cif: row.cif,
+                        nik: row.nik,
+                    });
+                    continue;
+                }
+                nextSubmissionNumber++;
+                const id = `SID${String(nextSubmissionNumber).padStart(4, "0")}`;
+                submissionData.push({
+                    id,
+                    debiturId: debt.id,
+                    mitraId: mitra?.id || null,
+                    insuranceId: insur?.id || null,
+                    payOfficeId: payOffice?.id || null,
+                    value: row.nilai,
+                    tenor: row.tenor,
+                    productId: product.id,
+                    userId: usr.id,
+                    createdById: usr.id,
+                    drawer_code: row.no_lemari || "-",
+                    purpose: row.tujuan_penggunaan || "-",
+                    approve_status: row.status_nasabah,
+                    doc_status: row.status_dokumen,
+                    guarantee_status: row.status_jaminan,
+                    flagging_status: row.status_flagging,
+                    account_number: row.no_rekening || "-",
+                    created_at: parseDate(row.tanggal_dibuat),
+                    guarantee_date: row.guarantee_date
+                        ? parseDate(row.guarantee_date)
+                        : null,
                 });
-                return true;
-            }, {
-                // Opsi untuk memperpanjang napas transaksi (Satuan Milliseconds)
-                timeout: 60000 * 10, // 60 Detik (Sangat cukup untuk ratusan data baris)
-            });
-        }
-        res.status(200).json({
+                existingAccountSet.add(accountKey);
+            }
+            if (submissionData.length > 0) {
+                const chunkSize = 500;
+                for (let i = 0; i < submissionData.length; i += chunkSize) {
+                    await tx.submission.createMany({
+                        data: submissionData.slice(i, i + chunkSize),
+                        skipDuplicates: true,
+                    });
+                }
+            }
+        }, {
+            timeout: 60000 * 10,
+        });
+        return res.status(200).json({
             message: "Data berhasil diimport!",
             total_data: jsonData.length,
+            inserted_data: validRows.length,
         });
     }
     catch (err) {
@@ -508,39 +643,46 @@ async function generateDebiturId() {
     const lastRecord = await prisma.debitur.count({});
     return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
 }
-async function generateSubTypeId() {
-    const prefix = "STYPE";
-    const padLength = 2;
-    const lastRecord = await prisma.submissionType.count({});
-    return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
-}
-async function generateProdTypeId() {
-    const prefix = "PTYPE";
-    const padLength = 2;
-    const lastRecord = await prisma.productType.count({});
-    return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
-}
-async function generateUsrId() {
-    const prefix = "USR";
-    const padLength = 3;
-    const lastRecord = await prisma.user.count({});
-    return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
-}
-async function generateMitraId() {
-    const prefix = "MITRA";
-    const padLength = 2;
-    const lastRecord = await prisma.mitra.count();
-    return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
-}
-async function generateKbyId() {
-    const prefix = "PAYOF";
-    const padLength = 2;
-    const lastRecord = await prisma.payOffice.count();
-    return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
-}
-async function generateInscId() {
-    const prefix = "INSC";
-    const padLength = 2;
-    const lastRecord = await prisma.insurance.count();
-    return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
-}
+const normalizeEnum = (value) => {
+    return String(value ?? "")
+        .trim()
+        .toUpperCase()
+        .replace(/[\s-]+/g, "_")
+        .replace(/_+/g, "_");
+};
+// async function generateSubTypeId() {
+//   const prefix = "STYPE";
+//   const padLength = 2;
+//   const lastRecord = await prisma.submissionType.count({});
+//   return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
+// }
+// async function generateProdTypeId() {
+//   const prefix = "PTYPE";
+//   const padLength = 2;
+//   const lastRecord = await prisma.productType.count({});
+//   return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
+// }
+// async function generateUsrId() {
+//   const prefix = "USR";
+//   const padLength = 3;
+//   const lastRecord = await prisma.user.count({});
+//   return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
+// }
+// async function generateMitraId() {
+//   const prefix = "MITRA";
+//   const padLength = 2;
+//   const lastRecord = await prisma.mitra.count();
+//   return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
+// }
+// async function generateKbyId() {
+//   const prefix = "PAYOF";
+//   const padLength = 2;
+//   const lastRecord = await prisma.payOffice.count();
+//   return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
+// }
+// async function generateInscId() {
+//   const prefix = "INSC";
+//   const padLength = 2;
+//   const lastRecord = await prisma.insurance.count();
+//   return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
+// }

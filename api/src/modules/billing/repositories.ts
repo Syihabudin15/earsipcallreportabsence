@@ -697,19 +697,14 @@ export const LAPORAN = async (
           where: {
             status: true,
             bill_date: {
-              ...(month
-                ? {
-                    gte: moment(month as string)
-                      .startOf("month")
-                      .toDate(),
-                    lte: moment(month as string)
-                      .endOf("month")
-                      .toDate(),
-                  }
-                : {
-                    gte: moment().startOf("month").toDate(),
-                    lte: moment().endOf("month").toDate(),
-                  }),
+              ...(month && {
+                gte: moment(month as string)
+                  .startOf("month")
+                  .toDate(),
+                lte: moment(month as string)
+                  .endOf("month")
+                  .toDate(),
+              }),
             },
           },
           include: {
