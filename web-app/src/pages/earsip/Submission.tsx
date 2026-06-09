@@ -149,18 +149,21 @@ export default function DataSubmission() {
         .request({
           method: "GET",
           url: `${import.meta.env.VITE_API_URL}/mitra`,
+          params: { limit: 5000 },
         })
         .then((res) => setMitras(res.data.data));
       await api
         .request({
           method: "GET",
           url: `${import.meta.env.VITE_API_URL}/pay_office`,
+          params: { limit: 500 },
         })
         .then((res) => setPays(res.data.data));
       await api
         .request({
           method: "GET",
           url: `${import.meta.env.VITE_API_URL}/insurance`,
+          params: { limit: 500 },
         })
         .then((res) => setInsc(res.data.data));
     })();
@@ -785,9 +788,7 @@ export default function DataSubmission() {
                 </Button>
               </a>
             )}
-            {hasAccess(window.location.pathname, "write") && (
-              <ExportImport data={pageprops.data} />
-            )}
+            <ExportImport data={pageprops.data} />
           </div>
           <div className="flex-1 flex items-center justify-end gap-2">
             <Input.Search
