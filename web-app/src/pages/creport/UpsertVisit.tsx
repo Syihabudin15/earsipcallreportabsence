@@ -656,15 +656,6 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
                 disabled
               />
             </Col>
-            <Col xs={12} md={8}>
-              <InputUtil
-                label="Kolektibilitas"
-                value={data.col}
-                onchage={(e: string) => setData({ ...data, col: e })}
-                type="text"
-                disabled
-              />
-            </Col>
           </Row>
         </Card>
         <Card

@@ -1,7 +1,9 @@
 import {
+  App,
   Button,
   DatePicker,
   Input,
+  Modal,
   Popover,
   Select,
   Table,
@@ -39,6 +41,7 @@ import {
 import api from "../../libs/api";
 import { IDRFormat } from "../utils/utilForm";
 import { ExportData } from "../../libs/helper";
+import type { HookAPI } from "antd/es/modal/useModal";
 const { RangePicker } = DatePicker;
 
 export default function DataVisit() {
@@ -67,6 +70,7 @@ export default function DataVisit() {
   const [visitStatuses, setVisitStatuses] = useState<IVisitStatus[]>([]);
   const [visitPurposes, setVisitPurposes] = useState<IVisitPurpose[]>([]);
   const [visitCategories, setVisitCategories] = useState<IVisitCategory[]>([]);
+  const { modal } = App.useApp();
 
   const getData = async () => {
     setLoading(true);
@@ -590,7 +594,7 @@ export default function DataVisit() {
         />
       </div>
 
-      {/* {action.delete && action.record && (
+      {action.delete && action.record && (
         <DeleteData
           open={action.delete}
           setOpen={(val: boolean) =>
@@ -601,7 +605,69 @@ export default function DataVisit() {
           hook={modal}
           key={"delete" + action.record.id}
         />
-      )} */}
+      )}
     </div>
   );
 }
+
+const DeleteData = ({
+  open,
+  setOpen,
+  record,
+  getData,
+  hook,
+}: {
+  open: boolean;
+  setOpen: Function;
+  record: IVisit;
+  getData: Function;
+  hook: HookAPI;
+}) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    await api
+      .request({
+        url: import.meta.env.VITE_API_URL + "/visit?id=" + record?.id,
+        method: "DELETE",
+        headers: { "Content-Type": "Application/json" },
+      })
+      .then(async (res) => {
+        if (res.status === 201 || res.status === 200) {
+          hook.success({
+            title: "BERHASIL",
+            content: res.data.msg,
+          });
+          setOpen(false);
+          getData && (await getData());
+        } else {
+          hook.error({
+            title: "ERROR",
+            content: res.data.msg,
+          });
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        hook.error({
+          title: "ERROR",
+          content: err.message || "Internal Server Error",
+        });
+      });
+    setLoading(false);
+  };
+  return (
+    <Modal
+      open={open}
+      title="Konfirmasi Hapus"
+      onCancel={() => setOpen(false)}
+      onOk={handleSubmit}
+      okButtonProps={{ loading: loading }}
+    >
+      <div className="p-5">
+        <p>Konfirmasi hapus data *{record.Debitur.fullname}*?</p>
+      </div>
+    </Modal>
+  );
+};

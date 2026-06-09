@@ -526,19 +526,6 @@ export default function DataVisitPlan() {
           }}
         />
       </div>
-
-      {/* {action.delete && action.record && (
-        <DeleteData
-          open={action.delete}
-          setOpen={(val: boolean) =>
-            setAction({ ...action, delete: val, record: undefined })
-          }
-          record={action.record}
-          getData={getData}
-          hook={modal}
-          key={"delete" + action.record.id}
-        />
-      )} */}
     </div>
   );
 }
