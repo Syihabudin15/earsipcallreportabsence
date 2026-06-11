@@ -212,13 +212,13 @@ model Mitra {
   id          String  @id @default(uuid())
   name        String
   code        String?
-  phone       String?
-  email       String?
-  address     String?
-  pic         String?
+  phone       String? @db.Text
+  email       String? @db.Text
+  address     String? @db.Text
+  pic         String? @db.Text
   no_contract String?
   drawer_code String?
-  description String?
+  description String? @db.Text
   file        String? @db.Text
 
   status     Boolean      @default(true)

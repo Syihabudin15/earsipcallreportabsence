@@ -125,7 +125,7 @@ export const DELETE = async (
 
 async function generateId() {
   const prefix = "MITRA";
-  const padLength = 2;
+  const padLength = 4;
   const lastRecord = await prisma.mitra.count();
   return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
 }
