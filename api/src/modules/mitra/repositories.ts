@@ -17,7 +17,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       skip: skip,
       take: limit,
       include: { Submission: true },
-      orderBy: { id: "asc" },
+      orderBy: { created_at: "desc" },
     });
 
     const total = await prisma.mitra.count({
