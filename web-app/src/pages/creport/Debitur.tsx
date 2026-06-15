@@ -379,7 +379,7 @@ export default function DebiturCallReport() {
           rowKey={"id"}
           scroll={{
             x: "max-content",
-            // y: window.innerWidth > 600 ? "53vh" : "65vh",
+            y: window.innerWidth > 600 ? "53vh" : "65vh",
           }}
           columns={columns}
           dataSource={pageprops.data}

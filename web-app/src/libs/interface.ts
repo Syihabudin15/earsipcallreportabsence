@@ -368,7 +368,15 @@ export interface IMitra {
 export interface IPayOffice {
   id: string;
   name: string;
+  code: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  pic: string | null;
+  no_contract: string | null;
+  drawer_code: string | null;
   description: string | null;
+  file: string | null;
 
   status: boolean;
   created_at: Date;
@@ -378,7 +386,15 @@ export interface IPayOffice {
 export interface IInsurance {
   id: string;
   name: string;
+  code: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  pic: string | null;
+  no_contract: string | null;
+  drawer_code: string | null;
   description: string | null;
+  file: string | null;
 
   status: boolean;
   created_at: Date;

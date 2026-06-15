@@ -132,42 +132,44 @@ export default function DataSubmission() {
 
   useEffect(() => {
     (async () => {
-      await api
-        .request({
-          method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/producttype`,
-        })
-        .then((res) => {
-          setProductTypes(res.data.data);
-          setProducts(res.data.data.flatMap((p: IProductType) => p.Product));
-        });
-      await api
-        .request({
-          method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/sub_type`,
-        })
-        .then((res) => setSubTypes(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/mitra`,
-          params: { limit: 5000 },
-        })
-        .then((res) => setMitras(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/pay_office`,
-          params: { limit: 500 },
-        })
-        .then((res) => setPays(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/insurance`,
-          params: { limit: 500 },
-        })
-        .then((res) => setInsc(res.data.data));
+      await Promise.all([
+        api
+          .request({
+            method: "GET",
+            url: `${import.meta.env.VITE_API_URL}/producttype`,
+          })
+          .then((res) => {
+            setProductTypes(res.data.data);
+            setProducts(res.data.data.flatMap((p: IProductType) => p.Product));
+          }),
+        api
+          .request({
+            method: "GET",
+            url: `${import.meta.env.VITE_API_URL}/sub_type`,
+          })
+          .then((res) => setSubTypes(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: `${import.meta.env.VITE_API_URL}/mitra`,
+            params: { limit: 5000 },
+          })
+          .then((res) => setMitras(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: `${import.meta.env.VITE_API_URL}/pay_office`,
+            params: { limit: 500 },
+          })
+          .then((res) => setPays(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: `${import.meta.env.VITE_API_URL}/insurance`,
+            params: { limit: 500 },
+          })
+          .then((res) => setInsc(res.data.data)),
+      ]);
     })();
   }, []);
 
@@ -548,7 +550,11 @@ export default function DataSubmission() {
             className="w-full"
             options={subTypes.map((t) => ({ label: t.name, value: t.id }))}
             onChange={(val) =>
-              setPageprops({ ...pageprops, submissionTypeId: val })
+              setPageprops((prev) => ({
+                ...prev,
+                submissionTypeId: val,
+                page: 1,
+              }))
             }
             allowClear
             value={pageprops.submissionTypeId}
@@ -564,11 +570,12 @@ export default function DataSubmission() {
             className="w-full"
             options={productTypes.map((t) => ({ label: t.name, value: t.id }))}
             onChange={(val) =>
-              setPageprops({
-                ...pageprops,
+              setPageprops((prev) => ({
+                ...prev,
                 productTypeId: val,
                 productId: null,
-              })
+                page: 1,
+              }))
             }
             allowClear
             value={pageprops.productTypeId}
@@ -585,7 +592,9 @@ export default function DataSubmission() {
             options={products
               .filter((p) => p.productTypeId === pageprops.productTypeId)
               .map((t) => ({ label: t.name, value: t.id }))}
-            onChange={(val) => setPageprops({ ...pageprops, productId: val })}
+            onChange={(val) =>
+              setPageprops((prev) => ({ ...prev, productId: val, page: 1 }))
+            }
             allowClear
             value={pageprops.productId}
             optionFilterProp={"label"}
@@ -599,7 +608,9 @@ export default function DataSubmission() {
             placeholder="Pilih mitra.."
             className="w-full"
             options={mitras.map((t) => ({ label: t.name, value: t.id }))}
-            onChange={(val) => setPageprops({ ...pageprops, mitraId: val })}
+            onChange={(val) =>
+              setPageprops((prev) => ({ ...prev, mitraId: val, page: 1 }))
+            }
             allowClear
             value={pageprops.mitraId}
             optionFilterProp={"label"}
@@ -613,7 +624,9 @@ export default function DataSubmission() {
             placeholder="Pilih Kantor Bayar.."
             className="w-full"
             options={pays.map((t) => ({ label: t.name, value: t.id }))}
-            onChange={(val) => setPageprops({ ...pageprops, payOfficeId: val })}
+            onChange={(val) =>
+              setPageprops((prev) => ({ ...prev, payOfficeId: val, page: 1 }))
+            }
             allowClear
             value={pageprops.payOfficeId}
             optionFilterProp={"label"}
@@ -627,7 +640,9 @@ export default function DataSubmission() {
             placeholder="Pilih Asuransi.."
             className="w-full"
             options={insc.map((t) => ({ label: t.name, value: t.id }))}
-            onChange={(val) => setPageprops({ ...pageprops, insuranceId: val })}
+            onChange={(val) =>
+              setPageprops((prev) => ({ ...prev, insuranceId: val, page: 1 }))
+            }
             allowClear
             value={pageprops.insuranceId}
             optionFilterProp={"label"}
@@ -647,7 +662,11 @@ export default function DataSubmission() {
               { label: "DIKEMBALIKAN", value: "DIKEMBALIKAN" },
             ]}
             onChange={(val) =>
-              setPageprops({ ...pageprops, guarantee_status: val })
+              setPageprops((prev) => ({
+                ...prev,
+                guarantee_status: val,
+                page: 1,
+              }))
             }
             allowClear
             value={pageprops.guarantee_status}
@@ -667,7 +686,9 @@ export default function DataSubmission() {
               { label: "DIPINJAM", value: "DIPINJAM" },
               { label: "DIKEMBALIKAN", value: "DIKEMBALIKAN" },
             ]}
-            onChange={(val) => setPageprops({ ...pageprops, doc_status: val })}
+            onChange={(val) =>
+              setPageprops((prev) => ({ ...prev, doc_status: val, page: 1 }))
+            }
             allowClear
             value={pageprops.doc_status}
             optionFilterProp={"label"}
@@ -688,7 +709,11 @@ export default function DataSubmission() {
               { label: "PASIF", value: "PASIF" },
             ]}
             onChange={(val) =>
-              setPageprops({ ...pageprops, approve_status: val })
+              setPageprops((prev) => ({
+                ...prev,
+                approve_status: val,
+                page: 1,
+              }))
             }
             allowClear
             value={pageprops.approve_status}
@@ -708,7 +733,11 @@ export default function DataSubmission() {
               { label: "NON_PENSIUNAN", value: "NON_PENSIUNAN" },
             ]}
             onChange={(val) =>
-              setPageprops({ ...pageprops, flagging_status: val })
+              setPageprops((prev) => ({
+                ...prev,
+                flagging_status: val,
+                page: 1,
+              }))
             }
             allowClear
             value={pageprops.flagging_status}
@@ -727,7 +756,9 @@ export default function DataSubmission() {
               { label: "LEWAT TBO", value: "LEWAT TBO" },
               { label: "DITERIMA", value: "DITERIMA" },
             ]}
-            onChange={(val) => setPageprops({ ...pageprops, tbo_status: val })}
+            onChange={(val) =>
+              setPageprops((prev) => ({ ...prev, tbo_status: val, page: 1 }))
+            }
             allowClear
             value={pageprops.tbo_status}
             optionFilterProp={"label"}
@@ -746,7 +777,11 @@ export default function DataSubmission() {
             }
             onChange={
               (_date, datestr) =>
-                setPageprops({ ...pageprops, backdate: datestr })
+                setPageprops((prev) => ({
+                  ...prev,
+                  backdate: datestr,
+                  page: 1,
+                }))
               // console.log({ _date, datestr })
             }
             size="small"
@@ -773,6 +808,7 @@ export default function DataSubmission() {
               payOfficeId: "",
               insuranceId: "",
               tbo_status: "",
+              page: 1,
             })
           }
         >
@@ -821,7 +857,7 @@ export default function DataSubmission() {
               width={200}
               style={{ width: 200 }}
               onChange={(e) =>
-                setPageprops({ ...pageprops, search: e.target.value })
+                setPageprops((prev) => ({ ...prev, search: e.target.value }))
               }
             />
             <Popover
@@ -837,9 +873,14 @@ export default function DataSubmission() {
                   pageprops.productId ||
                   pageprops.guarantee_status ||
                   pageprops.approve_status ||
+                  pageprops.doc_status ||
+                  pageprops.flagging_status ||
                   pageprops.mitraId ||
+                  pageprops.payOfficeId ||
+                  pageprops.insuranceId ||
                   pageprops.backdate ||
-                  pageprops.submissionTypeId
+                  pageprops.submissionTypeId ||
+                  pageprops.tbo_status
                     ? "primary"
                     : undefined
                 }

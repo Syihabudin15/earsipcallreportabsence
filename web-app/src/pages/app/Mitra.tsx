@@ -409,6 +409,7 @@ export default function DataMitra() {
     {
       title: "Nama Mitra",
       key: "name",
+      fixed: window && window.innerWidth > 600 ? "left" : false,
       render(_v, record) {
         return (
           <>
@@ -421,6 +422,7 @@ export default function DataMitra() {
     {
       title: "Kontak",
       key: "contact",
+      width: 300,
       render(_v, record) {
         return (
           <div className="flex flex-col gap-0.5 text-xs opacity-80">
@@ -526,7 +528,10 @@ export default function DataMitra() {
           loading={loading}
           rowKey="id"
           bordered
-          scroll={{ x: "max-content" }}
+          scroll={{
+            x: "max-content",
+            y: window.innerWidth > 600 ? "50vh" : "63vh",
+          }}
           columns={columns}
           dataSource={pageprops.data}
           pagination={{

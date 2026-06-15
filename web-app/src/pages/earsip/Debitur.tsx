@@ -402,7 +402,7 @@ export default function DebiturEArsip() {
           rowKey={"id"}
           scroll={{
             x: "max-content",
-            // y: window.innerWidth > 600 ? "50vh" : "63vh",
+            y: window.innerWidth > 600 ? "50vh" : "63vh",
           }}
           columns={columns}
           dataSource={pageprops.data}

@@ -441,11 +441,15 @@ export default function DataBilling() {
               onClick={() =>
                 ExportData(
                   pageprops.data.map((d) => ({
-                    name: d.name,
+                    cif: d.Submission?.Debitur.cif,
+                    name: d.Submission?.Debitur.fullname,
+                    norek: d.Submission?.account_number,
+                    mitra: d.Mitra?.name,
                     nominal_tagihan: d.value,
                     nominal_realisasi: d.realize_value,
                     tanggal_tagih: moment(d.bill_date).format("DD/MM/YYYY"),
                     status: d.bill_status,
+                    ao: d.User.fullname,
                   })),
                   "data_tagihan",
                 )
