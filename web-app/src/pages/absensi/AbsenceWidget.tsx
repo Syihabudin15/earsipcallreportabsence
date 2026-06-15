@@ -282,7 +282,7 @@ export default function AbsenceWidget({
 
             if (distance > (config.meter_tolerance || 0)) {
               setDisable(true);
-              message.error("Maaf, Anda berada di luar radius lokasi kantor!");
+              // message.error("Maaf, Anda berada di luar radius lokasi kantor!");
             }
           }
         } catch (error) {

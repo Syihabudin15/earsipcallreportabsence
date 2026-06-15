@@ -119,18 +119,18 @@ const generate = (record: any, selectedMonth: string | null) => {
 
   // Template Reusable Header BPR
   const renderBprHeader = (titleText: string) => `
-    <div class="mb-4 flex items-center gap-3 border-b border-gray-200 pb-2">
+    <div class="mb-4 flex items-center justify-between gap-3 border-b border-gray-200 pb-2">
+      <div>
+        <div class="text-xs font-bold text-gray-500 font-sans" style="color: #1F4E78;">PT BPR HASAMITRA JAWA BARAT</div>
+        <div class="text-sm font-bold text-black font-sans">${titleText.toUpperCase()}</div>
+        <div class="text-xs italic text-gray-400 font-sans">PERIODE LAPORAN: ${periodeTeks.toUpperCase()}</div>
+      </div>
       <div class="shrink-0">
         <img
           src="${logoUrl}"
           alt="Logo"
           style="width: 54px; height: 54px; object-fit: contain;"
         />
-      </div>
-      <div>
-        <div class="text-xs font-bold text-gray-500 font-sans" style="color: #1F4E78;">PT BPR HASAMITRA JAWA BARAT</div>
-        <div class="text-sm font-bold text-black font-sans">${titleText.toUpperCase()}</div>
-        <div class="text-xs italic text-gray-400 font-sans">PERIODE LAPORAN: ${periodeTeks.toUpperCase()}</div>
       </div>
     </div>
   `;
@@ -216,6 +216,7 @@ const generate = (record: any, selectedMonth: string | null) => {
               <th class="border-excel-light text-center w-14">Debitur</th>
               <th class="border-excel-light text-right">Sisa Pokok (OS)</th>
               <th class="border-excel-light text-right">Angsuran Wajib</th>
+              <th class="border-excel-light text-center w-24">NPL Instansi</th>
               <th class="border-excel-light text-center w-24">NPL Gross</th>
             </tr>
           </thead>
@@ -225,9 +226,18 @@ const generate = (record: any, selectedMonth: string | null) => {
                 const isZebra = idx % 2 === 1 ? "bg-zebra-even" : "";
                 const isSubtotal = d.rowType === "subtotal";
                 const rowClass = `${isZebra} ${isSubtotal ? "subtotal-row" : ""}`;
-                const nplVal = isSubtotal ? (d.nplGross || 0) / 100 : null;
-                const nplFontColor =
-                  nplVal !== null && nplVal * 100 > 5
+                const nplInstansiVal = isSubtotal
+                  ? (d.nplInstansi || 0) / 100
+                  : null;
+                const nplGrossVal = isSubtotal ? (d.nplGross || 0) / 100 : null;
+
+                const nplInstansiFontColor =
+                  nplInstansiVal !== null && nplInstansiVal * 100 > 5
+                    ? "color: #9C0006; font-weight: bold;"
+                    : "";
+
+                const nplGrossFontColor =
+                  nplGrossVal !== null && nplGrossVal * 100 > 5
                     ? "color: #9C0006; font-weight: bold;"
                     : "";
 
@@ -239,7 +249,12 @@ const generate = (record: any, selectedMonth: string | null) => {
                   <td class="border-excel-light text-center">${d.deb || 0}</td>
                   <td class="border-excel-light text-right">${formatIDR(d.sisaPokok)}</td>
                   <td class="border-excel-light text-right">${formatIDR(d.angsuran)}</td>
-                  <td class="border-excel-light text-center" style="${nplFontColor}">${nplVal === null ? "" : formatPct(nplVal)}</td>
+                  <td class="border-excel-light text-center" style="${nplInstansiFontColor}">
+  ${nplInstansiVal === null ? "" : formatPct(nplInstansiVal)}
+</td>
+<td class="border-excel-light text-center" style="${nplGrossFontColor}">
+  ${nplGrossVal === null ? "" : formatPct(nplGrossVal)}
+</td>
                 </tr>
               `;
               })
@@ -249,7 +264,12 @@ const generate = (record: any, selectedMonth: string | null) => {
               <td class="border-excel-light border-total-top border-total-bottom text-center">${tDeb1}</td>
               <td class="border-excel-light border-total-top border-total-bottom text-right">${formatIDR(tSisa1)}</td>
               <td class="border-excel-light border-total-top border-total-bottom text-right">${formatIDR(tAngs1)}</td>
-              <td class="border-excel-light border-total-top border-total-bottom text-center">${formatPct(globalNplGross1)}</td>
+              <td class="border-excel-light border-total-top border-total-bottom text-center">
+  ${formatPct(globalNplGross1)}
+</td>
+<td class="border-excel-light border-total-top border-total-bottom text-center">
+  ${formatPct(globalNplGross1)}
+</td>
             </tr>
           </tbody>
         </table>

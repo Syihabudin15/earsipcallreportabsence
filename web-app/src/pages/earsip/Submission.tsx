@@ -61,6 +61,7 @@ export default function DataSubmission() {
     mitraId: "",
     payOfficeId: "",
     insuranceId: "",
+    tbo_status: "",
   });
   const [action, setAction] = useState<IActionPage<ISubmission>>({
     upsert: false,
@@ -97,6 +98,7 @@ export default function DataSubmission() {
           mitraId: pageprops.mitraId,
           payOfficeId: pageprops.payOfficeId,
           insuranceId: pageprops.insuranceId,
+          tbo_status: pageprops.tbo_status,
           backdate: pageprops.backdate ? pageprops.backdate.toString() : "",
         },
       })
@@ -189,6 +191,7 @@ export default function DataSubmission() {
     pageprops.mitraId,
     pageprops.payOfficeId,
     pageprops.insuranceId,
+    pageprops.tbo_status,
   ]);
 
   const columns: TableProps<ISubmission>["columns"] = [
@@ -210,7 +213,7 @@ export default function DataSubmission() {
       title: "Nasabah",
       key: "pemohon",
       dataIndex: ["Debitur", "fullname"],
-      fixed: window.innerWidth > 600 ? "left" : undefined,
+      fixed: window.innerWidth > 600 ? "left" : false,
       render(value, record, _index) {
         return (
           <div>
@@ -714,6 +717,24 @@ export default function DataSubmission() {
             size="small"
           />
         </div>
+        <div className="flex flex-col">
+          <p className="mb-1 text-xs">Status TBO</p>
+          <Select
+            placeholder="Pilih status tbo.."
+            className="w-full"
+            options={[
+              { label: "MASA TBO", value: "MASA TBO" },
+              { label: "LEWAT TBO", value: "LEWAT TBO" },
+              { label: "DITERIMA", value: "DITERIMA" },
+            ]}
+            onChange={(val) => setPageprops({ ...pageprops, tbo_status: val })}
+            allowClear
+            value={pageprops.tbo_status}
+            optionFilterProp={"label"}
+            showSearch
+            size="small"
+          />
+        </div>
         <div className="flex flex-col col-span-2">
           <p className="mb-1 text-xs">Periode</p>
           <RangePicker
@@ -751,6 +772,7 @@ export default function DataSubmission() {
               mitraId: "",
               payOfficeId: "",
               insuranceId: "",
+              tbo_status: "",
             })
           }
         >
@@ -835,7 +857,7 @@ export default function DataSubmission() {
           bordered
           scroll={{
             x: "max-content",
-            // y: window.innerWidth > 600 ? "50vh" : "63vh",
+            y: window.innerWidth > 600 ? "50vh" : "63vh",
           }}
           columns={columns}
           dataSource={pageprops.data}

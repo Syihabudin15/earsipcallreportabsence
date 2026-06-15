@@ -21,7 +21,27 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
 
   const where: Prisma.BillingWhereInput = {
     status: true,
-    ...(search && { name: { contains: search as string } }),
+    ...(search && {
+      OR: [
+        { name: { contains: search as string } },
+        {
+          Submission: {
+            OR: [
+              { account_number: { contains: search as string } },
+              {
+                Debitur: {
+                  OR: [
+                    { nik: { contains: search as string } },
+                    { fullname: { contains: search as string } },
+                    { cif: { contains: search as string } },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }),
     ...(mitraId && { mitraId: mitraId as string }),
     ...(productId && { productId: productId as string }),
     ...(bill_status && { bill_status: bill_status as EBill }),

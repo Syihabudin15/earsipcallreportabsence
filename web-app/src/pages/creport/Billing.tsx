@@ -163,10 +163,11 @@ export default function DataBilling() {
       title: "Nasabah",
       key: "name",
       dataIndex: "name",
+      fixed: window && window.innerWidth > 600 ? "left" : false,
       render(_value, record) {
         return (
           <div>
-            <div>{record.name}</div>
+            <div>{record.Submission?.Debitur.fullname}</div>
             <div className="text-xs opacity-80">
               {record.Submission?.Debitur?.cif}
             </div>
@@ -506,7 +507,7 @@ export default function DataBilling() {
           }}
           scroll={{
             x: "max-content",
-            // y: window.innerWidth > 600 ? "53vh" : "65vh",
+            y: window.innerWidth > 600 ? "53vh" : "65vh",
           }}
           columns={columns}
           dataSource={pageprops.data}
@@ -833,7 +834,7 @@ const ProcessData = ({
           url: `${import.meta.env.VITE_API_URL}/billing/${record.id}`,
           method: "PUT",
           data: {
-            realize_value: billStatus === "BAYAR" ? record.realize_value : 0,
+            realize_value: billStatus === "BAYAR" ? record.value : 0,
             bill_status: billStatus,
           },
           headers: { "Content-Type": "Application/json" },

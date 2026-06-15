@@ -27,6 +27,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     payOfficeId,
     insuranceId,
     guarantee_date,
+    tbo_status,
   } = req.query;
   page = Number(page);
   limit = Number(limit);
@@ -96,6 +97,28 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
             .toDate(),
         },
       }),
+      ...(tbo_status &&
+        tbo_status === "DITERIMA" && {
+          guarantee_status: { in: ["DIPINJAM", "DITERIMA"] },
+          flagging_status: { not: "NON_PENSIUNAN" },
+          guarantee_date: { not: null },
+        }),
+      ...(tbo_status &&
+        tbo_status === "MASA TBO" && {
+          guarantee_status: "PENDING",
+          flagging_status: { not: "NON_PENSIUNAN" },
+          guarantee_date: {
+            lte: moment().toDate(),
+          },
+        }),
+      ...(tbo_status &&
+        tbo_status === "LEWAT TBO" && {
+          guarantee_status: "PENDING",
+          flagging_status: { not: "NON_PENSIUNAN" },
+          guarantee_date: {
+            gte: moment().toDate(),
+          },
+        }),
       ...(req.user?.Role.data_status === "USER"
         ? { OR: [{ createdById: req.user.id }, { userId: req.user.id }] }
         : {}),

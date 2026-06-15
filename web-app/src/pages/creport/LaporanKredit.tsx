@@ -316,20 +316,40 @@ export default function LaporanKredit() {
     if (isNpl(bill)) item.nplValue += os;
   };
 
-  const finalizeKolItem = (item: any) => {
+  const finalizeKolItem = (item: any, totalOsKredit = 0) => {
     const larRatio =
       item.sisaPokok > 0 ? (item.larValue / item.sisaPokok) * 100 : 0;
-    const nplGross =
+
+    // NPL Instansi = pembagi OS kelompok / instansi masing-masing
+    const nplInstansi =
       item.sisaPokok > 0 ? (item.nplValue / item.sisaPokok) * 100 : 0;
+
+    // NPL Gross = pembagi total OS kredit seluruh laporan
+    const nplGross =
+      totalOsKredit > 0 ? (item.nplValue / totalOsKredit) * 100 : 0;
 
     return {
       ...item,
       larRatio: parseFloat(larRatio.toFixed(2)),
+      nplInstansi: parseFloat(nplInstansi.toFixed(2)),
       nplGross: parseFloat(nplGross.toFixed(2)),
     };
   };
 
+  const getTotalOsKredit = () => {
+    return dashboardData.reduce((total: number, mitra: any) => {
+      return (
+        total +
+        (mitra.Billing?.reduce(
+          (acc: number, bill: any) => acc + (bill.pkk || 0),
+          0,
+        ) || 0)
+      );
+    }, 0);
+  };
+
   const getInstansiKolektibilitasData = () => {
+    const totalOsKredit = getTotalOsKredit();
     return dashboardData.flatMap((mitra, index) => {
       const kolMap: Record<number, any> = {};
       const total = createEmptyKolItem();
@@ -346,7 +366,7 @@ export default function LaporanKredit() {
       const detailRows = Object.entries(kolMap)
         .sort(([a], [b]) => Number(a) - Number(b))
         .map(([kol, item], rowIndex) => ({
-          ...finalizeKolItem(item),
+          ...finalizeKolItem(item, totalOsKredit),
           rowType: "detail",
           no: rowIndex === 0 ? index + 1 : "",
           instansi: rowIndex === 0 ? mitra.name || "Tanpa Nama" : "",
@@ -359,7 +379,7 @@ export default function LaporanKredit() {
       return [
         ...detailRows,
         {
-          ...finalizeKolItem(total),
+          ...finalizeKolItem(total, totalOsKredit),
           rowType: "subtotal",
           no: "",
           instansi: "",
@@ -573,7 +593,7 @@ export default function LaporanKredit() {
       // ==========================================
       const ws1 = workbook.addWorksheet("NPL Instansi");
       applyWorksheetConfig(ws1);
-      addBprHeader(ws1, "LAPORAN POSISI KOLEKTIBILITAS PINJAMAN", 7);
+      addBprHeader(ws1, "LAPORAN POSISI KOLEKTIBILITAS PINJAMAN", 8);
 
       ws1.getCell("A5").value = "I. KOLEKTIBILITAS BERDASARKAN INSTANSI";
       ws1.getCell("A5").font = {
@@ -591,6 +611,7 @@ export default function LaporanKredit() {
         "Debitur",
         "Sisa Pokok (OS)",
         "Angsuran Wajib",
+        "NPL Instansi",
         "NPL Gross",
       ];
       hRow1.font = {
@@ -612,6 +633,7 @@ export default function LaporanKredit() {
       ws1.getColumn(5).width = 18;
       ws1.getColumn(6).width = 18;
       ws1.getColumn(7).width = 12;
+      ws1.getColumn(8).width = 12;
       hRow1.eachCell(
         (c) =>
           (c.fill = {
@@ -642,6 +664,7 @@ export default function LaporanKredit() {
           d.deb,
           d.sisaPokok,
           d.angsuran,
+          d.rowType === "subtotal" ? d.nplInstansi / 100 : null,
           d.rowType === "subtotal" ? d.nplGross / 100 : null,
         ]);
         r.height = 20;
@@ -652,6 +675,7 @@ export default function LaporanKredit() {
         r.getCell(5).numFmt = "#,##0";
         r.getCell(6).numFmt = "#,##0";
         r.getCell(7).numFmt = "0.00%";
+        r.getCell(8).numFmt = "0.00%";
 
         if (d.rowType === "subtotal") {
           r.font = { name: "Segoe UI", size: 10, bold: true };
@@ -680,6 +704,9 @@ export default function LaporanKredit() {
         if (d.rowType === "subtotal" && d.nplGross > 5) {
           r.getCell(7).font = { color: { argb: "9C0006" }, bold: true };
         }
+        if (d.rowType === "subtotal" && d.nplGross > 5) {
+          r.getCell(8).font = { color: { argb: "9C0006" }, bold: true };
+        }
 
         currentRow++;
       });
@@ -694,6 +721,7 @@ export default function LaporanKredit() {
         tSisa1,
         tAngs1,
         globalNplGross1,
+        globalNplGross1,
       ]);
       ws1.mergeCells(currentRow, 1, currentRow, 3);
       totalRow1.height = 22;
@@ -703,6 +731,7 @@ export default function LaporanKredit() {
       totalRow1.getCell(5).numFmt = "#,##0";
       totalRow1.getCell(6).numFmt = "#,##0";
       totalRow1.getCell(7).numFmt = "0.00%";
+      totalRow1.getCell(8).numFmt = "0.00%";
       totalRow1.eachCell((cell) => {
         cell.fill = {
           type: "pattern",
@@ -715,7 +744,7 @@ export default function LaporanKredit() {
         };
       });
 
-      applyCellBorders(ws1, 6, currentRow - 1, 7);
+      applyCellBorders(ws1, 6, currentRow - 1, 8);
       autoFitColumns(ws1);
       addSignatures(ws1, currentRow + 1);
 

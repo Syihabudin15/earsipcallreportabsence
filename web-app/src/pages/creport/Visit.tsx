@@ -177,7 +177,7 @@ export default function DataVisit() {
       title: "Pemohon",
       key: "pemohon",
       dataIndex: ["Debitur", "fullname"],
-      fixed: window.innerWidth > 600 ? "left" : undefined,
+      fixed: window && window.innerWidth > 600 ? "left" : false,
       render(value, record, _index) {
         return (
           <div>
@@ -248,6 +248,7 @@ export default function DataVisit() {
       title: "Hasil Kunjungan",
       key: "hasil",
       dataIndex: ["VisitStatus", "name"],
+      width: 250,
       render(value, record, _index) {
         return (
           <div>
@@ -263,6 +264,7 @@ export default function DataVisit() {
       title: "Komentar",
       key: "komentar",
       dataIndex: "coments",
+      width: 250,
       render(_value, record, _index) {
         return (
           <CollapseList
@@ -282,6 +284,7 @@ export default function DataVisit() {
       title: "Tindak Lanjut",
       key: "next_action",
       dataIndex: "next_action",
+      width: 250,
       render(_value, record, _index) {
         return <CollapseText text={record.next_action || ""} />;
       },
@@ -503,8 +506,8 @@ export default function DataVisit() {
               onClick={() =>
                 ExportData(
                   pageprops.data.map((d) => ({
-                    nasabah: d.Submission?.Debitur.fullname,
-                    cif: d.Submission?.Debitur.cif,
+                    nasabah: d.Debitur.fullname,
+                    cif: d.Debitur.cif,
                     rekening: d.Submission?.account_number,
                     produk: d.Submission?.Product.name,
                     kategori_kunjungan: d.VisitCategory?.name,
@@ -571,7 +574,7 @@ export default function DataVisit() {
           rowKey={"id"}
           scroll={{
             x: "max-content",
-            // y: window.innerWidth > 600 ? "53vh" : "65vh",
+            y: window.innerWidth > 600 ? "53vh" : "65vh",
           }}
           columns={columns}
           dataSource={pageprops.data}
