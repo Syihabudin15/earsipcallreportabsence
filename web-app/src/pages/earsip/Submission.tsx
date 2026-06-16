@@ -755,6 +755,7 @@ export default function DataSubmission() {
               { label: "MASA TBO", value: "MASA TBO" },
               { label: "LEWAT TBO", value: "LEWAT TBO" },
               { label: "DITERIMA", value: "DITERIMA" },
+              { label: "NOT SET", value: "NOT SET" },
             ]}
             onChange={(val) =>
               setPageprops((prev) => ({ ...prev, tbo_status: val, page: 1 }))

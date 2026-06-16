@@ -26,6 +26,7 @@ import {
 // --- INTERFACES BINDING DATA ---
 import type { ISubmission } from "../../libs/interface";
 import { IDRFormat } from "../utils/utilForm";
+import moment from "moment";
 
 const COLOR_STATUS: Record<string, string> = {
   APPROVED: "#10b981",
@@ -152,40 +153,40 @@ export default function DashboardEarsip() {
         // - NOT SET: guarantee_date masih null
         // - Mitra kosong tidak ditampilkan
         // ==================================================
-        const normalizeStatus = (value: any) =>
-          String(value || "")
-            .trim()
-            .toUpperCase()
-            .replace(/[\s-]+/g, "_");
-
-        const toStartOfDay = (date: Date) => {
-          const d = new Date(date);
-          d.setHours(0, 0, 0, 0);
-          return d;
-        };
-
-        const today = toStartOfDay(new Date()).getTime();
+        // const normalizeStatus = (value: any) =>
+        //   String(value || "")
+        //     .trim()
+        //     .toUpperCase()
+        //     .replace(/[\s-]+/g, "_");
 
         const getTboCategory = (s: any) => {
-          const flaggingStatus = normalizeStatus(s.flagging_status);
+          // const flaggingStatus = normalizeStatus(s.flagging_status);
 
-          if (flaggingStatus === "NON_PENSIUNAN") return null;
+          if (s.flagging_status === "NON_PENSIUNAN") return null;
 
           if (!s.guarantee_date) {
             return "NOT SET";
           }
 
-          // Data yang sudah FLAGGING tidak masuk LEWAT/MASA TBO
-          if (flaggingStatus === "FLAGGING") return null;
+          // Data yang sudah FLAGGING dianggap sudah diterima
+          if (s.flagging_status === "FLAGGING") return "DITERIMA";
 
-          const guaranteeDate = toStartOfDay(
-            new Date(s.guarantee_date),
-          ).getTime();
-          if (Number.isNaN(guaranteeDate)) {
+          const guaranteeDate = moment(s.guarantee_date);
+
+          if (!guaranteeDate.isValid()) {
             return "NOT SET";
           }
 
-          return guaranteeDate < today ? "LEWAT TBO" : "MASA TBO";
+          const today = moment().startOf("day");
+
+          if (
+            s.flagging_status === "PENDING" &&
+            guaranteeDate.isAfter(today, "day")
+          ) {
+            return "LEWAT TBO";
+          }
+
+          return "MASA TBO";
         };
 
         const matrixReport = mitra
@@ -197,6 +198,7 @@ export default function DashboardEarsip() {
             > = {
               "LEWAT TBO": { productName: "LEWAT TBO", count: 0, value: 0 },
               "MASA TBO": { productName: "MASA TBO", count: 0, value: 0 },
+              DITERIMA: { productName: "DITERIMA", count: 0, value: 0 },
               "NOT SET": { productName: "NOT SET", count: 0, value: 0 },
             };
 

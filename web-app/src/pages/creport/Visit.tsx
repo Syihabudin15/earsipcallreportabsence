@@ -506,8 +506,8 @@ export default function DataVisit() {
               onClick={() =>
                 ExportData(
                   pageprops.data.map((d) => ({
-                    nasabah: d.Debitur.fullname,
-                    cif: d.Debitur.cif,
+                    nasabah: d.Submission?.Debitur.fullname,
+                    cif: d.Submission?.Debitur.cif,
                     rekening: d.Submission?.account_number,
                     produk: d.Submission?.Product.name,
                     kategori_kunjungan: d.VisitCategory?.name,

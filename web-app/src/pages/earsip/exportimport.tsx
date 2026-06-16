@@ -85,6 +85,9 @@ export const ExportImport = ({ data }: { data: ISubmission[] }) => {
                     email: d.Debitur.email,
                     jenis_pemohon: d.Debitur.SubmissionType.name,
                     tanggal_dibuat: moment(d.created_at).format("DD/MM/YYYY"),
+                    tanggal_jtmp_jaminan: d.guarantee_date
+                      ? moment(d.guarantee_date).format("DD/MM/YYYY")
+                      : "",
                     tipe_produk: d.Product.ProductType?.name,
                     produk: d.Product.name,
                     nilai: d.value,

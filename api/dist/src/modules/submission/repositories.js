@@ -4,7 +4,7 @@ import prisma from "../../libs/prisma.js";
 import moment from "moment";
 import xlsx from "xlsx";
 export const GET = async (req, res, next) => {
-    let { page = 1, limit = 50, search, productTypeId, productId, guarantee_status, doc_status, approve_status, flagging_status, backdate, submissionTypeId, mitraId, payOfficeId, insuranceId, guarantee_date, } = req.query;
+    let { page = 1, limit = 50, search, productTypeId, productId, guarantee_status, doc_status, approve_status, flagging_status, backdate, submissionTypeId, mitraId, payOfficeId, insuranceId, guarantee_date, tbo_status, } = req.query;
     page = Number(page);
     limit = Number(limit);
     const skip = (page - 1) * limit;
@@ -70,6 +70,28 @@ export const GET = async (req, res, next) => {
                     lte: moment(guarantee_date.split(",")[1])
                         .endOf("day")
                         .toDate(),
+                },
+            }),
+            ...(tbo_status &&
+                tbo_status === "DITERIMA" && {
+                guarantee_status: { in: ["DIPINJAM", "DITERIMA"] },
+                flagging_status: { not: "NON_PENSIUNAN" },
+                guarantee_date: { not: null },
+            }),
+            ...(tbo_status &&
+                tbo_status === "MASA TBO" && {
+                guarantee_status: "PENDING",
+                flagging_status: { not: "NON_PENSIUNAN" },
+                guarantee_date: {
+                    lte: moment().toDate(),
+                },
+            }),
+            ...(tbo_status &&
+                tbo_status === "LEWAT TBO" && {
+                guarantee_status: "PENDING",
+                flagging_status: { not: "NON_PENSIUNAN" },
+                guarantee_date: {
+                    gte: moment().toDate(),
                 },
             }),
             ...(req.user?.Role.data_status === "USER"

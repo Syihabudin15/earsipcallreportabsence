@@ -15,7 +15,7 @@ export const GET = async (req, res, next) => {
             skip: skip,
             take: limit,
             include: { Submission: true },
-            orderBy: { id: "asc" },
+            orderBy: { created_at: "desc" },
         });
         const total = await prisma.mitra.count({
             where: {
@@ -115,7 +115,7 @@ export const DELETE = async (req, res, next) => {
 };
 async function generateId() {
     const prefix = "MITRA";
-    const padLength = 2;
+    const padLength = 4;
     const lastRecord = await prisma.mitra.count();
     return `${prefix}${String(lastRecord + 1).padStart(padLength, "0")}`;
 }

@@ -108,7 +108,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
           guarantee_status: "PENDING",
           flagging_status: { not: "NON_PENSIUNAN" },
           guarantee_date: {
-            lte: moment().toDate(),
+            lte: new Date(),
           },
         }),
       ...(tbo_status &&
@@ -116,8 +116,13 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
           guarantee_status: "PENDING",
           flagging_status: { not: "NON_PENSIUNAN" },
           guarantee_date: {
-            gte: moment().toDate(),
+            gt: new Date(),
           },
+        }),
+      ...(tbo_status &&
+        tbo_status === "NOT SET" && {
+          flagging_status: { not: "NON_PENSIUNAN" },
+          guarantee_date: null,
         }),
       ...(req.user?.Role.data_status === "USER"
         ? { OR: [{ createdById: req.user.id }, { userId: req.user.id }] }
