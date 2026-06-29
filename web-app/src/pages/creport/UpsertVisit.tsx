@@ -238,9 +238,12 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
                   ...data,
                   Debitur: find ? find : data.Debitur,
                   debiturId: e,
+                  value: 0,
+                  col: "",
+                  submissionId: null,
                 });
                 if (find) {
-                  setSubmissions(find.Submission);
+                  setSubmissions(find.Submission || []);
                   setMitras(
                     find.Submission.flatMap((s) => s.Mitra) as IMitra[],
                   );
@@ -567,7 +570,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
                   label="Data Rekening"
                   value={data.submissionId}
                   options={submissions.map((s) => ({
-                    label: `${s.id} (${s.Product.name}-${s.Product.ProductType?.name})`,
+                    label: `${s.id} (${s.account_number})`,
                     value: s.id,
                   }))}
                   onchage={(e: string) => {
