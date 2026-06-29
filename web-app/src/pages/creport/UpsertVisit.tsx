@@ -241,6 +241,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
                   value: 0,
                   col: "",
                   submissionId: null,
+                  mitraId: null,
                 });
                 if (find) {
                   setSubmissions(find.Submission || []);
