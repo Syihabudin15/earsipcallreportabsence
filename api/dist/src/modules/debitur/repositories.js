@@ -38,6 +38,7 @@ export const GET = async (req, res, next) => {
                         include: {
                             Product: { include: { ProductType: true } },
                             Mitra: { select: { name: true, code: true, id: true } },
+                            Billing: true,
                         },
                     },
                     Visit: {

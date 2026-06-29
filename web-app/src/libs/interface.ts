@@ -217,6 +217,8 @@ export interface IBilling {
   mitraId: string | null;
   Product: IProduct | null;
   productId: string | null;
+  col: string | null;
+  periode: Date | null;
 
   status: boolean;
   created_at: Date;
@@ -437,6 +439,7 @@ export interface ISubmission {
   payOfficeId?: string | null;
   insuranceId?: string | null;
   createdById: string;
+  Billing: IBilling[];
 }
 
 export interface ICollateralLending {

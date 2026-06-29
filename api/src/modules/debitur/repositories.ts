@@ -42,6 +42,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
             include: {
               Product: { include: { ProductType: true } },
               Mitra: { select: { name: true, code: true, id: true } },
+              Billing: true,
             },
           },
           Visit: {

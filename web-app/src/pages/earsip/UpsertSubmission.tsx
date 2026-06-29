@@ -1028,6 +1028,7 @@ const defaultData: ISubmission = {
   payOfficeId: null,
   insuranceId: null,
   createdById: "",
+  Billing: [],
 };
 
 const defaultComment: IComments = {

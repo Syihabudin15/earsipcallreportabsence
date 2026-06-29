@@ -355,17 +355,6 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
           </Col>
           <Col xs={12} md={8}>
             <InputUtil
-              label="Kolektibilitas"
-              value={data.col}
-              onchage={(e: string) => {
-                setData({ ...data, col: e });
-              }}
-              type="text"
-            />
-          </Col>
-
-          <Col xs={12} md={8}>
-            <InputUtil
               label="Jenis Pemohon"
               required
               value={data.Debitur?.submissionTypeId}
@@ -377,6 +366,40 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
               }}
               type="option"
               options={subTypes.map((s) => ({ label: s.name, value: s.id }))}
+            />
+          </Col>
+          {submissions.length !== 0 && (
+            <Col xs={12} md={8}>
+              <InputUtil
+                label="Data Rekening"
+                value={data.submissionId}
+                options={submissions.map((s) => ({
+                  label: `${s.id} (${s.Product.name}-${s.Product.ProductType?.name})`,
+                  value: s.id,
+                }))}
+                onchage={(e: string) => {
+                  const find = submissions.find((s) => s.id === e);
+                  setData({
+                    ...data,
+                    submissionId: e,
+                    ...(find && {
+                      col: find.Billing[0]?.col,
+                      value: find.Billing[0].value,
+                    }),
+                  });
+                }}
+                type="option"
+              />
+            </Col>
+          )}
+          <Col xs={12} md={8}>
+            <InputUtil
+              label="Kolektibilitas"
+              value={data.col}
+              onchage={(e: string) => {
+                setData({ ...data, col: e });
+              }}
+              type="text"
             />
           </Col>
         </Row>
