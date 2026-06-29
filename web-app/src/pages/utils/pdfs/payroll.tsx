@@ -5,39 +5,8 @@ import { IDRFormat } from "../utilForm";
 
 moment.locale("id");
 
-const parseDescription = (description?: string | null): string[] => {
-  try {
-    const parsed = JSON.parse(description || "[]");
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
 const generate = (record: IUser) => {
   const temp = calculatePayroll(record);
-
-  const hadir = record.Absence.filter((a) => a.absence_status === "HADIR");
-
-  const perdin = hadir.filter((h) =>
-    parseDescription(h.description).some((d) => d === "PERDIN"),
-  );
-
-  const lembur = hadir.filter((h) =>
-    parseDescription(h.description).some((d) => d === "LEMBUR"),
-  );
-
-  const telat = hadir.filter((h) =>
-    parseDescription(h.description).some((d) => d === "TERLAMBAT"),
-  );
-
-  const pulangawal = hadir.filter((h) =>
-    parseDescription(h.description).some((d) => d === "PULANG_CPAT"),
-  );
-
-  const alpha = record.Absence.filter((a) => a.absence_status === "ALPHA");
-  const izin = record.Absence.filter((a) => a.absence_status === "CUTI");
-  const sakit = record.Absence.filter((a) => a.absence_status === "SAKIT");
 
   const totalPotongan =
     temp.deductionPay +
@@ -203,22 +172,22 @@ const generate = (record: IUser) => {
           <div class="grid grid-cols-4 gap-3 text-center">
             <div class="bg-white border border-gray-200 rounded-md p-3">
               <p class="text-xs text-gray-500 font-semibold uppercase">Hadir</p>
-              <p class="text-lg font-bold text-green-700 mt-1">${hadir.length}</p>
+              <p class="text-lg font-bold text-green-700 mt-1">${temp.hadir.length}</p>
             </div>
 
             <div class="bg-white border border-gray-200 rounded-md p-3">
               <p class="text-xs text-gray-500 font-semibold uppercase">Alpha</p>
-              <p class="text-lg font-bold text-red-700 mt-1">${alpha.length}</p>
+              <p class="text-lg font-bold text-red-700 mt-1">${temp.alpha.length}</p>
             </div>
 
             <div class="bg-white border border-gray-200 rounded-md p-3">
               <p class="text-xs text-gray-500 font-semibold uppercase">Cuti</p>
-              <p class="text-lg font-bold text-blue-700 mt-1">${izin.length}</p>
+              <p class="text-lg font-bold text-blue-700 mt-1">${temp.cuti.length}</p>
             </div>
 
             <div class="bg-white border border-gray-200 rounded-md p-3">
               <p class="text-xs text-gray-500 font-semibold uppercase">Sakit</p>
-              <p class="text-lg font-bold text-yellow-700 mt-1">${sakit.length}</p>
+              <p class="text-lg font-bold text-yellow-700 mt-1">${temp.sakit.length}</p>
             </div>
           </div>
         </div>
@@ -373,44 +342,44 @@ const generate = (record: IUser) => {
             <div>
               <div class="attendance-row">
                 <span>Hadir</span>
-                <span class="attendance-value">${hadir.length}</span>
+                <span class="attendance-value">${temp.hadir.length}</span>
               </div>
 
               <div class="attendance-row">
                 <span>Perjalanan Dinas</span>
-                <span class="attendance-value">${perdin.length}</span>
+                <span class="attendance-value">${temp.perdin.length}</span>
               </div>
 
               <div class="attendance-row">
                 <span>Lembur</span>
-                <span class="attendance-value">${lembur.length}</span>
+                <span class="attendance-value">${temp.lembur.length}</span>
               </div>
 
               <div class="attendance-row">
                 <span>Terlambat</span>
-                <span class="attendance-value">${telat.length}</span>
+                <span class="attendance-value">${temp.late.length}</span>
               </div>
             </div>
 
             <div>
               <div class="attendance-row">
                 <span>Pulang Awal</span>
-                <span class="attendance-value">${pulangawal.length}</span>
+                <span class="attendance-value">${temp.fastleave.length}</span>
               </div>
 
               <div class="attendance-row">
                 <span>Alpha</span>
-                <span class="attendance-value">${alpha.length}</span>
+                <span class="attendance-value">${temp.alpha.length}</span>
               </div>
 
               <div class="attendance-row">
                 <span>Cuti</span>
-                <span class="attendance-value">${izin.length}</span>
+                <span class="attendance-value">${temp.cuti.length}</span>
               </div>
 
               <div class="attendance-row">
                 <span>Sakit</span>
-                <span class="attendance-value">${sakit.length}</span>
+                <span class="attendance-value">${temp.sakit.length}</span>
               </div>
             </div>
           </div>

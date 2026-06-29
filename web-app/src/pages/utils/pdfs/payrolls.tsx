@@ -417,7 +417,7 @@ const generate = (record: IUser[]) => {
                       ? r.payroll.tt_deduction
                           .map(
                             (ins) =>
-                              `<div class="flex justify-between"><span class="truncate max-w-[60px]">${ins.name}:</span> <span class="text-red-500">${ins.nominal_type === "RUPIAH" ? IDRFormat(ins.nominal) : IDRFormat(r.salary * (ins.nominal / 100))}</span></div>`,
+                              `<div class="flex justify-between"><span class="truncate max-w-15">${ins.name}:</span> <span class="text-red-500">${ins.nominal_type === "RUPIAH" ? IDRFormat(ins.nominal) : IDRFormat(r.salary * (ins.nominal / 100))}</span></div>`,
                           )
                           .join("")
                       : `<span class="text-gray-300">-</span>`
