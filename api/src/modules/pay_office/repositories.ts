@@ -9,28 +9,25 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
   const skip = (page - 1) * limit;
 
   try {
-    const data = await prisma.payOffice.findMany({
-      where: {
-        status: true,
-        ...(search && { name: { contains: search as string } }),
-      },
-      skip: skip,
-      take: limit,
-      include: { Submission: true },
-      orderBy: { id: "asc" },
-    });
-
-    const total = await prisma.payOffice.count({
-      where: {
-        status: true,
-        ...(search && { name: { contains: search as string } }),
-      },
-    });
+    const [data, total] = await Promise.all([
+      prisma.payOffice.findMany({
+        where: {
+          status: true,
+          ...(search && { name: { contains: search as string } }),
+        },
+        skip: skip,
+        take: limit,
+        include: { Submission: true },
+        orderBy: { id: "asc" },
+      }),
+      prisma.payOffice.count({
+        where: {
+          status: true,
+          ...(search && { name: { contains: search as string } }),
+        },
+      }),
+    ]);
     return ResponseServer(res, 200, {
-      msg: "GET /pay_office",
-      page,
-      limit,
-      search,
       data,
       total,
     });

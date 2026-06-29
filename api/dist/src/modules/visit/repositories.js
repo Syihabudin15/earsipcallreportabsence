@@ -26,7 +26,9 @@ export const GET = async (req, res, next) => {
                 ],
             }),
             ...(visitCategoryId && { visitCategoryId: visitCategoryId }),
-            ...(mitraId && { mitraId: mitraId }),
+            ...(mitraId && {
+                mitraId: mitraId === "null" ? null : mitraId,
+            }),
             ...(visitStatusId && { visitStatusId: visitStatusId }),
             ...(visitPurposeId && { visitPurposeId: visitPurposeId }),
             ...(approve_status && {
@@ -52,28 +54,26 @@ export const GET = async (req, res, next) => {
                 },
             }),
         };
-        const data = await prisma.visit.findMany({
-            where: querywhere,
-            include: {
-                Debitur: { include: { SubmissionType: true } },
-                Submission: { include: { Debitur: true, Product: true } },
-                VisitCategory: true,
-                VisitStatus: true,
-                VisitPurpose: true,
-                User: true,
-                Mitra: true,
-            },
-            skip: skip,
-            take: limit,
-        });
-        const total = await prisma.visit.count({
-            where: querywhere,
-        });
+        const [data, total] = await Promise.all([
+            prisma.visit.findMany({
+                where: querywhere,
+                include: {
+                    Debitur: { include: { SubmissionType: true } },
+                    Submission: { include: { Debitur: true, Product: true } },
+                    VisitCategory: true,
+                    VisitStatus: true,
+                    VisitPurpose: true,
+                    User: true,
+                    Mitra: true,
+                },
+                skip: skip,
+                take: limit,
+            }),
+            prisma.visit.count({
+                where: querywhere,
+            }),
+        ]);
         return ResponseServer(res, 200, {
-            msg: "GET /visit",
-            page,
-            limit,
-            search,
             data: data.map((item) => ({
                 ...item,
                 files: JSON.parse(item.files || "[]"),

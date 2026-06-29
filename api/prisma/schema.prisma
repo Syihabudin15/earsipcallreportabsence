@@ -269,12 +269,14 @@ model Submission {
 }
 
 model CollateralLending {
-  id          String    @id @default(uuid())
-  description String?   @db.Text
-  start_at    DateTime  @default(now())
+  id          String        @id @default(uuid())
+  description String?       @db.Text
+  start_at    DateTime      @default(now())
   end_at      DateTime?
   file        String?
   return_at   DateTime?
+  sub_status  EPermitStatus @default(PENDING)
+  approv_desc String?
 
   status       Boolean    @default(true)
   created_at   DateTime   @default(now())
@@ -423,7 +425,7 @@ model Visit {
   VisitPurpose    VisitPurpose? @relation(fields: [visitPurposeId], references: [id])
   Submission      Submission?   @relation(fields: [submissionId], references: [id], onUpdate: Cascade)
   ApproverBy      User?         @relation("VisitApprover", fields: [approverById], references: [id], onUpdate: Cascade)
-  Mitra           Mitra         @relation(fields: [mitraId], references: [id])
+  Mitra           Mitra?        @relation(fields: [mitraId], references: [id])
   approverById    String?
   submissionId    String?
   debiturId       String
@@ -431,7 +433,7 @@ model Visit {
   visitCategoryId String
   visitStatusId   String?
   visitPurposeId  String?
-  mitraId         String
+  mitraId         String?
 }
 
 model Billing {
@@ -449,6 +451,7 @@ model Billing {
   start_at      DateTime?
   end_at        DateTime?
   col           String?
+  periode       DateTime  @default(now())
 
   status       Boolean     @default(true)
   created_at   DateTime    @default(now())

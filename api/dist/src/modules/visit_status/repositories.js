@@ -7,25 +7,23 @@ export const GET = async (req, res, next) => {
     limit = Number(limit);
     const skip = (page - 1) * limit;
     try {
-        const data = await prisma.visitStatus.findMany({
-            where: {
-                status: true,
-                ...(search && { name: { contains: search } }),
-            },
-            skip: skip,
-            take: limit,
-        });
-        const total = await prisma.visitStatus.count({
-            where: {
-                status: true,
-                ...(search && { name: { contains: search } }),
-            },
-        });
+        const [data, total] = await Promise.all([
+            prisma.visitStatus.findMany({
+                where: {
+                    status: true,
+                    ...(search && { name: { contains: search } }),
+                },
+                skip: skip,
+                take: limit,
+            }),
+            prisma.visitStatus.count({
+                where: {
+                    status: true,
+                    ...(search && { name: { contains: search } }),
+                },
+            }),
+        ]);
         return ResponseServer(res, 200, {
-            msg: "GET /visit-status",
-            page,
-            limit,
-            search,
             data,
             total,
         });

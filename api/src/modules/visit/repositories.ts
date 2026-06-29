@@ -41,7 +41,9 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
         ],
       }),
       ...(visitCategoryId && { visitCategoryId: visitCategoryId as string }),
-      ...(mitraId && { mitraId: mitraId as string }),
+      ...(mitraId && {
+        mitraId: mitraId === "null" ? null : (mitraId as string),
+      }),
       ...(visitStatusId && { visitStatusId: visitStatusId as string }),
       ...(visitPurposeId && { visitPurposeId: visitPurposeId as string }),
       ...(approve_status && {
@@ -68,29 +70,26 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       }),
     };
 
-    const data = await prisma.visit.findMany({
-      where: querywhere,
-      include: {
-        Debitur: { include: { SubmissionType: true } },
-        Submission: { include: { Debitur: true, Product: true } },
-        VisitCategory: true,
-        VisitStatus: true,
-        VisitPurpose: true,
-        User: true,
-        Mitra: true,
-      },
-      skip: skip,
-      take: limit,
-    });
-
-    const total = await prisma.visit.count({
-      where: querywhere,
-    });
+    const [data, total] = await Promise.all([
+      prisma.visit.findMany({
+        where: querywhere,
+        include: {
+          Debitur: { include: { SubmissionType: true } },
+          Submission: { include: { Debitur: true, Product: true } },
+          VisitCategory: true,
+          VisitStatus: true,
+          VisitPurpose: true,
+          User: true,
+          Mitra: true,
+        },
+        skip: skip,
+        take: limit,
+      }),
+      prisma.visit.count({
+        where: querywhere,
+      }),
+    ]);
     return ResponseServer(res, 200, {
-      msg: "GET /visit",
-      page,
-      limit,
-      search,
       data: data.map((item) => ({
         ...item,
         files: JSON.parse(item.files || "[]"),

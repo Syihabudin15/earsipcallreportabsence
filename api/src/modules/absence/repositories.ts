@@ -42,24 +42,17 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       }),
     };
 
-    const data = await prisma.absence.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { check_in: "desc" },
-      include: { User: true },
-    });
-
-    const total = await prisma.absence.count({ where });
-    return ResponseServer(res, 200, {
-      msg: "GET /absence",
-      page,
-      limit,
-      search,
-      date,
-      data,
-      total,
-    });
+    const [data, total] = await Promise.all([
+      prisma.absence.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { check_in: "desc" },
+        include: { User: true },
+      }),
+      prisma.absence.count({ where }),
+    ]);
+    return ResponseServer(res, 200, { data, total });
   } catch (err) {
     console.log(err);
     return ResponseServer(res, 500, {
@@ -130,9 +123,7 @@ export const DELETE = async (
     });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
 
-    await prisma.$transaction(async (tx) => {
-      await tx.absence.delete({ where: { id: find.id } });
-    });
+    await prisma.absence.delete({ where: { id: find.id } });
 
     return ResponseServer(res, 200, { msg: "Data berhasil dihapus" });
   } catch (err) {

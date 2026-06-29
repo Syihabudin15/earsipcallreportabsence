@@ -27,134 +27,135 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       ...(req.user?.Role.data_status === "USER" && { id: req.user.id }),
     };
 
-    const data = await prisma.user.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { created_at: "desc" },
-      include: {
-        Position: true,
-        PermitAbsence: {
-          where: {
-            ...(month
-              ? {
-                  created_at: {
-                    gte: moment(month as string)
-                      .subtract(1, "month")
-                      .set("date", 21)
-                      .startOf("day")
-                      .toDate(),
-                    lte: moment(month as string)
-                      .set("date", 20)
-                      .endOf("day")
-                      .toDate(),
-                  },
-                }
-              : {
-                  created_at: {
-                    gte: moment().set("date", 21).startOf("day").toDate(),
-                    lte: moment().set("date", 20).endOf("day").toDate(),
-                  },
-                }),
-            status: true,
+    const [data, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { created_at: "desc" },
+        include: {
+          Position: true,
+          PermitAbsence: {
+            where: {
+              ...(month
+                ? {
+                    created_at: {
+                      gte: moment(month as string)
+                        .subtract(1, "month")
+                        .set("date", 21)
+                        .startOf("day")
+                        .toDate(),
+                      lte: moment(month as string)
+                        .set("date", 20)
+                        .endOf("day")
+                        .toDate(),
+                    },
+                  }
+                : {
+                    created_at: {
+                      gte: moment().set("date", 21).startOf("day").toDate(),
+                      lte: moment().set("date", 20).endOf("day").toDate(),
+                    },
+                  }),
+              status: true,
+            },
+          },
+          Absence: {
+            where: {
+              ...(month
+                ? {
+                    created_at: {
+                      gte: moment(month as string)
+                        .subtract(1, "month")
+                        .set("date", 21)
+                        .startOf("day")
+                        .toDate(),
+                      lte: moment(month as string)
+                        .set("date", 20)
+                        .endOf("day")
+                        .toDate(),
+                    },
+                  }
+                : {
+                    created_at: {
+                      gte: moment()
+                        .subtract(1, "month")
+                        .set("date", 21)
+                        .startOf("day")
+                        .toDate(),
+                      lte: moment().set("date", 20).endOf("day").toDate(),
+                    },
+                  }),
+            },
+          },
+          UserCost: {
+            where: {
+              end_at: null,
+            },
+          },
+          Insentif: {
+            where: {
+              ...(month
+                ? {
+                    created_at: {
+                      gte: moment(month as string)
+                        .subtract(1, "month")
+                        .set("date", 21)
+                        .startOf("day")
+                        .toDate(),
+                      lte: moment(month as string)
+                        .set("date", 20)
+                        .endOf("day")
+                        .toDate(),
+                    },
+                  }
+                : {
+                    created_at: {
+                      gte: moment()
+                        .subtract(1, "month")
+                        .set("date", 21)
+                        .startOf("day")
+                        .toDate(),
+                      lte: moment().set("date", 20).endOf("day").toDate(),
+                    },
+                  }),
+              status: true,
+              approve_status: "DISETUJUI",
+            },
+          },
+          Deduction: {
+            where: {
+              ...(month
+                ? {
+                    created_at: {
+                      gte: moment(month as string)
+                        .subtract(1, "month")
+                        .set("date", 21)
+                        .startOf("day")
+                        .toDate(),
+                      lte: moment(month as string)
+                        .set("date", 20)
+                        .endOf("day")
+                        .toDate(),
+                    },
+                  }
+                : {
+                    created_at: {
+                      gte: moment()
+                        .subtract(1, "month")
+                        .set("date", 21)
+                        .startOf("day")
+                        .toDate(),
+                      lte: moment().set("date", 20).endOf("day").toDate(),
+                    },
+                  }),
+              status: true,
+            },
           },
         },
-        Absence: {
-          where: {
-            ...(month
-              ? {
-                  created_at: {
-                    gte: moment(month as string)
-                      .subtract(1, "month")
-                      .set("date", 21)
-                      .startOf("day")
-                      .toDate(),
-                    lte: moment(month as string)
-                      .set("date", 20)
-                      .endOf("day")
-                      .toDate(),
-                  },
-                }
-              : {
-                  created_at: {
-                    gte: moment()
-                      .subtract(1, "month")
-                      .set("date", 21)
-                      .startOf("day")
-                      .toDate(),
-                    lte: moment().set("date", 20).endOf("day").toDate(),
-                  },
-                }),
-          },
-        },
-        UserCost: {
-          where: {
-            end_at: null,
-          },
-        },
-        Insentif: {
-          where: {
-            ...(month
-              ? {
-                  created_at: {
-                    gte: moment(month as string)
-                      .subtract(1, "month")
-                      .set("date", 21)
-                      .startOf("day")
-                      .toDate(),
-                    lte: moment(month as string)
-                      .set("date", 20)
-                      .endOf("day")
-                      .toDate(),
-                  },
-                }
-              : {
-                  created_at: {
-                    gte: moment()
-                      .subtract(1, "month")
-                      .set("date", 21)
-                      .startOf("day")
-                      .toDate(),
-                    lte: moment().set("date", 20).endOf("day").toDate(),
-                  },
-                }),
-            status: true,
-            approve_status: "DISETUJUI",
-          },
-        },
-        Deduction: {
-          where: {
-            ...(month
-              ? {
-                  created_at: {
-                    gte: moment(month as string)
-                      .subtract(1, "month")
-                      .set("date", 21)
-                      .startOf("day")
-                      .toDate(),
-                    lte: moment(month as string)
-                      .set("date", 20)
-                      .endOf("day")
-                      .toDate(),
-                  },
-                }
-              : {
-                  created_at: {
-                    gte: moment()
-                      .subtract(1, "month")
-                      .set("date", 21)
-                      .startOf("day")
-                      .toDate(),
-                    lte: moment().set("date", 20).endOf("day").toDate(),
-                  },
-                }),
-            status: true,
-          },
-        },
-      },
-    });
-
-    const total = await prisma.user.count({ where });
+      }),
+      prisma.user.count({ where }),
+    ]);
     return ResponseServer(res, 200, {
       msg: "GET /absence",
       page,

@@ -4,6 +4,7 @@ import type {
   IDebitur,
   IMitra,
   ISubmission,
+  ISubType,
   IUser,
   IVisit,
   IVisitCategory,
@@ -28,6 +29,7 @@ export default function UpsertVisitPlan({ record }: { record?: IVisit }) {
   const [submissions, setSubmissions] = useState<ISubmission[]>(
     record ? record.Debitur.Submission : [],
   );
+  const [subTypes, setSubTypes] = useState<ISubType[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   // const [search, setSearch] = useState("");
   const [dateErrors, setDateErrors] = useState<{ [key: string]: string }>({});
@@ -49,7 +51,12 @@ export default function UpsertVisitPlan({ record }: { record?: IVisit }) {
           api
             .request({ method: "GET", url: "/visit_category" })
             .then((res) => setVisitCategories(res.data.data)),
-
+          api
+            .request({
+              method: "GET",
+              url: "/sub_type",
+            })
+            .then((res) => setSubTypes(res.data.data)),
           api
             .request({ method: "GET", url: "/visit_purpose" })
             .then((res) => setVisitPurposes(res.data.data)),
@@ -136,7 +143,8 @@ export default function UpsertVisitPlan({ record }: { record?: IVisit }) {
         console.log(err);
         modal.error({
           title: "ERROR",
-          content: err.message || "Internal Server Error",
+          content:
+            err.response.data.msg || err.message || "Internal Server Error",
         });
       });
     setLoading(false);
@@ -213,7 +221,6 @@ export default function UpsertVisitPlan({ record }: { record?: IVisit }) {
           <Col xs={12} md={8}>
             <InputUtil
               label="Mitra"
-              required
               value={data.mitraId}
               onchage={(e: string) => {
                 setData({
@@ -324,6 +331,21 @@ export default function UpsertVisitPlan({ record }: { record?: IVisit }) {
                 setData({ ...data, col: e });
               }}
               type="text"
+            />
+          </Col>
+          <Col xs={12} md={8}>
+            <InputUtil
+              label="Jenis Pemohon"
+              required
+              value={data.Debitur?.submissionTypeId}
+              onchage={(e: string) => {
+                setData({
+                  ...data,
+                  Debitur: { ...data.Debitur, submissionTypeId: e },
+                });
+              }}
+              type="option"
+              options={subTypes.map((s) => ({ label: s.name, value: s.id }))}
             />
           </Col>
         </Row>
@@ -605,8 +627,7 @@ export default function UpsertVisitPlan({ record }: { record?: IVisit }) {
               !data.Debitur?.submissionTypeId ||
               !data.Debitur?.birthdate ||
               !data.visitCategoryId ||
-              !data.userId ||
-              !data.mitraId
+              !data.userId
             }
           >
             Submit
@@ -634,11 +655,11 @@ const defaultData: IVisit = {
   updated_at: new Date(),
   debiturId: "",
   userId: "",
-  Debitur: {} as IDebitur,
+  Debitur: { birthdate: new Date() } as IDebitur,
   User: {} as IUser,
   VisitCategory: {} as IVisitCategory,
-  Mitra: {} as IMitra,
-  mitraId: "",
+  Mitra: null,
+  mitraId: null,
   VisitPurpose: null,
   VisitStatus: null,
   visitCategoryId: "",

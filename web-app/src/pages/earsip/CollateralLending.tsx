@@ -11,6 +11,8 @@ import {
   Popover,
   Select,
   DatePicker,
+  Form,
+  Typography,
 } from "antd";
 import {
   EditOutlined,
@@ -18,6 +20,7 @@ import {
   EyeOutlined,
   CloseOutlined,
   PlusCircleOutlined,
+  FormOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import api from "../../libs/api";
@@ -28,7 +31,10 @@ import { Download, Filter } from "lucide-react";
 import dayjs from "dayjs";
 import useContext from "../../libs/context";
 import { ExportData } from "../../libs/helper";
+import axios from "axios";
 const { RangePicker } = DatePicker;
+const { TextArea } = Input;
+const { Text } = Typography;
 
 const CollateralLending = () => {
   const [data, setData] = useState<IPageProps<ICollateralLending>>({
@@ -37,12 +43,14 @@ const CollateralLending = () => {
     data: [],
     total: 0,
     search: "",
-    status: "",
+    sub_status: "",
     backdate: "",
   });
   const [loading, setLoading] = useState(false);
   const [viewRecord, setViewRecord] = useState<ICollateralLending | null>(null);
   const { hasAccess } = useContext();
+  const [prosesdata, setProsesData] = useState<ICollateralLending | null>(null);
+  const { user } = useContext();
 
   useEffect(() => {
     fetchData();
@@ -58,7 +66,7 @@ const CollateralLending = () => {
           page: data.page,
           limit: data.limit,
           search: data.search,
-          status: data.status,
+          sub_status: data.sub_status,
           backdate: data.backdate,
         },
       });
@@ -156,7 +164,7 @@ const CollateralLending = () => {
       },
     },
     {
-      title: "Status",
+      title: "Status Permohonan",
       dataIndex: "return_at",
       key: "return_at",
       render(_value, record, _index) {
@@ -164,10 +172,18 @@ const CollateralLending = () => {
           <div className="flex justify-center">
             <Tag
               style={{ width: 80, textAlign: "center" }}
-              color={record.return_at ? "green" : "orange"}
+              color={
+                record.return_at
+                  ? "green"
+                  : record.sub_status === "DISETUJUI"
+                    ? "green"
+                    : record.sub_status === "PENDING"
+                      ? "orange"
+                      : "red"
+              }
               variant="solid"
             >
-              {record.return_at ? "KEMBALI" : "DIPINJAM"}
+              {record.return_at ? "DIKEMBALIKAN" : record.sub_status}
             </Tag>
           </div>
         );
@@ -181,10 +197,22 @@ const CollateralLending = () => {
       render(_value, record, _index) {
         return (
           <div className="text-xs opacity-80">
-            <CollapseText text={record.description || ""} maxLength={40} />
+            <div className="flex gap-2">
+              Pemohon:{" "}
+              <CollapseText text={record.description || ""} maxLength={40} />
+            </div>
+            <div className="flex gap-2">
+              Pemeriksa:{" "}
+              <CollapseText text={record.approv_desc || ""} maxLength={40} />
+            </div>
           </div>
         );
       },
+    },
+    {
+      title: "Pemeriksa",
+      dataIndex: ["ApproverBy", "fullname"],
+      key: "pemeriksa",
     },
     {
       title: "Aksi",
@@ -192,7 +220,6 @@ const CollateralLending = () => {
       render: (_, record) => (
         <Space>
           <Button
-            type="primary"
             size="small"
             icon={<EyeOutlined />}
             onClick={() => setViewRecord(record)}
@@ -206,6 +233,15 @@ const CollateralLending = () => {
                 (window.location.href =
                   "/app/earsip/collateral_lending/upsert/" + record.id)
               }
+            />
+          )}
+          {hasAccess(window.location.pathname, "proses") && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<FormOutlined />}
+              disabled={record.sub_status !== "PENDING"}
+              onClick={() => setProsesData(record)}
             />
           )}
           {hasAccess(window.location.pathname, "delete") && (
@@ -232,6 +268,9 @@ const CollateralLending = () => {
           options={[
             { label: "DIPINJAM", value: "DIPINJAM" },
             { label: "DIKEMBALIKAN", value: "DIKEMBALIKAN" },
+            { label: "DISETUJUI", value: "DISETUJUI" },
+            { label: "DITOLAK", value: "DITOLAK" },
+            { label: "PENDING", value: "PENDING" },
           ]}
           onChange={(val) => setData({ ...data, status: val })}
           allowClear
@@ -439,7 +478,156 @@ const CollateralLending = () => {
           </div>
         )}
       </Modal>
+      {prosesdata && (
+        <ProsesPeminjamanJaminan
+          record={prosesdata}
+          open={prosesdata ? true : false}
+          setOpen={() => setProsesData(null)}
+          getData={fetchData}
+          key={prosesdata.id}
+          userId={user?.id || ""}
+        />
+      )}
     </div>
+  );
+};
+
+const ProsesPeminjamanJaminan = ({
+  open,
+  setOpen,
+  record,
+  getData,
+  userId,
+}: {
+  open: boolean;
+  setOpen: Function;
+  getData: Function;
+  record: ICollateralLending; // Sesuaikan dengan interface Anda (ICollateralLending)
+  userId: string;
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [form] = Form.useForm();
+
+  // 👀 Gunakan Form.useWatch untuk memantau nilai sub_status secara real-time
+  const subStatusWatch = Form.useWatch("sub_status", form);
+
+  useEffect(() => {
+    if (open && record) {
+      form.setFieldsValue({
+        sub_status: record.sub_status || "PENDING",
+        approv_desc: record.approv_desc || "", // Sesuaikan dengan field payload Anda jika ada default-nya
+      });
+    }
+  }, [open, record, form]);
+
+  const handleProses = async () => {
+    try {
+      const values = await form.validateFields();
+      setLoading(true);
+
+      const payload = {
+        submissionId: record?.submissionId,
+        sub_status: values.sub_status,
+        approv_desc: values.approv_desc,
+        id: record?.id,
+        approverById: userId,
+      };
+
+      await api.request({
+        url: `/collateral_lending/approv`,
+        method: "PUT",
+        data: payload,
+      });
+
+      message.success("Status peminjaman jaminan berhasil diperbarui");
+      getData();
+      setOpen(false);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const serverMessage =
+          error.response?.data?.msg || error.response?.data?.message;
+        message.error(serverMessage || "Gagal memperbarui data");
+      } else if (error instanceof Error) {
+        console.log("Validation/Local Error:", error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onCancel={() => !loading && setOpen(false)}
+      destroyOnClose // Lebih baik gunakan destroyOnClose agar form bersih saat dibuka kembali
+      title="Persetujuan Peminjaman Jaminan"
+      confirmLoading={loading}
+      onOk={handleProses}
+      okText="Simpan Keputusan"
+      cancelText="Batal"
+    >
+      <div style={{ marginBottom: 16, marginTop: 16 }}>
+        <Text type="secondary">Nama Debitur:</Text>
+        <div style={{ fontSize: 16, fontWeight: "bold" }}>
+          {record?.Submission?.Debitur?.fullname || "-"}
+        </div>
+      </div>
+
+      <Form form={form} layout="vertical">
+        {/* Input Pilihan Status */}
+        <Form.Item
+          name="sub_status"
+          label="Keputusan Persetujuan"
+          rules={[
+            { required: true, message: "Silakan pilih status keputusan!" },
+          ]}
+        >
+          <Input type="hidden" />
+        </Form.Item>
+
+        {/* Tombol dengan conditional type berdasarkan state subStatusWatch */}
+        <Space style={{ marginBottom: 24 }}>
+          <Button
+            type={subStatusWatch === "DISETUJUI" ? "primary" : "default"}
+            onClick={() => form.setFieldsValue({ sub_status: "DISETUJUI" })}
+          >
+            Setujui Pinjam
+          </Button>
+          <Button
+            danger
+            type={subStatusWatch === "DITOLAK" ? "primary" : "default"}
+            onClick={() => form.setFieldsValue({ sub_status: "DITOLAK" })}
+          >
+            Tolak Peminjaman
+          </Button>
+        </Space>
+
+        {/* Input Catatan / Alasan */}
+        <Form.Item
+          name="approv_desc"
+          label="Catatan / Alasan"
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                if (getFieldValue("sub_status") === "DITOLAK" && !value) {
+                  return Promise.reject(
+                    new Error("Alasan penolakan wajib diisi!"),
+                  );
+                }
+                return Promise.resolve();
+              },
+            }),
+          ]}
+        >
+          <TextArea
+            rows={4}
+            placeholder="Masukkan catatan peminjaman atau alasan jika ditolak..."
+            maxLength={255}
+            showCount
+          />
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 };
 

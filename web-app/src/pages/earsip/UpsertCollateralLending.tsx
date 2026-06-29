@@ -24,7 +24,7 @@ const UpsertCollateralLending = () => {
       const res = await api.request({
         url: "/submission",
         method: "GET",
-        params: { limit: 10000 },
+        params: { limit: 100 },
       });
       if (res?.data) {
         setSubmissions(res.data.data);
@@ -174,7 +174,7 @@ const UpsertCollateralLending = () => {
             <Form.Item
               label="Tanggal Pengembalian Aktual"
               name="return_at"
-              hidden={!id}
+              hidden={!id || form.getFieldValue("sub_status") !== "DISETUJUI"}
               rules={[
                 {
                   required: false,

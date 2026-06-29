@@ -61,15 +61,23 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     prisma.billing.findMany({
       where,
       include: {
-        Mitra: true,
+        Mitra: { select: { name: true, id: true } },
         Submission: {
           include: {
             Debitur: true,
-            Product: true,
+            Product: { select: { name: true, id: true } },
           },
         },
         Product: true,
-        User: true,
+        User: {
+          omit: {
+            created_at: true,
+            updated_at: true,
+            absen_method: true,
+            salary: true,
+            ptkp: true,
+          },
+        },
       },
       skip,
       take: limit,

@@ -117,6 +117,29 @@ const generate = (record: any, selectedMonth: string | null) => {
     return (num * 100).toFixed(2) + "%";
   };
 
+  const nplPaymentData = sortByOsDesc(
+    (record?.nplPaymentData || record?.npl_payment_data || []) as any[],
+  );
+
+  let tDebNpl = 0;
+  let tOsNpl = 0;
+  let tTargetNpl = 0;
+  let tRealisasiNpl = 0;
+
+  nplPaymentData.forEach((d) => {
+    // Pastikan properti ini sesuai dengan yang dikirim dari API / Data asal
+    tDebNpl += Number(d.deb || d.debitur || 0);
+    tOsNpl += Number(d.os || d.sisaPokok || 0); // <-- Gunakan d.os jika di map pakai d.os
+    tTargetNpl += Number(d.target || d.angsuran || 0); // <-- Gunakan d.target jika di map pakai d.target
+    tRealisasiNpl += Number(d.realisasi || d.realisasiBayar || 0);
+  });
+
+  // Hitung sisa tunggakan total
+  const tOutstandingNpl = tTargetNpl - tRealisasiNpl;
+
+  // Hitung persentase recovery total
+  const tRecovery = tTargetNpl > 0 ? (tRealisasiNpl / tTargetNpl) * 100 : 0;
+
   // Template Reusable Header BPR
   const renderBprHeader = (titleText: string) => `
     <div class="mb-4 flex items-center justify-between gap-3 border-b border-gray-200 pb-2">
@@ -539,6 +562,63 @@ const generate = (record: any, selectedMonth: string | null) => {
         </table>
         ${renderSignatures()}
       </div>
+      
+      <div class="page landscape page-break">
+  ${renderBprHeader("LAPORAN REALISASI PEMBAYARAN TUNGGAKAN NPL")}
+  
+  <div class="text-xs font-bold mb-2" style="color: #1F4E78;">V. ANALISIS REALISASI PEMBAYARAN TUNGGAKAN NPL</div>
+    <table class="text-left w-full">
+      <thead>
+        <tr class="bg-primary-dark text-white">
+          <th class="border-excel-light text-center w-8">No</th>
+          <th class="border-excel-light">Instansi / Mitra Kerja</th>
+          <th class="border-excel-light text-center w-14">Debitur NPL</th>
+          <th class="border-excel-light text-right">Sisa Pokok (OS NPL)</th>
+          <th class="border-excel-light text-right">Target Tagihan NPL</th>
+          <th class="border-excel-light text-right">Realisasi Bayar</th>
+          <th class="border-excel-light text-right">Sisa Tunggakan (Outstanding)</th>
+          <th class="border-excel-light text-center w-20">Persentase Recovery</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${
+          nplPaymentData.length === 0
+            ? `<tr><td colspan="8" class="border-excel-light text-center text-muted italic py-4">Tidak ada data pembayaran NPL periode ini</td></tr>`
+            : nplPaymentData
+                .map((d, idx) => {
+                  const isZebra = idx % 2 === 1 ? "bg-zebra-even" : "";
+                  return `
+                <tr class="${isZebra}">
+                  <td class="border-excel-light text-center">${d.no || idx + 1}</td>
+                  <td class="border-excel-light">${d.instansi || ""}</td>
+                  <td class="border-excel-light text-center">${d.deb || 0}</td>
+                  <td class="border-excel-light text-right">${formatIDR(d.os)}</td>
+                  <td class="border-excel-light text-right">${formatIDR(d.target)}</td>
+                  <td class="border-excel-light text-right">${formatIDR(d.realisasi)}</td>
+                  <td class="border-excel-light text-right">${formatIDR(d.outstanding)}</td>
+                  <td class="border-excel-light text-center font-bold" style="${d.recovery > 50 ? "color: #2E7D32;" : "color: #C62828;"}">
+                    ${d.recovery}%
+                  </td>
+                </tr>
+              `;
+                })
+                .join("")
+        }
+        
+        <tr class="bg-accent-total font-bold text-black">
+          <td colspan="2" class="border-excel-light border-total-top border-total-bottom text-left">GRAND TOTAL KONSOLIDASI NPL</td>
+          <td class="border-excel-light border-total-top border-total-bottom text-center">${tDebNpl}</td>
+          <td class="border-excel-light border-total-top border-total-bottom text-right">${formatIDR(tOsNpl)}</td>
+          <td class="border-excel-light border-total-top border-total-bottom text-right">${formatIDR(tTargetNpl)}</td>
+          <td class="border-excel-light border-total-top border-total-bottom text-right">${formatIDR(tRealisasiNpl)}</td>
+          <td class="border-excel-light border-total-top border-total-bottom text-right">${formatIDR(tOutstandingNpl)}</td>
+          <td class="border-excel-light border-total-top border-total-bottom text-center">${formatPct(tRecovery)}</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    ${renderSignatures()}
+  </div>
 
     </body>
   </html>

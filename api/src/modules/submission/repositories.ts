@@ -129,37 +129,38 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
         : {}),
     };
 
-    const data = await prisma.submission.findMany({
-      where: queryWhere,
-      skip: skip,
-      take: limit,
-      include: {
-        Debitur: { include: { SubmissionType: true } },
-        Product: {
-          include: {
-            ProductType: {
-              include: {
-                ProductTypeFile: true,
+    const [data, total] = await Promise.all([
+      prisma.submission.findMany({
+        where: queryWhere,
+        skip: skip,
+        take: limit,
+        include: {
+          Debitur: { include: { SubmissionType: true } },
+          Product: {
+            include: {
+              ProductType: {
+                include: {
+                  ProductTypeFile: true,
+                },
               },
             },
           },
+          User: true,
+          Files: true,
+          PermitFileDetail: true,
+          Mitra: true,
+          CollateralLending: true,
+          PayOffice: true,
+          Insurance: true,
         },
-        User: true,
-        Files: true,
-        PermitFileDetail: true,
-        Mitra: true,
-        CollateralLending: true,
-        PayOffice: true,
-        Insurance: true,
-      },
-      orderBy: { created_at: "desc" },
-    });
+        orderBy: { created_at: "desc" },
+      }),
 
-    const total = await prisma.submission.count({
-      where: queryWhere,
-    });
+      prisma.submission.count({
+        where: queryWhere,
+      }),
+    ]);
     return ResponseServer(res, 200, {
-      msg: "GET /submission",
       data: data.map((d) => ({
         ...d,
         activities: JSON.parse(d.activities || "[]"),

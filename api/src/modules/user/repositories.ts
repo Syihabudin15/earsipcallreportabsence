@@ -18,21 +18,23 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       ...(positionId && { positionId: positionId as string }),
       ...(req.user?.Role.data_status === "USER" && { id: req.user.id }),
     };
-    const data = await prisma.user.findMany({
-      where: querywhere,
-      skip: skip,
-      take: limit,
-      include: {
-        Role: true,
-        Position: true,
-        UserCost: true,
-        Absence: true,
-      },
-    });
 
-    const total = await prisma.user.count({
-      where: querywhere,
-    });
+    const [data, total] = await Promise.all([
+      prisma.user.findMany({
+        where: querywhere,
+        skip: skip,
+        take: limit,
+        include: {
+          Role: true,
+          Position: true,
+          UserCost: true,
+          Absence: true,
+        },
+      }),
+      prisma.user.count({
+        where: querywhere,
+      }),
+    ]);
     return ResponseServer(res, 200, {
       msg: "GET /user",
       page,

@@ -17,7 +17,7 @@ export const MainDashboard = async (
     visitCategory,
     visitStatus,
     visitPurpose,
-  ] = await prisma.$transaction([
+  ] = await Promise.all([
     prisma.submissionType.findMany({
       where: {
         status: true,
@@ -246,7 +246,7 @@ export const MainDashboard = async (
 };
 
 export const DashboardCallreport = async (req: Request, res: Response) => {
-  const [visit, visit_plan, tagihan] = await prisma.$transaction([
+  const [visit, visit_plan, tagihan] = await Promise.all([
     prisma.visit.findMany({
       where: { status: true, date_action: { not: null } },
       include: {
@@ -308,7 +308,7 @@ export const LaporanCallreport = async (req: Request, res: Response) => {
 };
 
 export const DashboardAbsensi = async (req: Request, res: Response) => {
-  const [users, deduction, insentif, permit] = await prisma.$transaction([
+  const [users, deduction, insentif, permit] = await Promise.all([
     prisma.user.findMany({
       where: { status: true },
       include: {
@@ -357,7 +357,7 @@ export const DashboardEarsip = async (req: Request, res: Response) => {
     asuransi,
     payoffice,
     collending,
-  ] = await prisma.$transaction([
+  ] = await Promise.all([
     prisma.debitur.findMany({
       where: {
         status: true,

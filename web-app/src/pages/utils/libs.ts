@@ -182,7 +182,8 @@ export const calculatePayroll = (user: IUser) => {
   const tarifTER = getTERTarif(kategoriTER, grossSalary);
 
   // Pajak PPh 21 Bulan Ini
-  const pphBulanan = Math.round(grossSalary * tarifTER);
+  // const pphBulanan = Math.round(grossSalary * tarifTER);
+  const pphBulanan = Math.round(grossSalary * (50 / 100) * (5 / 100));
 
   // --- 5. Perhitungan Gaji Bersih Terakhir (Take Home Pay) ---
   const netBeforeTax = Math.max(

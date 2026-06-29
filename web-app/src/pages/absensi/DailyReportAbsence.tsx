@@ -12,9 +12,12 @@ import {
   Descriptions,
   Tag,
   Divider,
+  message,
 } from "antd";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { DeleteOutlined } from "@ant-design/icons";
+import useContext from "../../libs/context";
 
 const DailyReportAbsence = () => {
   const [data, setData] = useState<IUser[]>([]);
@@ -27,6 +30,7 @@ const DailyReportAbsence = () => {
   const [limit, setLimit] = useState(50);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<IUser | null>(null);
+  const { hasAccess } = useContext((state: any) => state);
 
   const showDetail = (user: IUser) => {
     setSelectedUser(user);
@@ -222,6 +226,30 @@ const DailyReportAbsence = () => {
     });
   }, [month, holidays]);
 
+  const handleReset = async (id: string) => {
+    setLoading(true);
+    await api
+      .request({
+        url: "/absence?id=" + id,
+        method: "DELETE",
+      })
+      .then((res) => {
+        if (res.data.status === 200) {
+          message.success("Data berhasil di hapus/reset.");
+        } else {
+          message.error(res.data.msg || "Internal Server Error");
+        }
+        fetchData();
+      })
+      .catch((err) => {
+        console.log(err);
+        message.error(
+          err.response.message || err.message || "Internal Server Error",
+        );
+      });
+    setLoading(false);
+  };
+
   return (
     <Spin spinning={loading}>
       <div className="p-3 sm:p-6 bg-slate-50 min-h-screen">
@@ -344,6 +372,14 @@ const DailyReportAbsence = () => {
                                   ? moment(abs.check_out).format("HH:mm")
                                   : "-"}
                               </div>
+                              {hasAccess("delete") && (
+                                <Button
+                                  icon={<DeleteOutlined />}
+                                  danger
+                                  size="small"
+                                  onClick={() => handleReset(abs.id)}
+                                ></Button>
+                              )}
                             </div>
                           ) : (
                             <span className="text-slate-300 font-bold">

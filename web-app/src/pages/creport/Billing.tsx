@@ -118,28 +118,30 @@ export default function DataBilling() {
 
   useEffect(() => {
     (async () => {
-      await api
-        .request({
-          method: "GET",
-          url: "/mitra",
-          params: { limit: 5000 },
-        })
-        .then((res) => setMitras(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: "/producttype",
-        })
-        .then((res) =>
-          setProducts(res.data.data.flatMap((d: any) => d.Product)),
-        );
-      await api
-        .request({
-          method: "GET",
-          url: "/user",
-          params: { limit: 500 },
-        })
-        .then((res) => setUsers(res.data.data));
+      await Promise.all([
+        api
+          .request({
+            method: "GET",
+            url: "/mitra",
+            params: { limit: 5000 },
+          })
+          .then((res) => setMitras(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: "/producttype",
+          })
+          .then((res) =>
+            setProducts(res.data.data.flatMap((d: any) => d.Product)),
+          ),
+        api
+          .request({
+            method: "GET",
+            url: "/user",
+            params: { limit: 500 },
+          })
+          .then((res) => setUsers(res.data.data)),
+      ]);
     })();
   }, []);
 

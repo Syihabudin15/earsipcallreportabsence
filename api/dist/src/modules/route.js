@@ -4,7 +4,7 @@ import prisma from "../libs/prisma.js";
 import moment from "moment";
 export const MainDashboard = async (req, res, next) => {
     const userQuery = req.user?.Role.data_status === "USER" ? { userId: req.user?.id } : {};
-    const [submissionType, productType, visitCategory, visitStatus, visitPurpose,] = await prisma.$transaction([
+    const [submissionType, productType, visitCategory, visitStatus, visitPurpose,] = await Promise.all([
         prisma.submissionType.findMany({
             where: {
                 status: true,
@@ -203,7 +203,7 @@ export const MainDashboard = async (req, res, next) => {
     });
 };
 export const DashboardCallreport = async (req, res) => {
-    const [visit, visit_plan, tagihan] = await prisma.$transaction([
+    const [visit, visit_plan, tagihan] = await Promise.all([
         prisma.visit.findMany({
             where: { status: true, date_action: { not: null } },
             include: {
@@ -258,7 +258,7 @@ export const LaporanCallreport = async (req, res) => {
     return ResponseServer(res, 200, { data });
 };
 export const DashboardAbsensi = async (req, res) => {
-    const [users, deduction, insentif, permit] = await prisma.$transaction([
+    const [users, deduction, insentif, permit] = await Promise.all([
         prisma.user.findMany({
             where: { status: true },
             include: {
@@ -293,7 +293,7 @@ export const DashboardEarsip = async (req, res) => {
             },
         }
         : {};
-    const [debitur, submission, producttype, mitra, asuransi, payoffice, collending,] = await prisma.$transaction([
+    const [debitur, submission, producttype, mitra, asuransi, payoffice, collending,] = await Promise.all([
         prisma.debitur.findMany({
             where: {
                 status: true,

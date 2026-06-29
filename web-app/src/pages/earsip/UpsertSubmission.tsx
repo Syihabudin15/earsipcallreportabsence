@@ -63,48 +63,50 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
 
   useEffect(() => {
     (async () => {
-      await api
-        .request({
-          method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/sub_type?limit=10000`,
-        })
-        .then((res) => setSubType(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/producttype?limit=10000`,
-        })
-        .then((res) =>
-          setProducts(
-            res.data.data.flatMap((p: IProductType) =>
-              p.Product.map((dp) => ({ ...dp, ProductType: p })),
+      await Promise.all([
+        api
+          .request({
+            method: "GET",
+            url: `${import.meta.env.VITE_API_URL}/sub_type?limit=1000`,
+          })
+          .then((res) => setSubType(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: `${import.meta.env.VITE_API_URL}/producttype?limit=100`,
+          })
+          .then((res) =>
+            setProducts(
+              res.data.data.flatMap((p: IProductType) =>
+                p.Product.map((dp) => ({ ...dp, ProductType: p })),
+              ),
             ),
           ),
-        );
-      await api
-        .request({
-          method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/user?limit=10000`,
-        })
-        .then((res) => setUsers(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/mitra?limit=10000`,
-        })
-        .then((res) => setMitras(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/pay_office?limit=10000`,
-        })
-        .then((res) => setPays(res.data.data));
-      await api
-        .request({
-          method: "GET",
-          url: `${import.meta.env.VITE_API_URL}/insurance?limit=10000`,
-        })
-        .then((res) => setInsc(res.data.data));
+        api
+          .request({
+            method: "GET",
+            url: `${import.meta.env.VITE_API_URL}/user?limit=1000`,
+          })
+          .then((res) => setUsers(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: `${import.meta.env.VITE_API_URL}/mitra?limit=1000`,
+          })
+          .then((res) => setMitras(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: `${import.meta.env.VITE_API_URL}/pay_office?limit=1000`,
+          })
+          .then((res) => setPays(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: `${import.meta.env.VITE_API_URL}/insurance?limit=1000`,
+          })
+          .then((res) => setInsc(res.data.data)),
+      ]);
     })();
   }, []);
 

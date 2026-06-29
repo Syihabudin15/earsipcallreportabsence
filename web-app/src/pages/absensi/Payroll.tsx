@@ -17,6 +17,7 @@ import { CollapseList } from "../utils/utilComp";
 import { printAllPayrol } from "../utils/pdfs/payrolls";
 import { printPayrol } from "../utils/pdfs/payroll";
 import { calculatePayroll } from "../utils/libs";
+import * as XLSX from "xlsx";
 
 const PayrollPage = () => {
   const [loading, setLoading] = useState(false);
@@ -52,7 +53,112 @@ const PayrollPage = () => {
     }
   };
 
-  const exportToExcel = () => {};
+  const exportToExcel = () => {
+    if (!data.length) {
+      return message.warning("Tidak ada data untuk diexport Excel");
+    }
+
+    try {
+      const rows = data.map((record, index) => {
+        const temp = calculatePayroll(record);
+
+        return {
+          No: (page - 1) * limit + index + 1,
+          Nama: record.fullname || "-",
+          NIK: record.nik || "-",
+          Jabatan: record.Position?.name || "-",
+
+          "Gaji Pokok": record.salary || 0,
+
+          Tunjangan: temp.allowancePay || 0,
+          "Potongan Tetap": temp.deductionPay || 0,
+
+          Hadir: temp.hadir?.length || 0,
+          Alpha: temp.alpha?.length || 0,
+          Cuti: temp.cuti?.length || 0,
+          Sakit: temp.sakit?.length || 0,
+          Perdin: temp.perdin?.length || 0,
+          Terlambat: temp.late?.length || 0,
+          "Pulang Awal": temp.fastleave?.length || 0,
+          Lembur: temp.lembur?.length || 0,
+
+          "Denda Alpha": temp.alphaPay || 0,
+          "Denda Telat": temp.latePay || 0,
+          "Denda Pulang Awal": temp.fastLeaveDeduction || 0,
+          "Upah Lembur": temp.lemburPay || 0,
+
+          "Insentif / Bonus":
+            temp.insentif
+              ?.map((i) => {
+                const nominal =
+                  i.nominal_type === "RUPIAH"
+                    ? i.nominal
+                    : (record.salary || 0) * (i.nominal / 100);
+
+                return `${i.name}: ${nominal}`;
+              })
+              .join(", ") || "-",
+
+          "Potongan Tidak Tetap":
+            temp.tt_deduction
+              ?.map((i) => {
+                const nominal =
+                  i.nominal_type === "RUPIAH"
+                    ? i.nominal
+                    : (record.salary || 0) * (i.nominal / 100);
+
+                return `${i.name}: ${nominal}`;
+              })
+              .join(", ") || "-",
+
+          "PPh 21": temp.pph || 0,
+          "Take Home Pay": temp.takeHome || 0,
+        };
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+
+      worksheet["!cols"] = [
+        { wch: 6 },
+        { wch: 28 },
+        { wch: 18 },
+        { wch: 22 },
+        { wch: 16 },
+        { wch: 16 },
+        { wch: 16 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 12 },
+        { wch: 14 },
+        { wch: 10 },
+        { wch: 16 },
+        { wch: 16 },
+        { wch: 20 },
+        { wch: 16 },
+        { wch: 35 },
+        { wch: 35 },
+        { wch: 16 },
+        { wch: 18 },
+      ];
+
+      const workbook = XLSX.utils.book_new();
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Payroll");
+
+      XLSX.writeFile(
+        workbook,
+        `Payroll-${moment(month).format("MMMM-YYYY")}.xlsx`,
+      );
+
+      message.success("Berhasil export Excel");
+    } catch (error) {
+      console.error(error);
+      message.error("Gagal export Excel");
+    }
+  };
 
   const exportAllPdf = async () => {
     if (!data.length) {
@@ -417,7 +523,7 @@ const PayrollPage = () => {
             dataSource={data}
             columns={columns}
             bordered
-            size="middle"
+            size="small"
             className="custom-payroll-table"
             pagination={{
               current: page,

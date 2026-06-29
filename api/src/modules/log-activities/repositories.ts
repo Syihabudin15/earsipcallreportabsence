@@ -42,23 +42,18 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       ...(req.user?.Role.data_status && { userId: req.user.id }),
     };
 
-    const data = await prisma.logActivities.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { created_at: "desc" },
-      include: { User: true },
-    });
-
-    const total = await prisma.logActivities.count({ where });
+    const [data, total] = await Promise.all([
+      prisma.logActivities.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { created_at: "desc" },
+        include: { User: true },
+      }),
+      prisma.logActivities.count({ where }),
+    ]);
 
     return ResponseServer(res, 200, {
-      msg: "GET /log-activities",
-      page,
-      limit,
-      search,
-      startDate,
-      endDate,
       data,
       total,
     });

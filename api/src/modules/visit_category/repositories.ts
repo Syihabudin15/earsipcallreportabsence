@@ -9,26 +9,23 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
   const skip = (page - 1) * limit;
 
   try {
-    const data = await prisma.visitCategory.findMany({
-      where: {
-        status: true,
-        ...(search && { name: { contains: search as string } }),
-      },
-      skip: skip,
-      take: limit,
-    });
-
-    const total = await prisma.visitCategory.count({
-      where: {
-        status: true,
-        ...(search && { name: { contains: search as string } }),
-      },
-    });
+    const [data, total] = await Promise.all([
+      prisma.visitCategory.findMany({
+        where: {
+          status: true,
+          ...(search && { name: { contains: search as string } }),
+        },
+        skip: skip,
+        take: limit,
+      }),
+      prisma.visitCategory.count({
+        where: {
+          status: true,
+          ...(search && { name: { contains: search as string } }),
+        },
+      }),
+    ]);
     return ResponseServer(res, 200, {
-      msg: "GET /visit-category",
-      page,
-      limit,
-      search,
       data,
       total,
     });

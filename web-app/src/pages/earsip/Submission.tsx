@@ -152,7 +152,7 @@ export default function DataSubmission() {
           .request({
             method: "GET",
             url: `${import.meta.env.VITE_API_URL}/mitra`,
-            params: { limit: 5000 },
+            params: { limit: 1000 },
           })
           .then((res) => setMitras(res.data.data)),
         api

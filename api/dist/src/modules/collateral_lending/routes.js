@@ -6,4 +6,5 @@ router.post("/", collateralRepo.POST);
 router.put("/", collateralRepo.PUT);
 router.delete("/", collateralRepo.DELETE);
 router.patch("/", collateralRepo.PATCH);
+router.put("/approv", collateralRepo.APPROVE);
 export default router;

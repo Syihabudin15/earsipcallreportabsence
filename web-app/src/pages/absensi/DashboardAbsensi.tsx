@@ -7,7 +7,6 @@ import {
   UserX,
   CalendarDays,
   AlertTriangle,
-  Wallet,
 } from "lucide-react";
 import {
   BarChart,
@@ -24,7 +23,6 @@ import {
 } from "recharts";
 
 import type { IUser, IPermitAbsence } from "../../libs/interface";
-import { calculatePayroll } from "../utils/libs"; // Impor fungsi formula terbaru Anda
 
 const COLORS = [
   "#10b981", // Hadir Tepat Waktu
@@ -68,15 +66,7 @@ export default function DashboardAbsensi() {
     any[]
   >([]);
   const [periodTrendData, setPeriodTrendData] = useState<any[]>([]);
-  const [financialSummary, setFinancialSummary] = useState<any[]>([]);
   const [periodLabel, setPeriodLabel] = useState("");
-
-  const formatIDR = (num: number) =>
-    new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(num);
 
   const fetchData = async () => {
     setLoading(true);
@@ -87,7 +77,6 @@ export default function DashboardAbsensi() {
         setDataPayload({ users, permit });
 
         const now = new Date();
-        const todayYMD = toYMD(now);
 
         // =======================================================
         // MENENTUKAN PERIODE CUT-OFF (TGL 21 HINGGA TGL 20)
@@ -152,117 +141,6 @@ export default function DashboardAbsensi() {
           };
           cursor.setDate(cursor.getDate() + 1);
         }
-
-        const userFinances: any[] = [];
-
-        users.forEach((u: IUser) => {
-          // 1. Jalankan fungsi perhitungan formula terbaru
-          const payroll = calculatePayroll(u);
-
-          // Gunakan hasil rekap absensi terpusat dari core library agar sinkron
-          mPresent += payroll.hadir?.length || 0;
-          mAbsent += payroll.alpha?.length || 0;
-
-          let hasTodayRecord = false;
-
-          if (u.Absence && u.Absence.length > 0) {
-            u.Absence.forEach((abs: any) => {
-              const absDateStrRaw =
-                abs.created_at || abs.check_in || new Date().toISOString();
-              const absDateObj = new Date(absDateStrRaw);
-              const absYMD = toYMD(absDateObj);
-
-              const baseStatus = abs.absence_status || "ALPHA";
-              const desc = (abs.description || "").toUpperCase();
-
-              let isLate = false;
-              let isEarlyLeave = false;
-              if (baseStatus === "HADIR") {
-                if (desc.includes("TERLAMBAT")) isLate = true;
-                if (
-                  desc.includes("PULANG_CEPAT") ||
-                  desc.includes("PULANG CEPAT")
-                )
-                  isEarlyLeave = true;
-              }
-
-              // Kalkulasi Tren Grafik Periode Aktif
-              if (periodMap[absYMD]) {
-                if (baseStatus === "HADIR") {
-                  if (isLate) {
-                    periodMap[absYMD].Terlambat++;
-                    mLate++;
-                  } else {
-                    periodMap[absYMD].Hadir++;
-                  }
-                } else if (
-                  !["CUTI", "SAKIT", "PERDIN", "IZIN"].includes(baseStatus)
-                ) {
-                  periodMap[absYMD].Absen++;
-                }
-              }
-
-              // Kalkulasi Data Real-time HARI INI
-              if (absYMD === todayYMD) {
-                hasTodayRecord = true;
-                if (baseStatus === "HADIR") {
-                  if (isLate) {
-                    tLate++;
-                    todayMap["TERLAMBAT"]++;
-                  } else if (isEarlyLeave) {
-                    tEarlyLeave++;
-                    todayMap["PULANG_CEPAT"]++;
-                  } else {
-                    tOnTime++;
-                    todayMap["HADIR_TEPAT"]++;
-                  }
-                } else if (
-                  ["CUTI", "SAKIT", "PERDIN", "IZIN"].includes(baseStatus)
-                ) {
-                  tLeave++;
-                  todayMap["IZIN_CUTI"]++;
-                } else {
-                  tAbsent++;
-                  todayMap["ALPHA"]++;
-                }
-              }
-            });
-          }
-
-          if (!hasTodayRecord) {
-            tAbsent++;
-            todayMap["ALPHA"]++;
-          }
-
-          // 2. Satukan komponen finansial dengan Formula TER & Rekap Potongan Absen Baru
-          const totalInsentif =
-            payroll.allowancePay + payroll.insentifPay + payroll.lemburPay;
-          const totalPotongan =
-            payroll.deductionPay +
-            payroll.tt_deductionPay +
-            payroll.latePay +
-            payroll.fastLeaveDeduction +
-            payroll.alphaPay +
-            payroll.pph; // Termasuk pajak PPh 21 TER
-
-          userFinances.push({
-            id: u.id,
-            name: u.fullname,
-            position: u.Position?.name || "-",
-            salary: u.salary || 0,
-            insentif: totalInsentif,
-            potongan: totalPotongan,
-            pph: payroll.pph,
-            kategoriTER: payroll.kategoriTER,
-            tarifTER: payroll.tarifTER,
-            net: payroll.takeHome, // Sesuai THP akhir rumus
-            permitCount: payroll.permitCount,
-            permitApproved: payroll.permitApproved,
-          });
-        });
-
-        userFinances.sort((a, b) => b.net - a.net);
-        setFinancialSummary(userFinances);
 
         setMetricsToday({
           totalEmployees: users.length,
@@ -527,77 +405,7 @@ export default function DashboardAbsensi() {
       </div>
 
       {/* --- TABEL SINKRONISASI FINANSIAL & PERMIT --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Rekapitulasi Tunjangan & Potongan Berdasarkan Perhitungan Terbaru */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-          <div className="mb-4">
-            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-indigo-500" /> Estimasi Beban
-              Finansial & TER Pajak
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Akumulasi akurat berdasarkan potongan keterlambatan, denda alpa
-              harian, serta PPh 21 TER.
-            </p>
-          </div>
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 text-slate-400 uppercase tracking-wider font-semibold text-[10px]">
-                  <th className="py-3 px-2">Karyawan / Posisi</th>
-                  <th className="py-3 px-2 text-right">Gaji Pokok</th>
-                  <th className="py-3 px-2 text-right text-emerald-500">
-                    Tunj. + Lembur
-                  </th>
-                  <th className="py-3 px-2 text-right text-rose-500">
-                    Pot. + TER Pajak
-                  </th>
-                  <th className="py-3 px-2 text-right font-bold text-slate-700">
-                    Take Home Pay
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 text-slate-600">
-                {financialSummary.slice(0, 10).map((u) => (
-                  <tr
-                    key={u.id}
-                    className="hover:bg-slate-50/80 transition-colors"
-                  >
-                    <td className="py-3 px-2">
-                      <div className="font-medium text-slate-800">{u.name}</div>
-                      <div className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-                        <span>{u.position}</span>
-                        {u.permitCount > 0 && (
-                          <span className="bg-amber-50 text-amber-700 border border-amber-200 px-1 rounded text-[9px] font-medium">
-                            Izin: {u.permitApproved}/{u.permitCount}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-2 text-right">
-                      {formatIDR(u.salary)}
-                    </td>
-                    <td className="py-3 px-2 text-right text-emerald-600 font-medium">
-                      + {formatIDR(u.insentif)}
-                    </td>
-                    <td className="py-3 px-2 text-right text-rose-600 font-medium">
-                      <div>- {formatIDR(u.potongan)}</div>
-                      {u.pph > 0 && (
-                        <div className="text-[9px] text-slate-400 font-normal">
-                          Inc. PPh21 (Kat {u.kategoriTER}-{u.tarifTER})
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3 px-2 text-right font-bold text-slate-900 bg-slate-50/30 font-mono">
-                      {formatIDR(u.net)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
+      <div className="">
         {/* Pengajuan Dokumen Izin Terbaru */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
           <div className="mb-4">
@@ -608,7 +416,7 @@ export default function DashboardAbsensi() {
               Berkas perizinan masuk dalam siklus berjalan
             </p>
           </div>
-          <div className="space-y-3 overflow-y-auto max-h-[350px] pr-1">
+          <div className="space-y-3 overflow-y-auto max-h-87.5 pr-1">
             {dataPayload.permit.length === 0 ? (
               <div className="text-center py-8 text-xs text-slate-400 font-medium">
                 Belum ada pengajuan izin/cuti.

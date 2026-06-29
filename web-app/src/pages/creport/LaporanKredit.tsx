@@ -47,7 +47,6 @@ export default function LaporanKredit() {
     nplPercentage: 0,
     collectionRate: 0,
 
-    // LAR = Kol 2 s/d Kol 5
     totalLar: 0,
     larPercentage: 0,
   });
@@ -108,6 +107,42 @@ export default function LaporanKredit() {
   const isNpl = (bill: any): boolean => {
     const kol = getKol(bill);
     return kol >= 3 && kol <= 5;
+  };
+
+  const getNplPaymentData = () => {
+    return dashboardData
+      .map((mitra, index) => {
+        let deb = 0;
+        let os = 0;
+        let target = 0;
+        let realisasi = 0;
+
+        mitra.Billing?.forEach((bill: any) => {
+          if (!isNpl(bill)) return;
+
+          deb++;
+          os += bill.pkk || 0;
+          target += bill.value || 0;
+          realisasi += bill.realize_value || 0;
+        });
+
+        const outstanding = target - realisasi;
+
+        return {
+          no: index + 1,
+          instansi: mitra.name,
+          deb,
+          os,
+          target,
+          realisasi,
+          outstanding,
+          recovery:
+            target > 0
+              ? parseFloat(((realisasi / target) * 100).toFixed(2))
+              : 0,
+        };
+      })
+      .filter((item) => item.deb > 0);
   };
 
   // Hitung agregasi data untuk komponen Summary Cards
@@ -456,6 +491,7 @@ export default function LaporanKredit() {
       const segmentKolData = getSegmentasiKolektibilitasData();
       const aoData = getAnalisisAoData();
       const aoKolData = getAoKolektibilitasData();
+      const nplPaymentData = getNplPaymentData();
       const periodeTeks = selectedMonth
         ? moment(selectedMonth).format("MMM-YY")
         : "SEMUA DATA";
@@ -1356,6 +1392,119 @@ export default function LaporanKredit() {
 
         currentRow++;
       });
+      const ws7 = workbook.addWorksheet("Pembayaran NPL");
+      applyWorksheetConfig(ws7);
+
+      addBprHeader(ws7, "LAPORAN PEMBAYARAN NPL", 8);
+
+      ws7.getCell("A5").value = "VII. LAPORAN PEMBAYARAN NPL";
+
+      ws7.getCell("A5").font = {
+        name: "Segoe UI",
+        size: 11,
+        bold: true,
+        color: { argb: PALETTE.primaryDark },
+      };
+
+      const hRow7 = ws7.getRow(6);
+
+      hRow7.values = [
+        "No",
+        "Instansi",
+        "Deb NPL",
+        "OS NPL",
+        "Target Tagihan",
+        "Realisasi",
+        "Outstanding",
+        "Recovery",
+      ];
+
+      hRow7.font = {
+        name: "Segoe UI",
+        size: 10,
+        bold: true,
+        color: { argb: "FFFFFF" },
+      };
+
+      hRow7.alignment = {
+        horizontal: "center",
+        vertical: "middle",
+      };
+
+      hRow7.eachCell((cell) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: {
+            argb: PALETTE.primaryDark,
+          },
+        };
+      });
+
+      ws7.getColumn(2).width = 35;
+
+      let row = 7;
+
+      let totalDeb = 0;
+      let totalOs = 0;
+      let totalTarget = 0;
+      let totalRealisasi = 0;
+
+      nplPaymentData.forEach((item, idx) => {
+        totalDeb += item.deb;
+        totalOs += item.os;
+        totalTarget += item.target;
+        totalRealisasi += item.realisasi;
+
+        const excelRow = ws7.addRow([
+          item.no,
+          item.instansi,
+          item.deb,
+          item.os,
+          item.target,
+          item.realisasi,
+          item.outstanding,
+          item.recovery / 100,
+        ]);
+
+        excelRow.height = 20;
+
+        excelRow.getCell(4).numFmt = "#,##0";
+        excelRow.getCell(5).numFmt = "#,##0";
+        excelRow.getCell(6).numFmt = "#,##0";
+        excelRow.getCell(7).numFmt = "#,##0";
+        excelRow.getCell(8).numFmt = "0.00%";
+
+        if (idx % 2 === 1) {
+          excelRow.eachCell((cell) => {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: {
+                argb: PALETTE.zebraEven,
+              },
+            };
+          });
+        }
+
+        row++;
+      });
+      const totalOutstanding = totalTarget - totalRealisasi;
+
+      const totalRecovery = totalTarget > 0 ? totalRealisasi / totalTarget : 0;
+
+      ws7.addRow([
+        "TOTAL",
+        "",
+        totalDeb,
+        totalOs,
+        totalTarget,
+        totalRealisasi,
+        totalOutstanding,
+        totalRecovery,
+      ]);
+
+      ws7.mergeCells(row, 1, row, 2);
 
       const globalNplGross6 = tSisa6 > 0 ? tNplValue6 / tSisa6 : 0;
 
@@ -2029,6 +2178,7 @@ export default function LaporanKredit() {
                     segmentKolData: getSegmentasiKolektibilitasData(),
                     aoData: getAnalisisAoData(),
                     aoKolData: getAoKolektibilitasData(),
+                    nplPaymentData: getNplPaymentData(),
                   },
                   selectedMonth,
                 )

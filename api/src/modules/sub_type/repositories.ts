@@ -9,22 +9,23 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
   const skip = (page - 1) * limit;
 
   try {
-    const data = await prisma.submissionType.findMany({
-      where: {
-        status: true,
-        ...(search && { name: { contains: search as string } }),
-      },
-      skip: skip,
-      take: limit,
-      include: { Debitur: true },
-    });
-
-    const total = await prisma.submissionType.count({
-      where: {
-        status: true,
-        ...(search && { name: { contains: search as string } }),
-      },
-    });
+    const [data, total] = await Promise.all([
+      prisma.submissionType.findMany({
+        where: {
+          status: true,
+          ...(search && { name: { contains: search as string } }),
+        },
+        skip: skip,
+        take: limit,
+        include: { Debitur: true },
+      }),
+      prisma.submissionType.count({
+        where: {
+          status: true,
+          ...(search && { name: { contains: search as string } }),
+        },
+      }),
+    ]);
     return ResponseServer(res, 200, {
       msg: "GET /sub_type",
       page,

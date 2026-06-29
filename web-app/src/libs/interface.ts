@@ -1,4 +1,3 @@
-// FUNCTION & UTILS
 export interface IActionPage<T> {
   upsert: boolean;
   delete: boolean;
@@ -443,10 +442,12 @@ export interface ISubmission {
 export interface ICollateralLending {
   id: string;
   description: string | null;
+  approv_desc: string | null;
   start_at: Date;
   end_at: Date;
   file: string | null;
   return_at: Date;
+  sub_status: EPermitStatus;
 
   status: boolean;
   created_at: Date;
@@ -508,8 +509,8 @@ export interface IVisit {
   VisitStatus?: IVisitStatus | null; // Di schema Anda bernama 'Visit' (relation name)
   VisitPurpose?: IVisitPurpose | null; // Di schema Anda bernama 'Visit' (relation name)
   Submission?: ISubmission | null;
-  Mitra: IMitra;
-  mitraId: string;
+  Mitra: IMitra | null;
+  mitraId: string | null;
   debiturId: string;
   userId: string;
   visitCategoryId: string;

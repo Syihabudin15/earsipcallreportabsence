@@ -151,7 +151,7 @@ export const menus: IMenu[] = [
         path: "/app/earsip/collateral_lending",
         icon: <FormInput size={15} />,
         need_access: true,
-        can_access: ["read", "write", "update", "delete"],
+        can_access: ["read", "write", "update", "delete", "proses"],
       },
     ],
   },

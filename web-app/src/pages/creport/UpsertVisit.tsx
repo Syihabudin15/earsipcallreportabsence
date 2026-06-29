@@ -4,6 +4,7 @@ import type {
   IDebitur,
   IMitra,
   ISubmission,
+  ISubType,
   IUser,
   IVisit,
   IVisitCategory,
@@ -27,6 +28,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
   const [visitPurposes, setVisitPurposes] = useState<IVisitPurpose[]>([]);
   const [Mitras, setMitras] = useState<IMitra[]>([]);
   const [submissions, setSubmissions] = useState<ISubmission[]>([]);
+  const [subTypes, setSubTypes] = useState<ISubType[]>([]);
   const [debts, setDebts] = useState<IDebitur[]>([]);
 
   const [users, setUsers] = useState<IUser[]>([]);
@@ -51,6 +53,12 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             url: "/submission",
           })
           .then((res) => setSubmissions(res.data.data)),
+        api
+          .request({
+            method: "GET",
+            url: "/sub_type",
+          })
+          .then((res) => setSubTypes(res.data.data)),
         api
           .request({
             method: "GET",
@@ -80,7 +88,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
           .request({
             method: "GET",
             url: "/mitra",
-            params: { limit: 500 },
+            params: { limit: 1000 },
           })
           .then((res) => setMitras(res.data.data)),
         api
@@ -145,7 +153,8 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
         console.log(err);
         modal.error({
           title: "ERROR",
-          content: err.message || "Internal Server Error",
+          content:
+            err.response.data.msg || err.message || "Internal Server Error",
         });
       });
     setLoading(false);
@@ -242,7 +251,6 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
           <Col xs={12} md={8}>
             <InputUtil
               label="Mitra"
-              required
               value={data.mitraId}
               onchage={(e: string) => {
                 setData({
@@ -356,7 +364,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             />
           </Col>
 
-          {/* <Col xs={12} md={8}>
+          <Col xs={12} md={8}>
             <InputUtil
               label="Jenis Pemohon"
               required
@@ -368,9 +376,9 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
                 });
               }}
               type="option"
-              options={subType.map((s) => ({ label: s.name, value: s.id }))}
+              options={subTypes.map((s) => ({ label: s.name, value: s.id }))}
             />
-          </Col> */}
+          </Col>
         </Row>
         <Card
           title={
@@ -757,6 +765,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             type="primary"
             onClick={() => handleSubmit()}
             loading={loading}
+            disabled={!data.date_action}
           >
             Submit
           </Button>
@@ -787,11 +796,11 @@ const defaultData: IVisit = {
   VisitCategory: {} as IVisitCategory,
   VisitPurpose: {} as IVisitPurpose,
   VisitStatus: {} as IVisitStatus,
-  Mitra: {} as IMitra,
+  Mitra: null,
   visitCategoryId: "",
   visitStatusId: "",
   visitPurposeId: "",
-  mitraId: "",
+  mitraId: null,
 };
 
 const defaultComment: IComments = {

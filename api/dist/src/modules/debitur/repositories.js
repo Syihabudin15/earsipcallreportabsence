@@ -21,39 +21,42 @@ export const GET = async (req, res, next) => {
                 submissionTypeId: submissionTypeId,
             }),
         };
-        const data = await prisma.debitur.findMany({
-            where: querywhere,
-            skip: skip,
-            take: limit,
-            include: {
-                SubmissionType: true,
-                Submission: {
-                    where: {
-                        status: true,
-                        ...(req.user?.Role.data_status === "USER"
-                            ? { userId: req.user?.id }
-                            : {}),
+        const [data, total] = await Promise.all([
+            prisma.debitur.findMany({
+                where: querywhere,
+                skip: skip,
+                take: limit,
+                include: {
+                    SubmissionType: true,
+                    Submission: {
+                        where: {
+                            status: true,
+                            ...(req.user?.Role.data_status === "USER"
+                                ? { userId: req.user?.id }
+                                : {}),
+                        },
+                        include: {
+                            Product: { include: { ProductType: true } },
+                            Mitra: { select: { name: true, code: true, id: true } },
+                        },
                     },
-                    include: { Product: { include: { ProductType: true } }, Mitra: true },
+                    Visit: {
+                        where: {
+                            status: true,
+                            ...(req.user?.Role.data_status === "USER"
+                                ? { userId: req.user?.id }
+                                : {}),
+                        },
+                        include: {
+                            VisitCategory: { select: { name: true } },
+                            VisitStatus: { select: { name: true } },
+                            VisitPurpose: { select: { name: true } },
+                        },
+                    },
                 },
-                Visit: {
-                    where: {
-                        status: true,
-                        ...(req.user?.Role.data_status === "USER"
-                            ? { userId: req.user?.id }
-                            : {}),
-                    },
-                    include: {
-                        VisitCategory: true,
-                        VisitStatus: true,
-                        VisitPurpose: true,
-                    },
-                },
-            },
-        });
-        const total = await prisma.debitur.count({
-            where: querywhere,
-        });
+            }),
+            prisma.debitur.count({ where: querywhere }),
+        ]);
         return ResponseServer(res, 200, {
             msg: "GET /debitur",
             page,
