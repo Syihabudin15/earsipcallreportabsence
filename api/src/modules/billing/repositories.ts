@@ -14,6 +14,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     mitraId,
     productId,
     bill_status,
+    col,
   } = req.query;
   page = Number(page);
   limit = Number(limit);
@@ -45,8 +46,9 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     ...(mitraId && { mitraId: mitraId as string }),
     ...(productId && { productId: productId as string }),
     ...(bill_status && { bill_status: bill_status as EBill }),
+    ...(col && { col: { contains: col as string } }),
     ...(backdate && {
-      bill_date: {
+      periode: {
         gte: moment((backdate as string).split(",")[0])
           .startOf("day")
           .toDate(),
@@ -86,15 +88,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
     prisma.billing.count({ where }),
   ]);
 
-  return ResponseServer(res, 200, {
-    msg: "GET /billing",
-    page,
-    limit,
-    search,
-    backdate,
-    data,
-    total,
-  });
+  return ResponseServer(res, 200, { data, total });
 };
 
 // export const POST = async (req: Request, res: Response, next: NextFunction) => {
@@ -314,8 +308,9 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
           tenor: number(getExcelValue(item, "JANGKA_BLN")),
           tungPkk: number(getExcelValue(item, "SLD_TUNGGAK_PKK")),
           tungBga: number(getExcelValue(item, "SLD_TUNGGAK_BGA")),
-          pkk: number(getExcelValue(item, "SISA_PKK_PINJAMAN")),
-          col: text(getExcelValue(item, "KD_KOL_REFF")),
+          pkk: number(getExcelValue(item, "SLD_PINJAMAN_PKK")),
+          col: text(getExcelValue(item, "KD_KOL_EFF")),
+          periode: parseDate(getExcelValue(item, "PERIODE")),
         };
       })
       .filter((row) => row.nama);
@@ -621,6 +616,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
             productId: product.id,
             mitraId: mitra?.id || null,
             submissionId: matchedSub?.id || null,
+            periode: row.periode,
           });
         }
 
@@ -628,10 +624,11 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
           return { count: 0 };
         }
 
-        return tx.billing.createMany({
+        const result = await tx.billing.createMany({
           data: billingDataList,
           skipDuplicates: true,
         });
+        return result;
       },
       {
         timeout: 60000 * 10,
@@ -720,11 +717,19 @@ export const LAPORAN = async (
   try {
     const data = await prisma.mitra.findMany({
       where: { status: true },
+      omit: {
+        file: true,
+        address: true,
+        phone: true,
+        email: true,
+        no_contract: true,
+        pic: true,
+      },
       include: {
         Billing: {
           where: {
             status: true,
-            bill_date: {
+            periode: {
               ...(month && {
                 gte: moment(month as string)
                   .startOf("month")
@@ -737,12 +742,18 @@ export const LAPORAN = async (
           },
           include: {
             Submission: {
+              omit: {
+                flagging_status: true,
+                doc_status: true,
+                activities: true,
+              },
               include: {
-                Debitur: true,
-                Product: true,
+                Debitur: { select: { fullname: true } },
+                Product: { select: { name: true } },
+                Mitra: { select: { name: true } },
               },
             },
-            User: true,
+            User: { select: { fullname: true } },
           },
         },
       },

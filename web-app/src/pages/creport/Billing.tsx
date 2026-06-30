@@ -48,6 +48,7 @@ export default function DataBilling() {
     mitraId: "",
     productId: "",
     bill_status: "",
+    col: "",
   });
   const [action, setAction] = useState<IActionPage<IBilling>>({
     upsert: false,
@@ -86,6 +87,9 @@ export default function DataBilling() {
     if (pageprops.bill_status) {
       params.append("bill_status", pageprops.bill_status);
     }
+    if (pageprops.col) {
+      params.append("col", pageprops.col);
+    }
     await api
       .request({
         url: `${import.meta.env.VITE_API_URL}/billing?${params.toString()}`,
@@ -114,6 +118,7 @@ export default function DataBilling() {
     pageprops.mitraId,
     pageprops.productId,
     pageprops.bill_status,
+    pageprops.col,
   ]);
 
   useEffect(() => {
@@ -188,6 +193,19 @@ export default function DataBilling() {
             <div className="text-xs opacity-80">
               {record.Submission?.Product?.name}
             </div>
+          </div>
+        );
+      },
+    },
+    {
+      title: "Rekening",
+      key: "rek",
+      dataIndex: "rek",
+      render(_value, record) {
+        return (
+          <div>
+            <div>{record.Submission?.account_number}</div>
+            <div className="text-xs opacity-80">Kol: {record.col}</div>
           </div>
         );
       },
@@ -297,7 +315,9 @@ export default function DataBilling() {
           placeholder="Pilih mitra..."
           className="w-full"
           options={mitras.map((t) => ({ label: t.name, value: t.id }))}
-          onChange={(val) => setPageprops({ ...pageprops, mitraId: val })}
+          onChange={(val) =>
+            setPageprops({ ...pageprops, mitraId: val, page: 1 })
+          }
           allowClear
           value={pageprops.mitraId}
           optionFilterProp={"label"}
@@ -314,7 +334,9 @@ export default function DataBilling() {
           placeholder="Pilih produk/segmen..."
           className="w-full"
           options={products.map((t) => ({ label: t.name, value: t.id }))}
-          onChange={(val) => setPageprops({ ...pageprops, productId: val })}
+          onChange={(val) =>
+            setPageprops({ ...pageprops, productId: val, page: 1 })
+          }
           allowClear
           value={pageprops.productId}
           optionFilterProp={"label"}
@@ -335,7 +357,9 @@ export default function DataBilling() {
             { label: "PARTIAL", value: "PARTIAL" },
             { label: "BELUM BAYAR", value: "BELUMBAYAR" },
           ]}
-          onChange={(val) => setPageprops({ ...pageprops, bill_status: val })}
+          onChange={(val) =>
+            setPageprops({ ...pageprops, bill_status: val, page: 1 })
+          }
           allowClear
           value={pageprops.bill_status}
           optionFilterProp={"label"}
@@ -357,10 +381,34 @@ export default function DataBilling() {
             ]
           }
           onChange={(_date, datestr) =>
-            setPageprops({ ...pageprops, backdate: datestr })
+            setPageprops({ ...pageprops, backdate: datestr, page: 1 })
           }
           size="small"
           style={{ width: "100%" }}
+        />
+      </div>
+      <div className="flex flex-col w-full">
+        <label className="mb-1 font-semibold text-gray-700 flex items-center gap-2">
+          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+          Kolektibilitas
+        </label>
+        <Select
+          placeholder="Pilih kol..."
+          className="w-full"
+          options={[
+            { label: "1", value: "1" },
+            { label: "2", value: "2" },
+            { label: "3", value: "3" },
+            { label: "4", value: "4" },
+            { label: "5", value: "5" },
+            { label: "6", value: "6" },
+          ]}
+          onChange={(val) => setPageprops({ ...pageprops, col: val, page: 1 })}
+          allowClear
+          value={pageprops.col}
+          optionFilterProp={"label"}
+          showSearch
+          size="small"
         />
       </div>
       <div className="flex justify-end gap-2 pt-4 border-t">
@@ -374,6 +422,7 @@ export default function DataBilling() {
               backdate: "",
               productId: "",
               mitraId: "",
+              page: 1,
             })
           }
         >
