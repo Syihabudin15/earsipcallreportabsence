@@ -22,7 +22,11 @@ import * as XLSX from "xlsx";
 const PayrollPage = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<IUser[]>([]);
-  const [month, setMonth] = useState(moment().format("YYYY-MM"));
+  const [month, setMonth] = useState(
+    new Date().getDate() > 20
+      ? moment().add(1, "month").format("YYYY-MM")
+      : moment().format("YYYY-MM"),
+  );
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(100);

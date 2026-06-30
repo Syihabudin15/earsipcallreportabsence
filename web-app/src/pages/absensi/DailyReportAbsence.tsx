@@ -21,7 +21,11 @@ import useContext from "../../libs/context";
 
 const DailyReportAbsence = () => {
   const [data, setData] = useState<IUser[]>([]);
-  const [month, setMonth] = useState(moment().format("YYYY-MM"));
+  const [month, setMonth] = useState(
+    new Date().getDate() > 20
+      ? moment().add(1, "month").format("YYYY-MM")
+      : moment().format("YYYY-MM"),
+  );
   const [holidays, setHolidays] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
