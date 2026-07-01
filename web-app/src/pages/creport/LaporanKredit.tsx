@@ -113,23 +113,25 @@ export default function LaporanKredit() {
     const rows: any[] = [];
 
     dashboardData.forEach((mitra) => {
-      mitra.Billing?.forEach((bill: any) => {
-        if (!isNpl(bill)) return;
+      mitra.Billing?.filter((b: any) => b.bill_status !== "BELUMBAYAR").forEach(
+        (bill: any) => {
+          if (!isNpl(bill)) return;
 
-        const pembayaran = bill.realize_value || 0;
-        const tagihan = bill.value || 0;
+          const pembayaran = bill.realize_value || 0;
+          const tagihan = bill.value || 0;
 
-        rows.push({
-          tanggal: bill.bill_date,
-          noLoan: bill.Submission.account_number,
-          debitur: bill.Submission.Debitur.fullname,
-          instansi: bill.Submission.Mitra.name,
-          ao: getAoName(bill),
-          pembayaran,
-          tagihan,
-          status: bill.bill_status,
-        });
-      });
+          rows.push({
+            tanggal: bill.bill_date,
+            noLoan: bill.Submission.account_number,
+            debitur: bill.Submission.Debitur.fullname,
+            instansi: bill.Submission.Mitra.name,
+            ao: getAoName(bill),
+            pembayaran,
+            tagihan,
+            status: bill.bill_status,
+          });
+        },
+      );
     });
 
     rows.sort(
