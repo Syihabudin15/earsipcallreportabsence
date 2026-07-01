@@ -728,6 +728,7 @@ export const LAPORAN = async (
       include: {
         Billing: {
           where: {
+            col: { in: ["1", "2", "3", "4", "5"] },
             status: true,
             periode: {
               ...(month && {

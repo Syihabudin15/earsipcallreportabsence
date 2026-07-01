@@ -266,7 +266,7 @@ export const DashboardCallreport = async (req: Request, res: Response) => {
       },
     }),
     prisma.billing.findMany({
-      where: { status: true },
+      where: { status: true, col: { in: ["1", "2", "3", "4", "5"] } },
       include: { Mitra: true },
     }),
   ]);
