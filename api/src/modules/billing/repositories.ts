@@ -539,20 +539,20 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
         }
 
         // 3d. Hapus billing pada bulan yang ada di Excel supaya upload ulang bulan sama tidak dobel
-        const monthKeys = Array.from(
-          new Set(rows.map((row) => moment(row.periode).format("YYYY-MM-DD"))),
-        );
+        // const monthKeys = Array.from(
+        //   new Set(rows.map((row) => moment(row.periode).format("YYYY-MM-DD"))),
+        // );
 
-        for (const monthKey of monthKeys) {
-          await tx.billing.deleteMany({
-            where: {
-              periode: {
-                gte: moment(monthKey).startOf("day").toDate(),
-                lte: moment(monthKey).endOf("day").toDate(),
-              },
-            },
-          });
-        }
+        // for (const monthKey of monthKeys) {
+        //   await tx.billing.deleteMany({
+        //     where: {
+        //       periode: {
+        //         gte: moment(monthKey).startOf("day").toDate(),
+        //         lte: moment(monthKey).endOf("day").toDate(),
+        //       },
+        //     },
+        //   });
+        // }
 
         // 3e. Susun data billing
         for (const row of rows) {
