@@ -82,6 +82,8 @@ model Role {
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
   User       User[]
+
+  @@index([name])
 }
 
 model Position {
@@ -93,6 +95,8 @@ model Position {
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
   User       User[]
+
+  @@index([name])
 }
 
 model User {
@@ -137,6 +141,9 @@ model User {
   PermitAbsence         PermitAbsence[]
   Deduction             Deduction[]
   Billing               Billing[]
+
+  @@index([fullname])
+  @@index([nip])
 }
 
 model SubmissionType {
@@ -148,6 +155,8 @@ model SubmissionType {
   created_at DateTime  @default(now())
   updated_at DateTime  @default(now())
   Debitur    Debitur[]
+
+  @@index([name])
 }
 
 model ProductType {
@@ -160,6 +169,8 @@ model ProductType {
   updated_at      DateTime          @default(now())
   ProductTypeFile ProductTypeFile[]
   Product         Product[]
+
+  @@index([name])
 }
 
 model ProductTypeFile {
@@ -173,6 +184,8 @@ model ProductTypeFile {
   ProductType   ProductType @relation(fields: [productTypeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   Files         Files[]
   productTypeId String
+
+  @@index([name])
 }
 
 model Product {
@@ -186,6 +199,8 @@ model Product {
   Submission    Submission[]
   productTypeId String
   Billing       Billing[]
+
+  @@index([name])
 }
 
 model Debitur {
@@ -206,6 +221,10 @@ model Debitur {
   submissionTypeId String
   Submission       Submission[]
   Visit            Visit[]
+
+  @@index([cif])
+  @@index([nik])
+  @@index([fullname])
 }
 
 model Mitra {
@@ -227,6 +246,9 @@ model Mitra {
   Submission Submission[]
   Billing    Billing[]
   Visit      Visit[]
+
+  @@index([name])
+  @@index([code])
 }
 
 model Submission {
@@ -266,6 +288,13 @@ model Submission {
   Insurance         Insurance?          @relation(fields: [insuranceId], references: [id])
   insuranceId       String?
   Billing           Billing[]
+
+  @@index([guarantee_status])
+  @@index([doc_status])
+  @@index([approve_status])
+  @@index([flagging_status])
+  @@index([guarantee_date])
+  @@index([account_number])
 }
 
 model CollateralLending {
@@ -287,6 +316,10 @@ model CollateralLending {
   approverById String?
   createdById  String
   submissionId String
+
+  @@index([start_at])
+  @@index([end_at])
+  @@index([return_at])
 }
 
 model Files {
@@ -301,6 +334,9 @@ model Files {
   submissionId      String?
   productTypeFileId String
   PermitFileDetail  PermitFileDetail[]
+
+  @@index([name])
+  @@index([url])
 }
 
 model PermitFile {
@@ -319,6 +355,9 @@ model PermitFile {
   requesterId      String
   approverId       String?
   PermitFileDetail PermitFileDetail[]
+
+  @@index([action])
+  @@index([permit_status])
 }
 
 model PermitFileDetail {
@@ -347,6 +386,9 @@ model PayOffice {
   created_at DateTime     @default(now())
   updated_at DateTime     @default(now())
   Submission Submission[]
+
+  @@index([name])
+  @@index([code])
 }
 
 model Insurance {
@@ -366,6 +408,9 @@ model Insurance {
   created_at DateTime     @default(now())
   updated_at DateTime     @default(now())
   Submission Submission[]
+
+  @@index([name])
+  @@index([code])
 }
 
 model VisitCategory {
@@ -377,6 +422,8 @@ model VisitCategory {
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
   Visit      Visit[]
+
+  @@index([name])
 }
 
 model VisitStatus {
@@ -389,6 +436,8 @@ model VisitStatus {
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
   Visit      Visit[]
+
+  @@index([name])
 }
 
 model VisitPurpose {
@@ -400,6 +449,8 @@ model VisitPurpose {
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
   Visit      Visit[]
+
+  @@index([name])
 }
 
 model Visit {
@@ -434,6 +485,10 @@ model Visit {
   visitStatusId   String?
   visitPurposeId  String?
   mitraId         String?
+
+  @@index([col])
+  @@index([date_action])
+  @@index([date_plan])
 }
 
 model Billing {
@@ -464,6 +519,10 @@ model Billing {
   mitraId      String?
   Product      Product?    @relation(fields: [productId], references: [id])
   productId    String?
+
+  @@index([col])
+  @@index([periode])
+  @@index([bill_status])
 }
 
 model AbsenceConfig {
@@ -534,6 +593,9 @@ model PermitAbsence {
   userId       String
   ApproverBy   User?    @relation("PermitAbsenceApprover", fields: [approverById], references: [id], onUpdate: Cascade)
   approverById String?
+
+  @@index([type])
+  @@index([permit_status])
 }
 
 model CostType {
@@ -545,6 +607,9 @@ model CostType {
   status     Boolean  @default(true)
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
+
+  @@index([type])
+  @@index([name])
 }
 
 model Insentif {
@@ -564,6 +629,9 @@ model Insentif {
   userId       String
   ApproverBy   User?   @relation("InsentifApprover", fields: [approverById], references: [id], onUpdate: Cascade)
   approverById String?
+
+  @@index([name])
+  @@index([approve_status])
 }
 
 model Deduction {
@@ -581,6 +649,8 @@ model Deduction {
   userId      String
   CreatedBy   User?    @relation("DeductionCreated", fields: [createdById], references: [id], onUpdate: Cascade)
   createdById String?
+
+  @@index([name])
 }
 
 model Payroll {

@@ -279,7 +279,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
 
     const normalizeBillStatus = (value: any) => {
       const status = normalizeEnum(text(value)).trim().toUpperCase();
-      return status || "BELUM_BAYAR";
+      return status || "BELUMBAYAR";
     };
 
     // ==================================================
@@ -540,23 +540,15 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
 
         // 3d. Hapus billing pada bulan yang ada di Excel supaya upload ulang bulan sama tidak dobel
         const monthKeys = Array.from(
-          new Set(rows.map((row) => moment(row.billDate).format("YYYY-MM"))),
+          new Set(rows.map((row) => moment(row.periode).format("YYYY-MM-DD"))),
         );
 
         for (const monthKey of monthKeys) {
-          const startDate = moment(monthKey, "YYYY-MM")
-            .startOf("month")
-            .toDate();
-          const endDate = moment(monthKey, "YYYY-MM")
-            .add(1, "month")
-            .startOf("month")
-            .toDate();
-
           await tx.billing.deleteMany({
             where: {
-              bill_date: {
-                gte: startDate,
-                lt: endDate,
+              periode: {
+                gte: moment(monthKey).startOf("day").toDate(),
+                lte: moment(monthKey).endOf("day").toDate(),
               },
             },
           });
@@ -626,7 +618,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
 
         const result = await tx.billing.createMany({
           data: billingDataList,
-          skipDuplicates: true,
+          // skipDuplicates: true,
         });
         return result;
       },
