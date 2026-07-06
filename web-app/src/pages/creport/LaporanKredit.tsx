@@ -78,9 +78,9 @@ export default function LaporanKredit() {
         const tagihan = response.data.billings.map((t: IBilling) =>
           ["1", "2", "3", "4", "5"].includes(t.col || "1"),
         );
-        const wo = response.data.billings.map(
-          (t: IBilling) => (t.col || "1") === "6",
-        );
+        // const wo = response.data.billings.map(
+        //   (t: IBilling) => (t.col || "1") === "6",
+        // );
         const last12Months = Array.from({ length: 12 })
           .map((_, i) => moment().subtract(i, "months").format("YYYY-MM"))
           .reverse();
