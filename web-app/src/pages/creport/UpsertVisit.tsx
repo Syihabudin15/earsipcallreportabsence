@@ -1,4 +1,4 @@
-import { App, Button, Card, Col, Divider, Row, Spin } from "antd";
+import { App, Button, Card, Col, Divider, Row, Spin, Select } from "antd"; // Tambahkan Select
 import type {
   IComments,
   IDebitur,
@@ -15,7 +15,7 @@ import { IDRFormat, IDRToNumber, InputUtil } from "../utils/utilForm";
 import { InputFileUploadVisitAuto } from "../utils/InputFileUploadVisitAuto";
 import { PlusCircleOutlined } from "@ant-design/icons";
 import { BookPlus, FolderOpen, MessageCircle, User } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react"; // Tambahkan useRef
 import moment from "moment";
 import api from "../../libs/api";
 import useContext from "../../libs/context";
@@ -30,10 +30,21 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
   const [submissions, setSubmissions] = useState<ISubmission[]>([]);
   const [subTypes, setSubTypes] = useState<ISubType[]>([]);
   const [debts, setDebts] = useState<IDebitur[]>([]);
-
   const [users, setUsers] = useState<IUser[]>([]);
   const [dateErrors, setDateErrors] = useState<{ [key: string]: string }>({});
+
   const { user, hasAccess } = useContext((state: any) => state);
+
+  // Loading states untuk debounce search
+  const [fetchingDebts, setFetchingDebts] = useState(false);
+  const [fetchingMitras, setFetchingMitras] = useState(false);
+  const [fetchingUsers, setFetchingUsers] = useState(false);
+
+  // Refs untuk debounce timeout
+  const debounceDebt = useRef<NodeJS.Timeout | null>(null);
+  const debounceMitra = useRef<NodeJS.Timeout | null>(null);
+  const debounceUser = useRef<NodeJS.Timeout | null>(null);
+
   const [data, setData] = useState(
     record || {
       ...defaultData,
@@ -46,69 +57,118 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      await Promise.all([
-        api
-          .request({
-            method: "GET",
-            url: "/submission",
-          })
-          .then((res) => setSubmissions(res.data.data)),
-        api
-          .request({
-            method: "GET",
-            url: "/sub_type",
-          })
-          .then((res) => setSubTypes(res.data.data)),
-        api
-          .request({
-            method: "GET",
-            url: "/visit_category",
-          })
-          .then((res) => setVisitCategories(res.data.data)),
-        api
-          .request({
-            method: "GET",
-            url: "/visit_status",
-          })
-          .then((res) => setVisitStatuses(res.data.data)),
-        api
-          .request({
-            method: "GET",
-            url: "/visit_purpose",
-          })
-          .then((res) => setVisitPurposes(res.data.data)),
-        api
-          .request({
-            method: "GET",
-            url: "/user",
-            params: { limit: 500 },
-          })
-          .then((res) => setUsers(res.data.data)),
-        api
-          .request({
-            method: "GET",
-            url: "/mitra",
-            params: { limit: 1000 },
-          })
-          .then((res) => setMitras(res.data.data)),
-        api
-          .request({
-            method: "GET",
-            url: "/debitur",
-            params: { limit: 10000 },
-          })
-          .then((res) => setDebts(res.data.data)),
-      ]);
+      try {
+        await Promise.all([
+          api
+            .request({ method: "GET", url: "/submission" })
+            .then((res) => setSubmissions(res.data.data)),
+          api
+            .request({ method: "GET", url: "/sub_type" })
+            .then((res) => setSubTypes(res.data.data)),
+          api
+            .request({ method: "GET", url: "/visit_category" })
+            .then((res) => setVisitCategories(res.data.data)),
+          api
+            .request({ method: "GET", url: "/visit_status" })
+            .then((res) => setVisitStatuses(res.data.data)),
+          api
+            .request({ method: "GET", url: "/visit_purpose" })
+            .then((res) => setVisitPurposes(res.data.data)),
+        ]);
+
+        // Panggil fetch awal dengan limit kecil
+        fetchDebts("");
+        fetchMitras("");
+        fetchUsers("");
+
+        // Injeksi data dari record jika sedang mode edit
+        if (record) {
+          if (record.Debitur) setDebts((prev) => [...prev, record.Debitur]);
+          if (record.Mitra)
+            setMitras((prev) => [...prev, record.Mitra as IMitra]);
+          if (record.User) setUsers((prev) => [...prev, record.User]);
+        }
+      } catch (error) {
+        console.log(error);
+      }
       setLoading(false);
     })();
-  }, []);
+
+    // Cleanup debounce
+    return () => {
+      if (debounceDebt.current) clearTimeout(debounceDebt.current);
+      if (debounceMitra.current) clearTimeout(debounceMitra.current);
+      if (debounceUser.current) clearTimeout(debounceUser.current);
+    };
+  }, [record]);
+
+  // --- FUNGSI FETCH DENGAN LIMIT KECIL & PENCARIAN ---
+  const fetchDebts = async (search: string) => {
+    setFetchingDebts(true);
+    try {
+      const res = await api.request({
+        method: "GET",
+        url: "/debitur",
+        params: { limit: 20, search },
+      });
+      setDebts(res.data.data);
+    } catch (e) {
+    } finally {
+      setFetchingDebts(false);
+    }
+  };
+
+  const fetchMitras = async (search: string) => {
+    setFetchingMitras(true);
+    try {
+      const res = await api.request({
+        method: "GET",
+        url: "/mitra",
+        params: { limit: 20, search },
+      });
+      setMitras(res.data.data);
+    } catch (e) {
+    } finally {
+      setFetchingMitras(false);
+    }
+  };
+
+  const fetchUsers = async (search: string) => {
+    setFetchingUsers(true);
+    try {
+      const res = await api.request({
+        method: "GET",
+        url: "/user",
+        params: { limit: 20, search },
+      });
+      setUsers(res.data.data);
+    } catch (e) {
+    } finally {
+      setFetchingUsers(false);
+    }
+  };
+
+  // --- HANDLER PENCARIAN (DEBOUNCE) ---
+  const onSearchDebt = (val: string) => {
+    if (debounceDebt.current) clearTimeout(debounceDebt.current);
+    debounceDebt.current = setTimeout(() => fetchDebts(val), 500);
+  };
+
+  const onSearchMitra = (val: string) => {
+    if (debounceMitra.current) clearTimeout(debounceMitra.current);
+    debounceMitra.current = setTimeout(() => fetchMitras(val), 500);
+  };
+
+  const onSearchUser = (val: string) => {
+    if (debounceUser.current) clearTimeout(debounceUser.current);
+    debounceUser.current = setTimeout(() => fetchUsers(val), 500);
+  };
 
   const validateDates = () => {
     const errors: { [key: string]: string } = {};
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Validate date_action >= date_plan
     if (data.date_action && data.date_plan) {
       const actionDate = new Date(data.date_action);
       const planDate = new Date(data.date_plan);
@@ -138,15 +198,9 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
       })
       .then(async (res) => {
         if (res.status === 201 || res.status === 200) {
-          modal.success({
-            title: "BERHASIL",
-            content: res.data.msg,
-          });
+          modal.success({ title: "BERHASIL", content: res.data.msg });
         } else {
-          modal.error({
-            title: "ERROR",
-            content: res.data.msg,
-          });
+          modal.error({ title: "ERROR", content: res.data.msg });
         }
       })
       .catch((err) => {
@@ -154,37 +208,11 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
         modal.error({
           title: "ERROR",
           content:
-            err.response.data.msg || err.message || "Internal Server Error",
+            err.response?.data?.msg || err.message || "Internal Server Error",
         });
       });
     setLoading(false);
   };
-
-  // const handleSearch = async () => {
-  //   setLoading(true);
-  //   await api
-  //     .request({
-  //       url: "/debitur",
-  //       method: "PATCH",
-  //       params: { id: search },
-  //     })
-  //     .then((res) => {
-  //       if (res.status === 200) {
-  //         setData((prev) => ({
-  //           ...prev,
-  //           Debitur: res.data.data,
-  //           debiturId: res.data.data.id,
-  //         }));
-  //       } else {
-  //         message.error("Data tidak ditemukan");
-  //       }
-  //     })
-  //     .catch((err) => {
-  //       console.log(err);
-  //       message.error("Data tidak ditemukan");
-  //     });
-  //   setLoading(false);
-  // };
 
   const getGeoLocation = () => {
     navigator.geolocation.getCurrentPosition(
@@ -223,57 +251,75 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
         </div>
         <Divider />
         <Row gutter={[16, 16]}>
+          {/* MENGGUNAKAN SELECT UNTUK NASABAH/DEBITUR */}
           <Col xs={12} md={8}>
-            <InputUtil
-              label="Nasabah"
-              type="option"
-              value={data.debiturId}
-              options={debts.map((d) => ({
-                label: `${d.fullname} (${d.cif})`,
-                value: d.id,
-              }))}
-              onchage={(e: string) => {
-                const find = debts.find((d) => d.id === e);
-                setData({
-                  ...data,
-                  Debitur: find ? find : data.Debitur,
-                  debiturId: e,
-                  value: 0,
-                  col: "",
-                  submissionId: null,
-                  mitraId: null,
-                });
-                if (find) {
-                  setSubmissions(find.Submission || []);
-                  setMitras(
-                    find.Submission.flatMap((s) => s.Mitra) as IMitra[],
-                  );
-                }
-              }}
-            />
+            <div className="flex flex-col mb-4">
+              <label className="mb-1 text-sm text-gray-600">Nasabah</label>
+              <Select
+                showSearch
+                filterOption={false}
+                loading={fetchingDebts}
+                onSearch={onSearchDebt}
+                value={data.debiturId || undefined}
+                placeholder="Cari Nasabah..."
+                options={debts.map((d) => ({
+                  label: `${d.fullname} (${d.cif})`,
+                  value: d.id,
+                }))}
+                onChange={(e) => {
+                  const find = debts.find((d) => d.id === e);
+                  setData({
+                    ...data,
+                    Debitur: find ? find : data.Debitur,
+                    debiturId: e,
+                    value: 0,
+                    col: "",
+                    submissionId: null,
+                    mitraId: null,
+                  });
+                  if (find) {
+                    setSubmissions(find.Submission || []);
+                    setMitras(
+                      find.Submission.flatMap((s) => s.Mitra) as IMitra[],
+                    );
+                  }
+                }}
+                className="w-full"
+              />
+            </div>
           </Col>
+
+          {/* MENGGUNAKAN SELECT UNTUK MITRA */}
           <Col xs={12} md={8}>
-            <InputUtil
-              label="Mitra"
-              value={data.mitraId}
-              onchage={(e: string) => {
-                setData({
-                  ...data,
-                  mitraId: e,
-                  Mitra: Mitras.find((m) => m.id === e) as IMitra,
-                });
-              }}
-              type="option"
-              options={Mitras.map((s) => ({ label: s.name, value: s.id }))}
-            />
+            <div className="flex flex-col mb-4">
+              <label className="mb-1 text-sm text-gray-600">Mitra</label>
+              <Select
+                showSearch
+                filterOption={false}
+                loading={fetchingMitras}
+                onSearch={onSearchMitra}
+                value={data.mitraId || undefined}
+                placeholder="Cari Mitra..."
+                options={Mitras.map((s) => ({ label: s.name, value: s.id }))}
+                onChange={(e) => {
+                  setData({
+                    ...data,
+                    mitraId: e,
+                    Mitra: Mitras.find((m) => m.id === e) as IMitra,
+                  });
+                }}
+                className="w-full"
+              />
+            </div>
           </Col>
+
           <Col xs={12} md={8}>
             <InputUtil
               label="CIF"
               value={data.Debitur?.cif}
-              onchage={(e: string) => {
-                setData({ ...data, Debitur: { ...data.Debitur, cif: e } });
-              }}
+              onchage={(e: string) =>
+                setData({ ...data, Debitur: { ...data.Debitur, cif: e } })
+              }
               type="text"
             />
           </Col>
@@ -282,9 +328,9 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
               label="NIK"
               value={data.Debitur?.nik}
               required
-              onchage={(e: string) => {
-                setData({ ...data, Debitur: { ...data.Debitur, nik: e } });
-              }}
+              onchage={(e: string) =>
+                setData({ ...data, Debitur: { ...data.Debitur, nik: e } })
+              }
               type="text"
             />
           </Col>
@@ -293,9 +339,9 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
               label="Nama Lengkap"
               required
               value={data.Debitur?.fullname}
-              onchage={(e: string) => {
-                setData({ ...data, Debitur: { ...data.Debitur, fullname: e } });
-              }}
+              onchage={(e: string) =>
+                setData({ ...data, Debitur: { ...data.Debitur, fullname: e } })
+              }
               type="text"
             />
           </Col>
@@ -304,12 +350,12 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
               label="Tempat Lahir"
               required
               value={data.Debitur?.birthplace}
-              onchage={(e: string) => {
+              onchage={(e: string) =>
                 setData({
                   ...data,
                   Debitur: { ...data.Debitur, birthplace: e },
-                });
-              }}
+                })
+              }
               type="text"
             />
           </Col>
@@ -317,13 +363,17 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <InputUtil
               label="Tanggal Lahir"
               required
-              value={moment(data.Debitur?.birthdate).format("YYYY-MM-DD")}
-              onchage={(e: string) => {
+              value={
+                data.Debitur?.birthdate
+                  ? moment(data.Debitur?.birthdate).format("YYYY-MM-DD")
+                  : ""
+              }
+              onchage={(e: string) =>
                 setData({
                   ...data,
                   Debitur: { ...data.Debitur, birthdate: new Date(e) },
-                });
-              }}
+                })
+              }
               type="date"
             />
           </Col>
@@ -331,9 +381,9 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <InputUtil
               label="Alamat"
               value={data.Debitur?.address}
-              onchage={(e: string) => {
-                setData({ ...data, Debitur: { ...data.Debitur, address: e } });
-              }}
+              onchage={(e: string) =>
+                setData({ ...data, Debitur: { ...data.Debitur, address: e } })
+              }
               type="area"
             />
           </Col>
@@ -341,9 +391,9 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <InputUtil
               label="No Telepon"
               value={data.Debitur?.phone}
-              onchage={(e: string) => {
-                setData({ ...data, Debitur: { ...data.Debitur, phone: e } });
-              }}
+              onchage={(e: string) =>
+                setData({ ...data, Debitur: { ...data.Debitur, phone: e } })
+              }
               type="text"
             />
           </Col>
@@ -351,9 +401,9 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <InputUtil
               label="Email"
               value={data.Debitur?.email}
-              onchage={(e: string) => {
-                setData({ ...data, Debitur: { ...data.Debitur, email: e } });
-              }}
+              onchage={(e: string) =>
+                setData({ ...data, Debitur: { ...data.Debitur, email: e } })
+              }
               type="text"
             />
           </Col>
@@ -362,12 +412,12 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
               label="Jenis Pemohon"
               required
               value={data.Debitur?.submissionTypeId}
-              onchage={(e: string) => {
+              onchage={(e: string) =>
                 setData({
                   ...data,
                   Debitur: { ...data.Debitur, submissionTypeId: e },
-                });
-              }}
+                })
+              }
               type="option"
               options={subTypes.map((s) => ({ label: s.name, value: s.id }))}
             />
@@ -378,7 +428,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
                 label="Data Rekening"
                 value={data.submissionId}
                 options={submissions.map((s) => ({
-                  label: `${s.id} (${s.Product.name}-${s.Product.ProductType?.name})`,
+                  label: `${s.id} (${s.Product?.name || ""}-${s.Product?.ProductType?.name || ""})`,
                   value: s.id,
                 }))}
                 onchage={(e: string) => {
@@ -387,8 +437,8 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
                     ...data,
                     submissionId: e,
                     ...(find && {
-                      col: find.Billing[0]?.col,
-                      value: find.Billing[0].value,
+                      col: find.Billing?.[0]?.col || "",
+                      value: find.Billing?.[0]?.value || 0,
                     }),
                   });
                 }}
@@ -400,13 +450,12 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <InputUtil
               label="Kolektibilitas"
               value={data.col}
-              onchage={(e: string) => {
-                setData({ ...data, col: e });
-              }}
+              onchage={(e: string) => setData({ ...data, col: e })}
               type="text"
             />
           </Col>
         </Row>
+
         <Card
           title={
             <div className="flex gap-2 items-center">
@@ -420,9 +469,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
               <InputUtil
                 label="ID Kunjungan"
                 value={data.id}
-                onchage={(e: string) => {
-                  setData({ ...data, id: e });
-                }}
+                onchage={(e: string) => setData({ ...data, id: e })}
                 type="text"
               />
             </Col>
@@ -431,13 +478,13 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
                 <InputUtil
                   label="Tanggal Rencana Kunjungan"
                   required
-                  value={moment(data.date_plan).format("YYYY-MM-DD")}
+                  value={
+                    data.date_plan
+                      ? moment(data.date_plan).format("YYYY-MM-DD")
+                      : ""
+                  }
                   onchage={(e: string) => {
-                    setData({
-                      ...data,
-                      date_plan: new Date(e),
-                    });
-                    // Validate date_plan
+                    setData({ ...data, date_plan: new Date(e) });
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
                     const planDate = new Date(e);
@@ -469,13 +516,13 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
               <div>
                 <InputUtil
                   label="Tanggal Pelaksanaan Kunjungan"
-                  value={moment(data.date_action).format("YYYY-MM-DD")}
+                  value={
+                    data.date_action
+                      ? moment(data.date_action).format("YYYY-MM-DD")
+                      : ""
+                  }
                   onchage={(e: string) => {
-                    setData({
-                      ...data,
-                      date_action: new Date(e),
-                    });
-                    // Validate date_action >= date_plan
+                    setData({ ...data, date_action: new Date(e) });
                     if (data.date_plan && e) {
                       const actionDate = new Date(e);
                       const planDate = new Date(data.date_plan);
@@ -549,9 +596,9 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
               <InputUtil
                 label="Nilai Tagihan"
                 value={IDRFormat(data.value)}
-                onchage={(e: string) => {
-                  setData({ ...data, value: IDRToNumber(e) });
-                }}
+                onchage={(e: string) =>
+                  setData({ ...data, value: IDRToNumber(e) })
+                }
                 type="text"
               />
             </Col>
@@ -559,28 +606,12 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
               <InputUtil
                 label="Realisasi Tagihan"
                 value={IDRFormat(data.realize_value)}
-                onchage={(e: string) => {
-                  setData({ ...data, realize_value: IDRToNumber(e) });
-                }}
+                onchage={(e: string) =>
+                  setData({ ...data, realize_value: IDRToNumber(e) })
+                }
                 type="text"
               />
             </Col>
-            {submissions.length !== 0 && (
-              <Col xs={12} md={8}>
-                <InputUtil
-                  label="Data Rekening"
-                  value={data.submissionId}
-                  options={submissions.map((s) => ({
-                    label: `${s.id} (${s.account_number})`,
-                    value: s.id,
-                  }))}
-                  onchage={(e: string) => {
-                    setData({ ...data, submissionId: e });
-                  }}
-                  type="option"
-                />
-              </Col>
-            )}
             <Col xs={12} md={8}>
               <InputUtil
                 label="Hasil Kunjungan"
@@ -605,12 +636,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
               <InputUtil
                 label="Ringkasan Pembicaraan"
                 value={data.summary}
-                onchage={(e: string) =>
-                  setData({
-                    ...data,
-                    summary: e,
-                  })
-                }
+                onchage={(e: string) => setData({ ...data, summary: e })}
                 type="area"
               />
             </Col>
@@ -618,17 +644,13 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
               <InputUtil
                 label="Tindak Lanjut"
                 value={data.next_action}
-                onchage={(e: string) =>
-                  setData({
-                    ...data,
-                    next_action: e,
-                  })
-                }
+                onchage={(e: string) => setData({ ...data, next_action: e })}
                 type="area"
               />
             </Col>
           </Row>
         </Card>
+
         <Card
           title={
             <div className="flex gap-2 items-center">
@@ -638,27 +660,37 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
           style={{ marginTop: 15, marginBottom: 15 }}
         >
           <Row gutter={[16, 16]}>
+            {/* MENGGUNAKAN SELECT UNTUK PETUGAS (USER) */}
             <Col xs={12} md={8}>
-              <InputUtil
-                label="Petugas"
-                required
-                value={data.userId}
-                disabled={!hasAccess("/app/callreport/visit", "proses")}
-                onchage={(e: string) => {
-                  const find = users.find((u) => u.id === e);
-                  setData({
-                    ...data,
-                    userId: e,
-                    User: find as IUser,
-                  });
-                }}
-                options={users.map((s) => ({
-                  label: `${s.fullname} (${s.nik})`,
-                  value: s.id,
-                }))}
-                type="option"
-              />
+              <div className="flex flex-col mb-4">
+                <label className="mb-1 text-sm text-gray-600">
+                  Petugas <span className="text-red-500">*</span>
+                </label>
+                <Select
+                  showSearch
+                  filterOption={false}
+                  loading={fetchingUsers}
+                  onSearch={onSearchUser}
+                  disabled={!hasAccess("/app/callreport/visit", "proses")}
+                  value={data.userId || undefined}
+                  placeholder="Cari Petugas..."
+                  options={users.map((s) => ({
+                    label: `${s.fullname} (${s.nik})`,
+                    value: s.id,
+                  }))}
+                  onChange={(e) => {
+                    const find = users.find((u) => u.id === e);
+                    setData({
+                      ...data,
+                      userId: e,
+                      User: find as IUser,
+                    });
+                  }}
+                  className="w-full"
+                />
+              </div>
             </Col>
+
             <Col xs={12} md={8}>
               <InputUtil
                 label="NIP"
@@ -693,6 +725,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             </Col>
           </Row>
         </Card>
+
         <Card
           title={
             <div className="flex gap-2 items-center">
@@ -746,6 +779,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             </Button>
           </div>
         </Card>
+
         <Card
           title={
             <div className="flex gap-2 items-center">
@@ -758,10 +792,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <InputFileUploadVisitAuto
               files={data.files || []}
               onFilesChange={(updatedFiles) =>
-                setData({
-                  ...data,
-                  files: updatedFiles,
-                })
+                setData({ ...data, files: updatedFiles })
               }
               filetype="image/*"
             />
@@ -775,8 +806,9 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             <section className="h-96 w-full bg-slate-200 overflow-hidden rounded-xl shadow-inner">
               <iframe
                 title="Lokasi Kantor"
+                /* Menggunakan URL Embed Google Maps yang benar agar tidak error */
                 src={`https://maps.google.com/maps?q=${data.geo}&z=17&output=embed`}
-                className="w-full h-full border-0  transition-all duration-700"
+                className="w-full h-full border-0 transition-all duration-700"
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
@@ -784,6 +816,7 @@ export default function UpsertVisit({ record }: { record?: IVisit }) {
             </section>
           </Col>
         </Card>
+
         <div className="flex gap-4 justify-end">
           <Link to={"/app/callreport/visit"}>
             <Button danger>Cancel</Button>

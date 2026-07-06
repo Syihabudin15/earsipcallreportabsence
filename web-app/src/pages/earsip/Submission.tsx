@@ -11,7 +11,7 @@ import {
   type TableProps,
 } from "antd";
 import { Plus, Filter } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react"; // Tambahkan useMemo
 import type {
   IActionPage,
   ICollateralLending,
@@ -25,7 +25,6 @@ import type {
   ISubType,
   IVisit,
 } from "../../libs/interface";
-import type { HookAPI } from "antd/es/modal/useModal";
 import api from "../../libs/api";
 import useContext from "../../libs/context";
 import { CollapseList, DetailSubmission } from "../utils/utilComp";
@@ -69,8 +68,10 @@ export default function DataSubmission() {
     process: false,
     record: undefined,
   });
+
   const { modal } = App.useApp();
   const { hasAccess } = useContext((state: any) => state);
+
   const [subTypes, setSubTypes] = useState<ISubType[]>([]);
   const [products, setProducts] = useState<IProduct[]>([]);
   const [productTypes, setProductTypes] = useState<IProductType[]>([]);
@@ -80,8 +81,8 @@ export default function DataSubmission() {
 
   const getData = async () => {
     setLoading(true);
-    await api
-      .request({
+    try {
+      const res = await api.request({
         url: `${import.meta.env.VITE_API_URL}/submission`,
         method: "GET",
         params: {
@@ -101,32 +102,34 @@ export default function DataSubmission() {
           tbo_status: pageprops.tbo_status,
           backdate: pageprops.backdate ? pageprops.backdate.toString() : "",
         },
-      })
-      .then((res) =>
-        setPageprops((prev) => ({
-          ...prev,
-          data: res.data.data.map((d: ISubmission) => ({
-            ...d,
-            Product: {
-              ...d.Product,
-              ProductType: {
-                ...d.Product.ProductType,
-                ProductTypeFile: d.Product?.ProductType?.ProductTypeFile.map(
-                  (ptf) => ({
-                    ...ptf,
-                    Files: d.Files.filter(
-                      (f) =>
-                        f.submissionId === d.id &&
-                        f.productTypeFileId === ptf.id,
-                    ),
-                  }),
-                ),
-              },
-            },
-          })),
-          total: res.data.total,
+      });
+
+      setPageprops((prev) => ({
+        ...prev,
+        // OPTIMASI: Menyederhanakan filtering file untuk mengurangi beban komputasi
+        data: res.data.data.map((d: ISubmission) => ({
+          ...d,
+          Product: {
+            ...d.Product,
+            ProductType: d.Product?.ProductType
+              ? {
+                  ...d.Product.ProductType,
+                  ProductTypeFile:
+                    d.Product.ProductType.ProductTypeFile?.map((ptf) => ({
+                      ...ptf,
+                      Files: d.Files
+                        ? d.Files.filter((f) => f.productTypeFileId === ptf.id)
+                        : [],
+                    })) || [],
+                }
+              : null,
+          },
         })),
-      );
+        total: res.data.total,
+      }));
+    } catch (error) {
+      console.error(error);
+    }
     setLoading(false);
   };
 
@@ -173,10 +176,11 @@ export default function DataSubmission() {
     })();
   }, []);
 
+  // OPTIMASI: Waktu debounce ditingkatkan menjadi 500ms agar request API tidak menumpuk saat user mengetik cepat
   useEffect(() => {
-    const timeout = setTimeout(async () => {
-      await getData();
-    }, 200);
+    const timeout = setTimeout(() => {
+      getData();
+    }, 500);
     return () => clearTimeout(timeout);
   }, [
     pageprops.page,
@@ -196,627 +200,657 @@ export default function DataSubmission() {
     pageprops.tbo_status,
   ]);
 
-  const columns: TableProps<ISubmission>["columns"] = [
-    {
-      title: "ID",
-      key: "id",
-      dataIndex: "id",
-      fixed: window.innerWidth > 600 ? "left" : undefined,
-      render(value, _record, index) {
-        return (
-          <>
-            <div>{(pageprops.page - 1) * pageprops.limit + index + 1}</div>
-            <div className="text-xs opacity-80">{value}</div>
-          </>
-        );
+  // OPTIMASI: Membungkus columns dalam useMemo agar tidak dirender ulang terus-menerus
+  const columns: TableProps<ISubmission>["columns"] = useMemo(
+    () => [
+      {
+        title: "ID",
+        key: "id",
+        dataIndex: "id",
+        fixed: window.innerWidth > 600 ? "left" : undefined,
+        render(value, _record, index) {
+          return (
+            <>
+              <div>{(pageprops.page - 1) * pageprops.limit + index + 1}</div>
+              <div className="text-xs opacity-80">{value}</div>
+            </>
+          );
+        },
       },
-    },
-    {
-      title: "Nasabah",
-      key: "pemohon",
-      dataIndex: ["Debitur", "fullname"],
-      fixed: window.innerWidth > 600 ? "left" : false,
-      render(value, record, _index) {
-        return (
-          <div>
-            <div>{value}</div>
-            <div className="text-xs opacity-80">@{record.Debitur.nik}</div>
-          </div>
-        );
-      },
-    },
-    {
-      title: "CIF & Rekening",
-      key: "cif",
-      dataIndex: "cif",
-      render(_value, record, _index) {
-        return (
-          <div>
-            <div>CIF: {record.Debitur.cif}</div>
-            <div className="text-xs opacity-80">
-              REK: {record.account_number}
+      {
+        title: "Nasabah",
+        key: "pemohon",
+        dataIndex: ["Debitur", "fullname"],
+        fixed: window.innerWidth > 600 ? "left" : false,
+        render(value, record) {
+          return (
+            <div>
+              <div>{value}</div>
+              <div className="text-xs opacity-80">@{record.Debitur?.nik}</div>
             </div>
-          </div>
-        );
+          );
+        },
       },
-    },
-    {
-      title: "Jenis Pemohon",
-      key: "subType",
-      dataIndex: ["Debitur", "SubmissionType", "name"],
-    },
-    {
-      title: "Produk",
-      key: "product",
-      dataIndex: "product",
-      render(_value, record, _index) {
-        return (
-          <div>
-            <div>{record.Product.name}</div>
-            <div className="text-xs opacity-80">
-              {record.Product.ProductType?.name}
+      {
+        title: "CIF & Rekening",
+        key: "cif",
+        dataIndex: "cif",
+        render(_value, record) {
+          return (
+            <div>
+              <div>CIF: {record.Debitur?.cif}</div>
+              <div className="text-xs opacity-80">
+                REK: {record.account_number}
+              </div>
             </div>
-          </div>
-        );
+          );
+        },
       },
-    },
-    {
-      title: "Plafond/Nilai",
-      key: "plafond",
-      dataIndex: "plafond",
-      render(_value, record, _index) {
-        return (
-          <div className="text-right">
-            <div>Rp. {IDRFormat(record.value)}</div>
-            <div className="text-xs opacity-80">{record.tenor} Bulan</div>
-          </div>
-        );
+      {
+        title: "Jenis Pemohon",
+        key: "subType",
+        dataIndex: ["Debitur", "SubmissionType", "name"],
       },
-    },
-    {
-      title: "Petugas",
-      key: "petugas",
-      dataIndex: "petugas",
-      render(_value, record, _index) {
-        return (
-          <div>
-            <div>{record.User.fullname}</div>
-            <div className="text-xs opacity-80">@{record.User.nik}</div>
-          </div>
-        );
+      {
+        title: "Produk",
+        key: "product",
+        dataIndex: "product",
+        render(_value, record) {
+          return (
+            <div>
+              <div>{record.Product?.name}</div>
+              <div className="text-xs opacity-80">
+                {record.Product?.ProductType?.name}
+              </div>
+            </div>
+          );
+        },
       },
-    },
-    {
-      title: "No Lemari",
-      key: "lemari",
-      dataIndex: "lemari",
-      render(_value, record, _index) {
-        return (
-          <div>
-            <div>{record.drawer_code}</div>
-          </div>
-        );
+      {
+        title: "Plafond/Nilai",
+        key: "plafond",
+        dataIndex: "plafond",
+        render(_value, record) {
+          return (
+            <div className="text-right">
+              <div>Rp. {IDRFormat(record.value)}</div>
+              <div className="text-xs opacity-80">{record.tenor} Bulan</div>
+            </div>
+          );
+        },
       },
-    },
-    {
-      title: "Mitra & Kantor Bayar",
-      key: "mitra",
-      dataIndex: "mitra",
-      render(_value, record, _index) {
-        return (
-          <div>
-            <div>{record.Mitra?.name}</div>
-            <div className="opacity-80 text-xs">{record.PayOffice?.name}</div>
-          </div>
-        );
+      {
+        title: "Petugas",
+        key: "petugas",
+        dataIndex: "petugas",
+        render(_value, record) {
+          return (
+            <div>
+              <div>{record.User?.fullname}</div>
+              <div className="text-xs opacity-80">@{record.User?.nik}</div>
+            </div>
+          );
+        },
       },
-    },
-    {
-      title: "Asuransi",
-      key: "insurance",
-      dataIndex: "insurance",
-      render(_value, record, _index) {
-        return (
-          <div>
-            <div>{record.Insurance?.name}</div>
-          </div>
-        );
+      {
+        title: "No Lemari",
+        key: "lemari",
+        dataIndex: "lemari",
+        render(_value, record) {
+          return <div>{record.drawer_code}</div>;
+        },
       },
-    },
-    {
-      title: "Tgl Jaminan",
-      key: "guarantee_date",
-      dataIndex: "guarantee_date",
-      render(_value, record, _index) {
-        return (
-          <div>
-            {record.guarantee_date
-              ? moment(record.guarantee_date).format("DD/MM/YYYY")
-              : "-"}
-          </div>
-        );
+      {
+        title: "Mitra & Kantor Bayar",
+        key: "mitra",
+        dataIndex: "mitra",
+        render(_value, record) {
+          return (
+            <div>
+              <div>{record.Mitra?.name}</div>
+              <div className="opacity-80 text-xs">{record.PayOffice?.name}</div>
+            </div>
+          );
+        },
       },
-    },
-    {
-      title: "Files",
-      key: "files",
-      dataIndex: "files",
-      render(_value, record, _index) {
-        return (
-          <div style={{ maxWidth: 300 }}>
+      {
+        title: "Asuransi",
+        key: "insurance",
+        dataIndex: "insurance",
+        render(_value, record) {
+          return <div>{record.Insurance?.name}</div>;
+        },
+      },
+      {
+        title: "Tgl Jaminan",
+        key: "guarantee_date",
+        dataIndex: "guarantee_date",
+        render(_value, record) {
+          return (
+            <div>
+              {record.guarantee_date
+                ? moment(record.guarantee_date).format("DD/MM/YYYY")
+                : "-"}
+            </div>
+          );
+        },
+      },
+      {
+        title: "Files",
+        key: "files",
+        dataIndex: "files",
+        render(_value, record) {
+          return (
+            <div style={{ maxWidth: 300 }}>
+              <CollapseList
+                items={
+                  record.Product?.ProductType
+                    ? record.Product.ProductType.ProductTypeFile?.map(
+                        (c) =>
+                          `${c.name} (${c.Files.length}) {${c.Files.map((f) => f.name).join(", ")}}`,
+                      )
+                    : []
+                }
+                initialVisible={1}
+              />
+            </div>
+          );
+        },
+      },
+      {
+        title: "Komentar",
+        key: "comment",
+        dataIndex: "comment",
+        render(_value, record) {
+          return (
             <CollapseList
               items={
-                record.Product.ProductType
-                  ? record.Product.ProductType?.ProductTypeFile.map(
-                      (c) =>
-                        `${c.name} (${c.Files.length}) {${c.Files.map((f) => f.name).join(", ")}}`,
-                    )
-                  : []
+                record.coments?.map(
+                  (c) =>
+                    `${c.name} at ${moment(c.date).format("DD/MM/YY HH:mm")} : ${c.comment}`,
+                ) || []
               }
-              initialVisible={1}
+            />
+          );
+        },
+      },
+      {
+        title: "Status Arsip",
+        key: "permohonan",
+        dataIndex: "permohonan",
+        render(_value, record) {
+          return (
+            <div className="flex justify-center">
+              <Tag
+                style={{ width: 100, textAlign: "center" }}
+                color={
+                  ["BREAK", "PASIF"].includes(record.approve_status)
+                    ? "cyan"
+                    : record.approve_status === "PENDING"
+                      ? "orange"
+                      : "green"
+                }
+                variant="solid"
+              >
+                {record.approve_status}
+              </Tag>
+            </div>
+          );
+        },
+      },
+      {
+        title: "Status Jaminan",
+        key: "jaminan",
+        dataIndex: "jaminan",
+        render(_value, record) {
+          return (
+            <div className="flex justify-center">
+              <Tag
+                style={{ width: 100, textAlign: "center" }}
+                color={
+                  record.guarantee_status === "DITERIMA"
+                    ? "green"
+                    : record.guarantee_status === "PENDING"
+                      ? "orange"
+                      : record.guarantee_status === "DIPINJAM"
+                        ? "blue"
+                        : "cyan"
+                }
+                variant="solid"
+              >
+                {record.guarantee_status}
+              </Tag>
+            </div>
+          );
+        },
+      },
+      {
+        title: "Status Dokumen",
+        key: "doc",
+        dataIndex: "doc",
+        render(_value, record) {
+          return (
+            <div className="flex justify-center">
+              <Tag
+                style={{ width: 100, textAlign: "center" }}
+                color={
+                  record.doc_status === "DITERIMA"
+                    ? "green"
+                    : record.doc_status === "PENDING"
+                      ? "orange"
+                      : record.doc_status === "DIPINJAM"
+                        ? "blue"
+                        : "cyan"
+                }
+                variant="solid"
+              >
+                {record.doc_status}
+              </Tag>
+            </div>
+          );
+        },
+      },
+      {
+        title: "Status Flagging",
+        key: "flagging",
+        dataIndex: "flagging",
+        render(_value, record) {
+          return (
+            <div className="flex justify-center">
+              <Tag
+                style={{ width: 100, textAlign: "center" }}
+                color={
+                  record.flagging_status === "PENDING"
+                    ? "orange"
+                    : record.flagging_status === "FLAGGING"
+                      ? "green"
+                      : "blue"
+                }
+                variant="solid"
+              >
+                {record.flagging_status}
+              </Tag>
+            </div>
+          );
+        },
+      },
+      {
+        title: "Tanggal",
+        key: "created_at",
+        dataIndex: "created_at",
+        render(_value, record) {
+          return (
+            <div>
+              <div>{moment(record.created_at).format("DD/MM/YY HH:mm")}</div>
+              <div className="text-xs opacity-80">
+                {moment(record.updated_at).format("DD/MM/YY HH:mm")}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        title: "Aktivitas",
+        key: "activities",
+        dataIndex: "activities",
+        render(_value, record) {
+          return (
+            <CollapseList
+              items={
+                record.activities?.map(
+                  (c) =>
+                    `${c.name} at ${moment(c.date).format("DD/MM/YY HH:mm")} : ${c.activities}`,
+                ) || []
+              }
+            />
+          );
+        },
+      },
+      {
+        title: "Aksi",
+        key: "action",
+        dataIndex: "action",
+        render(_value, record) {
+          return (
+            <div className="flex items-center gap-1">
+              <Button
+                icon={<FolderOpenOutlined size={15} />}
+                size="small"
+                onClick={() =>
+                  setAction((prev) => ({ ...prev, process: true, record }))
+                }
+              ></Button>
+              {hasAccess(window.location.pathname, "update") && (
+                <Link to={`/app/earsip/submission/upsert/${record.id}`}>
+                  <Button
+                    icon={<FormOutlined size={15} />}
+                    size="small"
+                    type="primary"
+                    onClick={() =>
+                      setAction((prev) => ({ ...prev, upsert: true, record }))
+                    }
+                  ></Button>
+                </Link>
+              )}
+              {hasAccess(window.location.pathname, "delete") && (
+                <Button
+                  icon={<DeleteOutlined size={15} />}
+                  size="small"
+                  danger
+                  onClick={() =>
+                    setAction((prev) => ({ ...prev, delete: true, record }))
+                  }
+                ></Button>
+              )}
+            </div>
+          );
+        },
+      },
+    ],
+    [pageprops.page, pageprops.limit, action, hasAccess],
+  );
+
+  // OPTIMASI: Membungkus Content Popover dengan useMemo untuk mencegah re-render puluhan <Select> setiap kali mengetik di form pencarian
+  const content = useMemo(
+    () => (
+      <div className="p-2 w-full max-w-3xl">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col">
+            <p className="mb-1 text-xs">Jenis Pemohon</p>
+            <Select
+              placeholder="Pilih jenis pemohon.."
+              className="w-full"
+              options={subTypes.map((t) => ({ label: t.name, value: t.id }))}
+              onChange={(val) =>
+                setPageprops((prev) => ({
+                  ...prev,
+                  submissionTypeId: val,
+                  page: 1,
+                }))
+              }
+              allowClear
+              value={pageprops.submissionTypeId}
+              optionFilterProp={"label"}
+              showSearch
+              size="small"
             />
           </div>
-        );
-      },
-    },
-    {
-      title: "Komentar",
-      key: "comment",
-      dataIndex: "comment",
-      render(_value, record, _index) {
-        return (
-          <CollapseList
-            items={record.coments.map(
-              (c) =>
-                `${c.name} at ${moment(c.date).format("DD/MM/YY HH:mm")} : ${c.comment}`,
-            )}
-          />
-        );
-      },
-    },
-    {
-      title: "Status Arsip",
-      key: "permohonan",
-      dataIndex: "permohonan",
-      render(_value, record, _index) {
-        return (
-          <div className="flex justify-center">
-            <Tag
-              style={{ width: 100, textAlign: "center" }}
-              color={
-                ["BREAK", "PASIF"].includes(record.approve_status)
-                  ? "cyan"
-                  : record.approve_status === "PENDING"
-                    ? "orange"
-                    : "green"
+          <div className="flex flex-col">
+            <p className="mb-1 text-xs">Tipe Arsip</p>
+            <Select
+              placeholder="Pilih tipe produk.."
+              className="w-full"
+              options={productTypes.map((t) => ({
+                label: t.name,
+                value: t.id,
+              }))}
+              onChange={(val) =>
+                setPageprops((prev) => ({
+                  ...prev,
+                  productTypeId: val,
+                  productId: null,
+                  page: 1,
+                }))
               }
-              variant="solid"
-            >
-              {record.approve_status}
-            </Tag>
-          </div>
-        );
-      },
-    },
-    {
-      title: "Status Jaminan",
-      key: "jaminan",
-      dataIndex: "jaminan",
-      render(_value, record, _index) {
-        return (
-          <div className="flex justify-center">
-            <Tag
-              style={{ width: 100, textAlign: "center" }}
-              color={
-                record.guarantee_status === "DITERIMA"
-                  ? "green"
-                  : record.guarantee_status === "PENDING"
-                    ? "orange"
-                    : record.guarantee_status === "DIPINJAM"
-                      ? "blue"
-                      : "cyan"
-              }
-              variant="solid"
-            >
-              {record.guarantee_status}
-            </Tag>
-          </div>
-        );
-      },
-    },
-    {
-      title: "Status Dokumen",
-      key: "doc",
-      dataIndex: "doc",
-      render(_value, record, _index) {
-        return (
-          <div className="flex justify-center">
-            <Tag
-              style={{ width: 100, textAlign: "center" }}
-              color={
-                record.doc_status === "DITERIMA"
-                  ? "green"
-                  : record.doc_status === "PENDING"
-                    ? "orange"
-                    : record.doc_status === "DIPINJAM"
-                      ? "blue"
-                      : "cyan"
-              }
-              variant="solid"
-            >
-              {record.doc_status}
-            </Tag>
-          </div>
-        );
-      },
-    },
-    {
-      title: "Status Flagging",
-      key: "flagging",
-      dataIndex: "flagging",
-      render(_value, record, _index) {
-        return (
-          <div className="flex justify-center">
-            <Tag
-              style={{ width: 100, textAlign: "center" }}
-              color={
-                record.flagging_status === "PENDING"
-                  ? "orange"
-                  : record.flagging_status === "FLAGGING"
-                    ? "green"
-                    : "blue"
-              }
-              variant="solid"
-            >
-              {record.flagging_status}
-            </Tag>
-          </div>
-        );
-      },
-    },
-    {
-      title: "Tanggal",
-      key: "created_at",
-      dataIndex: "created_at",
-      render(_value, record, _index) {
-        return (
-          <div>
-            <div>{moment(record.created_at).format("DD/MM/YY HH:mm")}</div>
-            <div className="text-xs opacity-80">
-              {moment(record.updated_at).format("DD/MM/YY HH:mm")}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      title: "Aktivitas",
-      key: "activities",
-      dataIndex: "activities",
-      render(_value, record, _index) {
-        return (
-          <CollapseList
-            items={record.activities.map(
-              (c) =>
-                `${c.name} at ${moment(c.date).format("DD/MM/YY HH:mm")} : ${c.activities}`,
-            )}
-          />
-        );
-      },
-    },
-    {
-      title: "Aksi",
-      key: "action",
-      dataIndex: "action",
-      render(_value, record, _index) {
-        return (
-          <div className="flex items-center gap-1">
-            <Button
-              icon={<FolderOpenOutlined size={15} />}
+              allowClear
+              value={pageprops.productTypeId}
+              optionFilterProp={"label"}
+              showSearch
               size="small"
-              onClick={() => setAction({ ...action, process: true, record })}
-            ></Button>
-            {hasAccess(window.location.pathname, "update") && (
-              <Link to={`/app/earsip/submission/upsert/${record.id}`}>
-                <Button
-                  icon={<FormOutlined size={15} />}
-                  size="small"
-                  type="primary"
-                  onClick={() => setAction({ ...action, upsert: true, record })}
-                ></Button>
-              </Link>
-            )}
-            {hasAccess(window.location.pathname, "delete") && (
-              <Button
-                icon={<DeleteOutlined size={15} />}
-                size="small"
-                danger
-                onClick={() => setAction({ ...action, delete: true, record })}
-              ></Button>
-            )}
+            />
           </div>
-        );
-      },
-    },
-  ];
-
-  const content = (
-    <div className="p-2 w-full max-w-3xl">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col">
-          <p className="mb-1 text-xs">Jenis Pemohon</p>
-          <Select
-            placeholder="Pilih jenis pemohon.."
-            className="w-full"
-            options={subTypes.map((t) => ({ label: t.name, value: t.id }))}
-            onChange={(val) =>
-              setPageprops((prev) => ({
-                ...prev,
-                submissionTypeId: val,
-                page: 1,
-              }))
-            }
-            allowClear
-            value={pageprops.submissionTypeId}
-            optionFilterProp={"label"}
-            showSearch
-            size="small"
-          />
-        </div>
-        <div className="flex flex-col">
-          <p className="mb-1 text-xs">Tipe Arsip</p>
-          <Select
-            placeholder="Pilih tipe produk.."
-            className="w-full"
-            options={productTypes.map((t) => ({ label: t.name, value: t.id }))}
-            onChange={(val) =>
-              setPageprops((prev) => ({
-                ...prev,
-                productTypeId: val,
-                productId: null,
-                page: 1,
-              }))
-            }
-            allowClear
-            value={pageprops.productTypeId}
-            optionFilterProp={"label"}
-            showSearch
-            size="small"
-          />
-        </div>
-        <div className="flex flex-col">
-          <p className="mb-1 text-xs">Produk</p>
-          <Select
-            placeholder="Pilih produk.."
-            className="w-full"
-            options={products
-              .filter((p) => p.productTypeId === pageprops.productTypeId)
-              .map((t) => ({ label: t.name, value: t.id }))}
-            onChange={(val) =>
-              setPageprops((prev) => ({ ...prev, productId: val, page: 1 }))
-            }
-            allowClear
-            value={pageprops.productId}
-            optionFilterProp={"label"}
-            showSearch
-            size="small"
-          />
-        </div>
-        <div className="flex flex-col">
-          <p className="mb-1 text-xs">Mitra</p>
-          <Select
-            placeholder="Pilih mitra.."
-            className="w-full"
-            options={mitras.map((t) => ({ label: t.name, value: t.id }))}
-            onChange={(val) =>
-              setPageprops((prev) => ({ ...prev, mitraId: val, page: 1 }))
-            }
-            allowClear
-            value={pageprops.mitraId}
-            optionFilterProp={"label"}
-            showSearch
-            size="small"
-          />
-        </div>
-        <div className="flex flex-col">
-          <p className="mb-1 text-xs">Kantor Bayar</p>
-          <Select
-            placeholder="Pilih Kantor Bayar.."
-            className="w-full"
-            options={pays.map((t) => ({ label: t.name, value: t.id }))}
-            onChange={(val) =>
-              setPageprops((prev) => ({ ...prev, payOfficeId: val, page: 1 }))
-            }
-            allowClear
-            value={pageprops.payOfficeId}
-            optionFilterProp={"label"}
-            showSearch
-            size="small"
-          />
-        </div>
-        <div className="flex flex-col">
-          <p className="mb-1 text-xs">Asuransi</p>
-          <Select
-            placeholder="Pilih Asuransi.."
-            className="w-full"
-            options={insc.map((t) => ({ label: t.name, value: t.id }))}
-            onChange={(val) =>
-              setPageprops((prev) => ({ ...prev, insuranceId: val, page: 1 }))
-            }
-            allowClear
-            value={pageprops.insuranceId}
-            optionFilterProp={"label"}
-            showSearch
-            size="small"
-          />
-        </div>
-        <div className="flex flex-col">
-          <p className="mb-1 text-xs">Status Jaminan</p>
-          <Select
-            placeholder="Pilih status jaminan.."
-            className="w-full"
-            options={[
-              { label: "PENDING", value: "PENDING" },
-              { label: "DITERIMA", value: "DITERIMA" },
-              { label: "DIPINJAM", value: "DIPINJAM" },
-              { label: "DIKEMBALIKAN", value: "DIKEMBALIKAN" },
-            ]}
-            onChange={(val) =>
-              setPageprops((prev) => ({
-                ...prev,
-                guarantee_status: val,
-                page: 1,
-              }))
-            }
-            allowClear
-            value={pageprops.guarantee_status}
-            optionFilterProp={"label"}
-            showSearch
-            size="small"
-          />
-        </div>
-        <div className="flex flex-col">
-          <p className="mb-1 text-xs">Status Dokumen</p>
-          <Select
-            placeholder="Pilih status doc.."
-            className="w-full"
-            options={[
-              { label: "PENDING", value: "PENDING" },
-              { label: "DITERIMA", value: "DITERIMA" },
-              { label: "DIPINJAM", value: "DIPINJAM" },
-              { label: "DIKEMBALIKAN", value: "DIKEMBALIKAN" },
-            ]}
-            onChange={(val) =>
-              setPageprops((prev) => ({ ...prev, doc_status: val, page: 1 }))
-            }
-            allowClear
-            value={pageprops.doc_status}
-            optionFilterProp={"label"}
-            showSearch
-            size="small"
-          />
-        </div>
-        <div className="flex flex-col">
-          <p className="mb-1 text-xs">Status Nasabah</p>
-          <Select
-            placeholder="Pilih status nasabah.."
-            className="w-full"
-            options={[
-              { label: "PENDING", value: "PENDING" },
-              { label: "AKTIF", value: "AKTIF" },
-              { label: "LUNAS", value: "LUNAS" },
-              { label: "BREAK", value: "BREAK" },
-              { label: "PASIF", value: "PASIF" },
-            ]}
-            onChange={(val) =>
-              setPageprops((prev) => ({
-                ...prev,
-                approve_status: val,
-                page: 1,
-              }))
-            }
-            allowClear
-            value={pageprops.approve_status}
-            optionFilterProp={"label"}
-            showSearch
-            size="small"
-          />
-        </div>
-        <div className="flex flex-col">
-          <p className="mb-1 text-xs">Status Flagging</p>
-          <Select
-            placeholder="Pilih status flagging.."
-            className="w-full"
-            options={[
-              { label: "PENDING", value: "PENDING" },
-              { label: "FLAGGING", value: "FLAGGING" },
-              { label: "NON_PENSIUNAN", value: "NON_PENSIUNAN" },
-            ]}
-            onChange={(val) =>
-              setPageprops((prev) => ({
-                ...prev,
-                flagging_status: val,
-                page: 1,
-              }))
-            }
-            allowClear
-            value={pageprops.flagging_status}
-            optionFilterProp={"label"}
-            showSearch
-            size="small"
-          />
-        </div>
-        <div className="flex flex-col">
-          <p className="mb-1 text-xs">Status TBO</p>
-          <Select
-            placeholder="Pilih status tbo.."
-            className="w-full"
-            options={[
-              { label: "MASA TBO", value: "MASA TBO" },
-              { label: "LEWAT TBO", value: "LEWAT TBO" },
-              { label: "DITERIMA", value: "DITERIMA" },
-              { label: "NOT SET", value: "NOT SET" },
-            ]}
-            onChange={(val) =>
-              setPageprops((prev) => ({ ...prev, tbo_status: val, page: 1 }))
-            }
-            allowClear
-            value={pageprops.tbo_status}
-            optionFilterProp={"label"}
-            showSearch
-            size="small"
-          />
-        </div>
-        <div className="flex flex-col col-span-2">
-          <p className="mb-1 text-xs">Periode</p>
-          <RangePicker
-            value={
-              pageprops.backdate && [
-                dayjs(pageprops.backdate[0]),
-                dayjs(pageprops.backdate[1]),
-              ]
-            }
-            onChange={
-              (_date, datestr) =>
+          <div className="flex flex-col">
+            <p className="mb-1 text-xs">Produk</p>
+            <Select
+              placeholder="Pilih produk.."
+              className="w-full"
+              options={products
+                .filter((p) => p.productTypeId === pageprops.productTypeId)
+                .map((t) => ({ label: t.name, value: t.id }))}
+              onChange={(val) =>
+                setPageprops((prev) => ({ ...prev, productId: val, page: 1 }))
+              }
+              allowClear
+              value={pageprops.productId}
+              optionFilterProp={"label"}
+              showSearch
+              size="small"
+            />
+          </div>
+          <div className="flex flex-col">
+            <p className="mb-1 text-xs">Mitra</p>
+            <Select
+              placeholder="Pilih mitra.."
+              className="w-full"
+              options={mitras.map((t) => ({ label: t.name, value: t.id }))}
+              onChange={(val) =>
+                setPageprops((prev) => ({ ...prev, mitraId: val, page: 1 }))
+              }
+              allowClear
+              value={pageprops.mitraId}
+              optionFilterProp={"label"}
+              showSearch
+              size="small"
+            />
+          </div>
+          <div className="flex flex-col">
+            <p className="mb-1 text-xs">Kantor Bayar</p>
+            <Select
+              placeholder="Pilih Kantor Bayar.."
+              className="w-full"
+              options={pays.map((t) => ({ label: t.name, value: t.id }))}
+              onChange={(val) =>
+                setPageprops((prev) => ({ ...prev, payOfficeId: val, page: 1 }))
+              }
+              allowClear
+              value={pageprops.payOfficeId}
+              optionFilterProp={"label"}
+              showSearch
+              size="small"
+            />
+          </div>
+          <div className="flex flex-col">
+            <p className="mb-1 text-xs">Asuransi</p>
+            <Select
+              placeholder="Pilih Asuransi.."
+              className="w-full"
+              options={insc.map((t) => ({ label: t.name, value: t.id }))}
+              onChange={(val) =>
+                setPageprops((prev) => ({ ...prev, insuranceId: val, page: 1 }))
+              }
+              allowClear
+              value={pageprops.insuranceId}
+              optionFilterProp={"label"}
+              showSearch
+              size="small"
+            />
+          </div>
+          <div className="flex flex-col">
+            <p className="mb-1 text-xs">Status Jaminan</p>
+            <Select
+              placeholder="Pilih status jaminan.."
+              className="w-full"
+              options={[
+                { label: "PENDING", value: "PENDING" },
+                { label: "DITERIMA", value: "DITERIMA" },
+                { label: "DIPINJAM", value: "DIPINJAM" },
+                { label: "DIKEMBALIKAN", value: "DIKEMBALIKAN" },
+              ]}
+              onChange={(val) =>
+                setPageprops((prev) => ({
+                  ...prev,
+                  guarantee_status: val,
+                  page: 1,
+                }))
+              }
+              allowClear
+              value={pageprops.guarantee_status}
+              optionFilterProp={"label"}
+              showSearch
+              size="small"
+            />
+          </div>
+          <div className="flex flex-col">
+            <p className="mb-1 text-xs">Status Dokumen</p>
+            <Select
+              placeholder="Pilih status doc.."
+              className="w-full"
+              options={[
+                { label: "PENDING", value: "PENDING" },
+                { label: "DITERIMA", value: "DITERIMA" },
+                { label: "DIPINJAM", value: "DIPINJAM" },
+                { label: "DIKEMBALIKAN", value: "DIKEMBALIKAN" },
+              ]}
+              onChange={(val) =>
+                setPageprops((prev) => ({ ...prev, doc_status: val, page: 1 }))
+              }
+              allowClear
+              value={pageprops.doc_status}
+              optionFilterProp={"label"}
+              showSearch
+              size="small"
+            />
+          </div>
+          <div className="flex flex-col">
+            <p className="mb-1 text-xs">Status Nasabah</p>
+            <Select
+              placeholder="Pilih status nasabah.."
+              className="w-full"
+              options={[
+                { label: "PENDING", value: "PENDING" },
+                { label: "AKTIF", value: "AKTIF" },
+                { label: "LUNAS", value: "LUNAS" },
+                { label: "BREAK", value: "BREAK" },
+                { label: "PASIF", value: "PASIF" },
+                { label: "HAPUSBUKU", value: "HAPUSBUKU" },
+              ]}
+              onChange={(val) =>
+                setPageprops((prev) => ({
+                  ...prev,
+                  approve_status: val,
+                  page: 1,
+                }))
+              }
+              allowClear
+              value={pageprops.approve_status}
+              optionFilterProp={"label"}
+              showSearch
+              size="small"
+            />
+          </div>
+          <div className="flex flex-col">
+            <p className="mb-1 text-xs">Status Flagging</p>
+            <Select
+              placeholder="Pilih status flagging.."
+              className="w-full"
+              options={[
+                { label: "PENDING", value: "PENDING" },
+                { label: "FLAGGING", value: "FLAGGING" },
+                { label: "NON_PENSIUNAN", value: "NON_PENSIUNAN" },
+              ]}
+              onChange={(val) =>
+                setPageprops((prev) => ({
+                  ...prev,
+                  flagging_status: val,
+                  page: 1,
+                }))
+              }
+              allowClear
+              value={pageprops.flagging_status}
+              optionFilterProp={"label"}
+              showSearch
+              size="small"
+            />
+          </div>
+          <div className="flex flex-col">
+            <p className="mb-1 text-xs">Status TBO</p>
+            <Select
+              placeholder="Pilih status tbo.."
+              className="w-full"
+              options={[
+                { label: "MASA TBO", value: "MASA TBO" },
+                { label: "LEWAT TBO", value: "LEWAT TBO" },
+                { label: "DITERIMA", value: "DITERIMA" },
+                { label: "NOT SET", value: "NOT SET" },
+              ]}
+              onChange={(val) =>
+                setPageprops((prev) => ({ ...prev, tbo_status: val, page: 1 }))
+              }
+              allowClear
+              value={pageprops.tbo_status}
+              optionFilterProp={"label"}
+              showSearch
+              size="small"
+            />
+          </div>
+          <div className="flex flex-col col-span-2">
+            <p className="mb-1 text-xs">Periode</p>
+            <RangePicker
+              value={
+                pageprops.backdate
+                  ? [dayjs(pageprops.backdate[0]), dayjs(pageprops.backdate[1])]
+                  : undefined
+              }
+              onChange={(_date, datestr) =>
                 setPageprops((prev) => ({
                   ...prev,
                   backdate: datestr,
                   page: 1,
                 }))
-              // console.log({ _date, datestr })
-            }
+              }
+              size="small"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end mt-3">
+          <Button
             size="small"
-          />
+            danger
+            icon={<CloseOutlined />}
+            onClick={() =>
+              setPageprops((prev) => ({
+                ...prev,
+                productTypeId: "",
+                productId: "",
+                approve_status: "",
+                flagging_status: "",
+                guarantee_status: "",
+                doc_status: "",
+                backdate: "",
+                submissionTypeId: "",
+                mitraId: "",
+                payOfficeId: "",
+                insuranceId: "",
+                tbo_status: "",
+                page: 1,
+              }))
+            }
+          >
+            Clear Filter
+          </Button>
         </div>
       </div>
-      <div className="flex justify-end mt-3">
-        <Button
-          size="small"
-          danger
-          icon={<CloseOutlined />}
-          onClick={() =>
-            setPageprops({
-              ...pageprops,
-              productTypeId: "",
-              productId: "",
-              approve_status: "",
-              flagging_status: "",
-              guarantee_status: "",
-              doc_status: "",
-              backdate: "",
-              submissionTypeId: "",
-              mitraId: "",
-              payOfficeId: "",
-              insuranceId: "",
-              tbo_status: "",
-              page: 1,
-            })
-          }
-        >
-          Clear Filter
-        </Button>
-      </div>
-    </div>
+    ),
+    [
+      subTypes,
+      productTypes,
+      products,
+      mitras,
+      pays,
+      insc,
+      pageprops.submissionTypeId,
+      pageprops.productTypeId,
+      pageprops.productId,
+      pageprops.mitraId,
+      pageprops.payOfficeId,
+      pageprops.insuranceId,
+      pageprops.guarantee_status,
+      pageprops.doc_status,
+      pageprops.approve_status,
+      pageprops.flagging_status,
+      pageprops.tbo_status,
+      pageprops.backdate,
+    ],
   );
 
   return (
@@ -833,19 +867,21 @@ export default function DataSubmission() {
 
       {/* --- FILTER & SEARCH --- */}
       <div className="bg-white p-2">
-        <div className="bg-white  flex flex-wrap items-center gap-4 mb-2">
+        <div className="bg-white flex flex-wrap items-center gap-4 mb-2">
           <div className="flex-1 flex gap-2">
             {hasAccess(window.location.pathname, "write") && (
-              <a href="/app/earsip/submission/upsert">
+              <Link to="/app/earsip/submission/upsert">
                 <Button
-                  onClick={() => setAction({ ...action, upsert: true })}
+                  onClick={() =>
+                    setAction((prev) => ({ ...prev, upsert: true }))
+                  }
                   icon={<Plus size={15} />}
                   type="primary"
                   size="small"
                 >
                   New
                 </Button>
-              </a>
+              </Link>
             )}
             <ExportImport data={pageprops.data} />
           </div>
@@ -855,7 +891,6 @@ export default function DataSubmission() {
               placeholder="Cari Nama, NIK, atau ID Debitur..."
               className="w-full transition-all"
               size="small"
-              width={200}
               style={{ width: 200 }}
               onChange={(e) =>
                 setPageprops((prev) => ({ ...prev, search: e.target.value }))
@@ -895,11 +930,11 @@ export default function DataSubmission() {
         <Table
           size="small"
           loading={loading}
-          rowKey={"id"}
+          rowKey="id"
           bordered
           scroll={{
             x: "max-content",
-            y: window.innerWidth > 600 ? "50vh" : "63vh",
+            y: window.innerWidth > 600 ? "45vh" : "63vh",
           }}
           columns={columns}
           dataSource={pageprops.data}
@@ -907,13 +942,8 @@ export default function DataSubmission() {
             current: pageprops.page,
             pageSize: pageprops.limit,
             total: pageprops.total,
-            onChange: (page, pageSize) => {
-              setPageprops((prev) => ({
-                ...prev,
-                page,
-                limit: pageSize,
-              }));
-            },
+            onChange: (page, pageSize) =>
+              setPageprops((prev) => ({ ...prev, page, limit: pageSize })),
             pageSizeOptions: [10, 25, 50, 100, 500, 1000, 10000],
             size: "small",
           }}
@@ -925,8 +955,8 @@ export default function DataSubmission() {
               />
             ),
             rowExpandable: (record) =>
-              record.CollateralLending?.length !== 0 &&
-              record.Visit?.length !== 0,
+              (record.CollateralLending?.length ?? 0) > 0 ||
+              (record.Visit?.length ?? 0) > 0,
           }}
           footer={() => (
             <div className="flex justify-end pr-4">
@@ -949,7 +979,7 @@ export default function DataSubmission() {
         <DeleteData
           open={action.delete}
           setOpen={(val: boolean) =>
-            setAction({ ...action, delete: val, record: undefined })
+            setAction((prev) => ({ ...prev, delete: val, record: undefined }))
           }
           record={action.record}
           getData={getData}
@@ -961,7 +991,7 @@ export default function DataSubmission() {
         <DetailSubmission
           open={action.process}
           setOpen={(val: boolean) =>
-            setAction({ ...action, process: val, record: undefined })
+            setAction((prev) => ({ ...prev, process: val, record: undefined }))
           }
           record={action.record}
           key={"detail" + action.record.id}
@@ -971,51 +1001,31 @@ export default function DataSubmission() {
   );
 }
 
-const DeleteData = ({
-  open,
-  setOpen,
-  record,
-  getData,
-  hook,
-}: {
-  open: boolean;
-  setOpen: Function;
-  record: ISubmission;
-  getData: Function;
-  hook: HookAPI;
-}) => {
+const DeleteData = ({ open, setOpen, record, getData, hook }: any) => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     setLoading(true);
-    await api
-      .request({
-        url: import.meta.env.VITE_API_URL + "/submission?id=" + record?.id,
+    try {
+      const res = await api.request({
+        url: `${import.meta.env.VITE_API_URL}/submission?id=${record?.id}`,
         method: "DELETE",
         headers: { "Content-Type": "Application/json" },
-      })
-      .then(async (res) => {
-        if (res.status === 201 || res.status === 200) {
-          hook.success({
-            title: "BERHASIL",
-            content: res.data.msg,
-          });
-          setOpen(false);
-          getData && (await getData());
-        } else {
-          hook.error({
-            title: "ERROR",
-            content: res.data.msg,
-          });
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-        hook.error({
-          title: "ERROR",
-          content: err.message || "Internal Server Error",
-        });
       });
+      if (res.status === 201 || res.status === 200) {
+        hook.success({ title: "BERHASIL", content: res.data.msg });
+        setOpen(false);
+        getData && (await getData());
+      } else {
+        hook.error({ title: "ERROR", content: res.data.msg });
+      }
+    } catch (err: any) {
+      console.log(err);
+      hook.error({
+        title: "ERROR",
+        content: err.message || "Internal Server Error",
+      });
+    }
     setLoading(false);
   };
   return (
@@ -1024,10 +1034,12 @@ const DeleteData = ({
       title="Konfirmasi Hapus"
       onCancel={() => setOpen(false)}
       onOk={handleSubmit}
-      okButtonProps={{ loading: loading }}
+      okButtonProps={{ loading: loading, danger: true }} // Tambahan danger: true
     >
       <div className="p-5">
-        <p>Konfirmasi hapus data *{record.id}*?</p>
+        <p>
+          Konfirmasi hapus data <b>{record.id}</b>?
+        </p>
       </div>
     </Modal>
   );
@@ -1040,66 +1052,58 @@ const TableJaminanKunjungan = ({
   lendings: ICollateralLending[];
   visits: IVisit[];
 }) => {
-  interface IData {
-    id: string;
-    name: string;
-    start_date: Date | null;
-    end_date: Date | null;
-    actual_date: Date | null;
-    status: string;
-  }
-  const data: IData[] = [
-    ...lendings.map((l) => ({
-      id: l.id,
-      name: "Peminjaman Jaminan",
-      start_date: l.start_at,
-      end_date: l.end_at,
-      actual_date: l.return_at,
-      status: l.return_at ? "SELESAI" : "PENDING",
-    })),
-    ...visits.map((p) => ({
-      id: p.id,
-      name: "Kunjungan",
-      start_date: p.created_at,
-      end_date: p.date_plan,
-      actual_date: p.date_action || null,
-      status: p.date_action ? "SELESAI" : "PENDING",
-    })),
-  ];
+  const data = useMemo(
+    () => [
+      ...lendings.map((l) => ({
+        id: l.id,
+        name: "Peminjaman Jaminan",
+        start_date: l.start_at,
+        end_date: l.end_at,
+        actual_date: l.return_at,
+        status: l.return_at ? "SELESAI" : "PENDING",
+      })),
+      ...visits.map((p) => ({
+        id: p.id,
+        name: "Kunjungan",
+        start_date: p.created_at,
+        end_date: p.date_plan,
+        actual_date: p.date_action || null,
+        status: p.date_action ? "SELESAI" : "PENDING",
+      })),
+    ],
+    [lendings, visits],
+  );
 
-  const columns: TableProps<IData>["columns"] = [
-    {
-      title: "Kategori",
-      key: "name",
-      dataIndex: "name",
-    },
-    {
-      title: "Tanggal Rencana",
-      key: "date",
-      dataIndex: "date",
-      render(_value, record, _index) {
-        return (
+  const columns: TableProps<any>["columns"] = useMemo(
+    () => [
+      { title: "Kategori", key: "name", dataIndex: "name" },
+      {
+        title: "Tanggal Rencana",
+        key: "date",
+        dataIndex: "date",
+        render: (_value, record) => (
           <div className="text-xs">
             <div>Mulai: {moment(record.start_date).format("DD-MM-YYYY")}</div>
             <div>Selesai: {moment(record.end_date).format("DD-MM-YYYY")}</div>
           </div>
-        );
+        ),
       },
-    },
-    {
-      title: "Tanggal Aktual",
-      key: "date",
-      dataIndex: "date",
-      render(_value, record, _index) {
-        return <div>{moment(record.actual_date).format("DD-MM-YYYY")}</div>;
+      {
+        title: "Tanggal Aktual",
+        key: "actual_date",
+        render: (_value, record) => (
+          <div>
+            {record.actual_date
+              ? moment(record.actual_date).format("DD-MM-YYYY")
+              : "-"}
+          </div>
+        ),
       },
-    },
-    {
-      title: "Status",
-      key: "status",
-      dataIndex: "status",
-      render(_value, record, _index) {
-        return (
+      {
+        title: "Status",
+        key: "status",
+        dataIndex: "status",
+        render: (_value, record) => (
           <div className="flex justify-center">
             <Tag
               style={{ width: 80, textAlign: "center" }}
@@ -1109,16 +1113,17 @@ const TableJaminanKunjungan = ({
               {record.status}
             </Tag>
           </div>
-        );
+        ),
       },
-    },
-  ];
+    ],
+    [],
+  );
 
   return (
     <div className="ml-8">
       <Table
         size="small"
-        rowKey={"id"}
+        rowKey="id"
         bordered
         columns={columns}
         dataSource={data}

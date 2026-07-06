@@ -25,7 +25,7 @@ import {
   CheckCircle2,
   Clock,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react"; // Tambahkan useMemo & useCallback
 import type { IActionPage, IMitra, IPageProps } from "../../libs/interface";
 import type { HookAPI } from "antd/es/modal/useModal";
 import api from "../../libs/api";
@@ -366,131 +366,146 @@ export default function DataMitra() {
   const { modal } = App.useApp();
   const { hasAccess } = useContext((state: any) => state);
 
-  const getData = async () => {
+  // OPTIMASI: Menggunakan useCallback agar tidak memicu re-render pada child component Modal
+  const getData = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
     params.append("page", pageprops.page.toString());
     params.append("limit", pageprops.limit.toString());
     if (pageprops.search) params.append("search", pageprops.search);
-    await api
-      .request({
+
+    try {
+      const res = await api.request({
         url: `${import.meta.env.VITE_API_URL}/mitra?${params}`,
         method: "GET",
-      })
-      .then((res) =>
-        setPageprops((prev) => ({
-          ...prev,
-          data: res.data.data,
-          total: res.data.total,
-        })),
-      );
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    const t = setTimeout(getData, 200);
-    return () => clearTimeout(t);
+      });
+      setPageprops((prev) => ({
+        ...prev,
+        data: res.data.data,
+        total: res.data.total,
+      }));
+    } catch (error) {
+      console.error("Fetch Error:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [pageprops.page, pageprops.limit, pageprops.search]);
 
-  const columns: TableProps<IMitra>["columns"] = [
-    {
-      title: "ID",
-      key: "id",
-      dataIndex: "id",
-      render(value, _r, index) {
-        return (
-          <>
-            <div>{(pageprops.page - 1) * pageprops.limit + index + 1}</div>
-            <div className="text-xs opacity-60">{value}</div>
-          </>
-        );
+  // OPTIMASI: Debounce 500ms
+  useEffect(() => {
+    const t = setTimeout(() => {
+      getData();
+    }, 500);
+    return () => clearTimeout(t);
+  }, [getData]);
+
+  // OPTIMASI: useMemo untuk Columns
+  const columns: TableProps<IMitra>["columns"] = useMemo(
+    () => [
+      {
+        title: "ID",
+        key: "id",
+        dataIndex: "id",
+        render(value, _r, index) {
+          return (
+            <>
+              <div>{(pageprops.page - 1) * pageprops.limit + index + 1}</div>
+              <div className="text-xs opacity-60">{value}</div>
+            </>
+          );
+        },
       },
-    },
-    {
-      title: "Nama Mitra",
-      key: "name",
-      fixed: window && window.innerWidth > 600 ? "left" : false,
-      render(_v, record) {
-        return (
-          <>
-            <div className="font-medium">{record.name}</div>
-            <div className="text-xs opacity-60">@{record.code}</div>
-          </>
-        );
+      {
+        title: "Nama Mitra",
+        key: "name",
+        fixed: window && window.innerWidth > 600 ? "left" : false,
+        render(_v, record) {
+          return (
+            <>
+              <div className="font-medium">{record.name}</div>
+              <div className="text-xs opacity-60">@{record.code}</div>
+            </>
+          );
+        },
       },
-    },
-    {
-      title: "Kontak",
-      key: "contact",
-      width: 300,
-      render(_v, record) {
-        return (
-          <div className="flex flex-col gap-0.5 text-xs opacity-80">
-            <span>
-              <PhoneOutlined /> {record.phone || "—"}
-            </span>
-            <span>
-              <MailOutlined /> {record.email || "—"}
-            </span>
-            <span>
-              <EnvironmentOutlined /> {record.address || "—"}
-            </span>
-            <span>
-              <UserOutlined /> {record.pic || "—"}
-            </span>
-          </div>
-        );
-      },
-    },
-    {
-      title: "Kerjasama",
-      key: "contract",
-      render(_v, record) {
-        return (
-          <>
-            <div className="text-sm">No: {record.no_contract || "—"}</div>
-            <div className="text-xs opacity-60 mb-1">
-              Lemari: {record.drawer_code || "—"}
+      {
+        title: "Kontak",
+        key: "contact",
+        width: 300,
+        render(_v, record) {
+          return (
+            <div className="flex flex-col gap-0.5 text-xs opacity-80">
+              <span>
+                <PhoneOutlined /> {record.phone || "—"}
+              </span>
+              <span>
+                <MailOutlined /> {record.email || "—"}
+              </span>
+              <span>
+                <EnvironmentOutlined /> {record.address || "—"}
+              </span>
+              <span>
+                <UserOutlined /> {record.pic || "—"}
+              </span>
             </div>
-            <FileListDisplay raw={record.file} />
-          </>
-        );
+          );
+        },
       },
-    },
-    {
-      title: "Keterangan",
-      key: "desc",
-      render(_v, record) {
-        return <CollapseText text={record.description || ""} />;
+      {
+        title: "Kerjasama",
+        key: "contract",
+        render(_v, record) {
+          return (
+            <>
+              <div className="text-sm">No: {record.no_contract || "—"}</div>
+              <div className="text-xs opacity-60 mb-1">
+                Lemari: {record.drawer_code || "—"}
+              </div>
+              <FileListDisplay raw={record.file} />
+            </>
+          );
+        },
       },
-    },
-    {
-      title: "Aksi",
-      key: "action",
-      render(_v, record) {
-        return (
-          <div className="flex items-center gap-1">
-            {hasAccess(window.location.pathname, "update") && (
-              <Button
-                icon={<Edit size={15} />}
-                size="small"
-                type="primary"
-                onClick={() => setAction({ ...action, upsert: true, record })}
-              />
-            )}
-            {hasAccess(window.location.pathname, "delete") && (
-              <Button
-                icon={<Trash size={15} />}
-                size="small"
-                danger
-                onClick={() => setAction({ ...action, delete: true, record })}
-              />
-            )}
-          </div>
-        );
+      {
+        title: "Keterangan",
+        key: "desc",
+        render(_v, record) {
+          return <CollapseText text={record.description || ""} />;
+        },
       },
-    },
-  ];
+      {
+        title: "Aksi",
+        key: "action",
+        render(_v, record) {
+          return (
+            <div className="flex items-center gap-1">
+              {hasAccess(window.location.pathname, "update") && (
+                <Button
+                  icon={<Edit size={15} />}
+                  size="small"
+                  type="primary"
+                  onClick={() =>
+                    setAction((prev) => ({ ...prev, upsert: true, record }))
+                  }
+                />
+              )}
+              {hasAccess(window.location.pathname, "delete") && (
+                <Button
+                  icon={<Trash size={15} />}
+                  size="small"
+                  danger
+                  onClick={() =>
+                    setAction((prev) => ({ ...prev, delete: true, record }))
+                  }
+                />
+              )}
+            </div>
+          );
+        },
+      },
+    ],
+    [pageprops.page, pageprops.limit, hasAccess],
+  );
 
   return (
     <div className="space-y-2">
@@ -518,8 +533,13 @@ export default function DataMitra() {
             placeholder="Cari mitra..."
             size="small"
             style={{ width: 200 }}
+            // OPTIMASI: reset page ke 1 saat pencarian
             onChange={(e) =>
-              setPageprops({ ...pageprops, search: e.target.value })
+              setPageprops((prev) => ({
+                ...prev,
+                search: e.target.value,
+                page: 1,
+              }))
             }
           />
         </div>
@@ -546,21 +566,25 @@ export default function DataMitra() {
           }}
         />
       </div>
+
+      {/* UPSERT MODAL */}
       <UpsertData
         open={action.upsert}
         setOpen={(val) =>
-          setAction({ ...action, upsert: val, record: undefined })
+          setAction((prev) => ({ ...prev, upsert: val, record: undefined }))
         }
         record={action.record}
         getData={getData}
         hook={modal}
         key={action.record ? "upsert" + action.record.id : "upsert"}
       />
+
+      {/* DELETE MODAL */}
       {action.delete && action.record && (
         <DeleteData
           open={action.delete}
           setOpen={(val) =>
-            setAction({ ...action, delete: val, record: undefined })
+            setAction((prev) => ({ ...prev, delete: val, record: undefined }))
           }
           record={action.record}
           getData={getData}
@@ -613,30 +637,29 @@ const UpsertData = ({
     }
     setLoading(true);
     const payload: IMitra = { ...data, file: serializeFiles(files) };
-    await api
-      .request({
+    try {
+      const res = await api.request({
         url: `${import.meta.env.VITE_API_URL}/mitra?id=${record?.id ?? ""}`,
         method: record ? "PUT" : "POST",
         data: payload,
         headers: { "Content-Type": "application/json" },
-      })
-      .then(async (res) => {
-        if (res.status === 200 || res.status === 201) {
-          hook.success({ title: "BERHASIL", content: res.data.msg });
-          setOpen(false);
-          await getData();
-        } else {
-          hook.error({ title: "ERROR", content: res.data.msg });
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-        hook.error({
-          title: "ERROR",
-          content: err.message ?? "Internal Server Error",
-        });
       });
-    setLoading(false);
+      if (res.status === 200 || res.status === 201) {
+        hook.success({ title: "BERHASIL", content: res.data.msg });
+        setOpen(false);
+        await getData();
+      } else {
+        hook.error({ title: "ERROR", content: res.data.msg });
+      }
+    } catch (err: any) {
+      console.error(err);
+      hook.error({
+        title: "ERROR",
+        content: err.message ?? "Internal Server Error",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -728,7 +751,6 @@ const UpsertData = ({
               label=""
               type="text"
               value={data.name}
-              // required
               onchage={(e: string) => set({ name: e })}
             />
           </div>
@@ -740,7 +762,6 @@ const UpsertData = ({
               label=""
               type="text"
               value={data.code}
-              // required
               onchage={(e: string) => set({ code: e })}
             />
           </div>
@@ -904,29 +925,28 @@ const DeleteData = ({
 
   const handleSubmit = async () => {
     setLoading(true);
-    await api
-      .request({
+    try {
+      const res = await api.request({
         url: `${import.meta.env.VITE_API_URL}/mitra?id=${record.id}`,
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-      })
-      .then(async (res) => {
-        if (res.status === 200 || res.status === 201) {
-          hook.success({ title: "BERHASIL", content: res.data.msg });
-          setOpen(false);
-          await getData();
-        } else {
-          hook.error({ title: "ERROR", content: res.data.msg });
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-        hook.error({
-          title: "ERROR",
-          content: err.message ?? "Internal Server Error",
-        });
       });
-    setLoading(false);
+      if (res.status === 200 || res.status === 201) {
+        hook.success({ title: "BERHASIL", content: res.data.msg });
+        setOpen(false);
+        await getData();
+      } else {
+        hook.error({ title: "ERROR", content: res.data.msg });
+      }
+    } catch (err: any) {
+      console.error(err);
+      hook.error({
+        title: "ERROR",
+        content: err.message ?? "Internal Server Error",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

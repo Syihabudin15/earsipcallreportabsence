@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import AppRouter from "./AppRouter";
 import useContext from "../libs/context";
-import { Modal, Dropdown } from "antd";
+import { Modal, Dropdown, Popover, Badge } from "antd";
 import { Link, useNavigate } from "react-router-dom";
 import AbsenceWidget from "./absensi/AbsenceWidget";
 import api from "../libs/api";
@@ -23,7 +23,7 @@ export default function MainLayout({
   children?: React.ReactNode;
 }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [isCollapsed, setCollapsed] = useState(false); // State untuk collapse di desktop
+  const [isCollapsed, setCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const [openLogout, setOpenLogout] = useState(false);
   const navigate = useNavigate();
@@ -31,12 +31,14 @@ export default function MainLayout({
     (state: any) => state,
   );
   const [openAbsen, setOpenAbse] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+
   const [notifs, setNotifs] = useState({
     downloads: 0,
     deletes: 0,
     absences: 0,
   });
+  const totalNotif = notifs.downloads + notifs.deletes + notifs.absences;
+
   const notifications = [
     {
       id: 1,
@@ -58,36 +60,45 @@ export default function MainLayout({
     },
   ];
 
-  const toggleSubMenu = (key: string) => {
-    setOpenMenus((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
-
   const getNotif = async () => {
-    await api
-      .request({
+    try {
+      const res = await api.request({
         url: import.meta.env.VITE_API_URL + "/notif",
         method: "GET",
-      })
-      .then((res) =>
-        setNotifs({
-          downloads: res.data.downloads || 0,
-          deletes: res.data.deletes || 0,
-          absences: res.data.absences | 0,
-        }),
-      );
+      });
+      setNotifs({
+        downloads: res.data.downloads || 0,
+        deletes: res.data.deletes || 0,
+        absences: res.data.absences || 0,
+      });
+    } catch (e) {
+      console.error("Gagal ambil notif", e);
+    }
   };
 
   useEffect(() => {
-    (async () => {
-      await getNotif();
-    })();
-    setTimeout(async () => {
-      await getNotif();
-    }, 2000);
+    getNotif(); // Call sekali di awal
+    const interval = setInterval(getNotif, 60000); // Polling setiap 1 menit
+    return () => clearInterval(interval); // Bersihkan interval saat unmount
   }, []);
+
+  const toggleSubMenu = (key: string) => {
+    setOpenMenus((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+  const notifContent = (
+    <div className="w-64">
+      {notifications.map((item) => (
+        <a
+          key={item.id}
+          href={item.href}
+          className="flex justify-between items-center py-2 border-b last:border-0 hover:text-orange-500"
+        >
+          <span>{item.text}</span>
+          <Badge count={item.value} style={{ backgroundColor: "#f58220" }} />
+        </a>
+      ))}
+    </div>
+  );
 
   return (
     <div className="flex h-screen w-full bg-slate-50 text-slate-900 overflow-hidden">
@@ -165,7 +176,7 @@ export default function MainLayout({
       <div className="flex-1 flex flex-col min-w-0 h overflow-hidden">
         {/* HEADER */}
         <header className="h-16 bg-white border-b  border-slate-200 flex items-center justify-between px-4 lg:px-8 shrink-0">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 lg:gap-4">
             <button
               className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
               onClick={() => setSidebarOpen(true)}
@@ -177,45 +188,31 @@ export default function MainLayout({
 
           <div className="flex items-center gap-2 lg:gap-4">
             <button
-              className="relative p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl cursor-pointer"
+              className="flex items-center justify-center w-10 h-10 text-slate-400 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors"
               onClick={() => setOpenAbse(!openAbsen)}
             >
               <Calendar size={20} />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
-            <button
-              className="relative p-2.5 text-slate-400 hover:bg-slate-50 rounded-xl cursor-pointer"
-              // onMouseEnter={() => setIsOpen(true)}
-              // onMouseLeave={() => setIsOpen(false)}
-              onClick={() => setIsOpen(true)}
+            <Popover
+              content={notifContent}
+              title="Notifikasi"
+              trigger="click"
+              placement="bottomRight"
             >
-              <Bell size={20} />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
-            {isOpen && (
-              <div
-                className="absolute top-12 right-0 mt-1 w-64 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-200"
-                onMouseLeave={() => setIsOpen(false)}
-              >
-                <div className="px-4 py-2 border-b border-slate-50">
-                  <p className="text-sm font-semibold text-slate-700">
-                    Notifikasi
-                  </p>
-                </div>
-                <div className="max-h-60 overflow-y-auto">
-                  {notifications.map((item) => (
-                    <a
-                      key={item.id}
-                      href={item.href}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 text-sm text-slate-600 hover:text-slate-900 transition-colors"
-                    >
-                      <span className="truncate">{item.text}</span>
-                      <span className="truncate">{item.value}</span>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
+              <button className="flex items-center justify-center w-10 h-10 text-slate-400 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors">
+                <Badge
+                  count={totalNotif}
+                  size="small"
+                  offset={[2, -2]}
+                  // Hapus style backgroundColor agar badge kembali ke warna default (merah)
+                >
+                  {/* Menyamakan warna ikon bell dengan ikon calendar. 
+        Asumsi ikon calendar Anda menggunakan text-slate-400 (atau warna default icon Anda).
+      */}
+                  <Bell size={20} className="text-slate-400" />
+                </Badge>
+              </button>
+            </Popover>
             {/* <HeaderAbsenceButton /> */}
             <Dropdown
               menu={{

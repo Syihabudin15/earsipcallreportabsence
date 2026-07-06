@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Form, Button, DatePicker, Input, Select, Spin, message } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../libs/api";
@@ -11,27 +11,47 @@ const UpsertCollateralLending = () => {
   const { id } = useParams();
   const [loading, setLoading] = useState(false);
   const [submissions, setSubmissions] = useState<ISubmission[]>([]);
+  const [fetchingSelect, setFetchingSelect] = useState(false);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    fetchSubmissions();
+    fetchSubmissions("");
     if (id) {
       fetchDetail();
     }
+    // Cleanup debounce saat komponen unmount
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [id]);
 
-  const fetchSubmissions = async () => {
+  const fetchSubmissions = async (keyword: string = "") => {
+    setFetchingSelect(true);
     try {
       const res = await api.request({
         url: "/submission",
         method: "GET",
-        params: { limit: 100 },
+        // Limit diperkecil. Gunakan parameter search untuk API backend Anda
+        params: { limit: 20, search: keyword },
       });
       if (res?.data) {
         setSubmissions(res.data.data);
       }
     } catch (error) {
       message.error("Gagal mengambil data permohonan");
+    } finally {
+      setFetchingSelect(false);
     }
+  };
+
+  const handleSearch = (value: string) => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    // Memberikan jeda 500ms agar API tidak di-spam setiap kali user mengetik
+    debounceRef.current = setTimeout(() => {
+      fetchSubmissions(value);
+    }, 500);
   };
 
   const fetchDetail = async () => {
@@ -44,6 +64,15 @@ const UpsertCollateralLending = () => {
       });
       if (res?.data) {
         const data = res.data.data;
+
+        // Memastikan data permohonan yang sudah tersimpan tetap muncul di dropdown
+        if (
+          data.Submission &&
+          !submissions.find((s) => s.id === data.submissionId)
+        ) {
+          setSubmissions((prev) => [...prev, data.Submission]);
+        }
+
         form.setFieldsValue({
           submissionId: data.submissionId,
           description: data.description,
@@ -51,6 +80,7 @@ const UpsertCollateralLending = () => {
           return_at: data.return_at ? dayjs(data.return_at) : null,
           end_at: data.end_at ? dayjs(data.end_at) : null,
           file: data.file ? data.file : null,
+          sub_status: data.sub_status,
         });
       }
     } catch (error) {
@@ -110,13 +140,15 @@ const UpsertCollateralLending = () => {
               rules={[{ required: true, message: "Permohonan wajib dipilih" }]}
             >
               <Select
-                placeholder="Pilih Permohonan"
+                placeholder="Ketik untuk mencari permohonan..."
                 options={submissions.map((sub) => ({
                   label: `${sub.id} - ${sub.Debitur?.fullname} (${sub.account_number})`,
                   value: sub.id,
                 }))}
-                optionFilterProp={"label"}
                 showSearch
+                filterOption={false}
+                onSearch={handleSearch}
+                loading={fetchingSelect}
               />
             </Form.Item>
 
@@ -144,16 +176,16 @@ const UpsertCollateralLending = () => {
             <Form.Item
               label="Tanggal Rencana Pengembalian"
               name="end_at"
+              dependencies={["start_at"]}
               rules={[
                 {
                   required: true,
                   message: "Tanggal rencana pengembalian wajib diisi",
                 },
-                {
-                  validator: (_, value) => {
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
                     if (!value) return Promise.resolve();
-
-                    const startDate = form.getFieldValue("start_at");
+                    const startDate = getFieldValue("start_at");
                     if (!startDate) return Promise.resolve();
 
                     if (value.isBefore(startDate, "day")) {
@@ -165,7 +197,7 @@ const UpsertCollateralLending = () => {
                     }
                     return Promise.resolve();
                   },
-                },
+                }),
               ]}
             >
               <DatePicker style={{ width: "100%" }} />
@@ -174,14 +206,13 @@ const UpsertCollateralLending = () => {
             <Form.Item
               label="Tanggal Pengembalian Aktual"
               name="return_at"
+              dependencies={["start_at"]}
               hidden={!id || form.getFieldValue("sub_status") !== "DISETUJUI"}
               rules={[
-                {
-                  required: false,
-                  validator: (_, value) => {
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
                     if (!value) return Promise.resolve();
-
-                    const startDate = form.getFieldValue("start_at");
+                    const startDate = getFieldValue("start_at");
                     if (!startDate) return Promise.resolve();
 
                     if (value.isBefore(startDate, "day")) {
@@ -193,7 +224,7 @@ const UpsertCollateralLending = () => {
                     }
                     return Promise.resolve();
                   },
-                },
+                }),
               ]}
             >
               <DatePicker style={{ width: "100%" }} />

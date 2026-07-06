@@ -41,6 +41,8 @@ export default function InsentifPage() {
     approve_status: "",
     backdate: "",
   });
+  const [users, setUser] = useState<IUser[]>([]);
+  const [searchUser, setSearchUser] = useState<string | null>(null);
   const user = useContext((state: any) => state.user);
   const { modal } = App.useApp();
 
@@ -89,6 +91,16 @@ export default function InsentifPage() {
     pageprops.approve_status,
     pageprops.backdate,
   ]);
+
+  useEffect(() => {
+    (async () => {
+      await api
+        .request({
+          url: `/user?limit=100${searchUser ? "&search=" + searchUser : ""}`,
+        })
+        .then((res) => setUser(res.data.data));
+    })();
+  }, [searchUser]);
 
   const columns: TableProps<IInsentif>["columns"] = [
     {
@@ -431,6 +443,9 @@ export default function InsentifPage() {
         getData={getData}
         user={user}
         hook={modal}
+        canSelect={hasAccess(window.location.pathname, "proses")}
+        users={users}
+        onsearch={(e: string) => setSearchUser(e)}
       />
       {action.record && action.process && (
         <ProsesData
@@ -454,6 +469,9 @@ const UpsertData = ({
   getData,
   user,
   hook,
+  canSelect,
+  users,
+  onsearch,
 }: {
   record?: IInsentif;
   open: boolean;
@@ -461,6 +479,9 @@ const UpsertData = ({
   getData: () => void;
   user: IUser;
   hook: HookAPI;
+  canSelect: boolean;
+  users: IUser[];
+  onsearch: Function;
 }) => {
   const [data, setData] = useState<IInsentif>(
     record || {
@@ -521,14 +542,33 @@ const UpsertData = ({
           layout="horizontal"
           onchage={(e: string) => setData({ ...data, created_at: new Date(e) })}
         />
-        <InputUtil
-          type="text"
-          value={data.User.fullname}
-          disabled
-          label="Pemohon"
-          required
-          layout="horizontal"
-        />
+        <div className="flex gap-4">
+          <div className="w-32">Pemohon</div>
+          <div className="flex-1">
+            <Select
+              style={{ width: "100%" }}
+              value={data.userId}
+              disabled={!canSelect}
+              options={[
+                ...users,
+                ...(users.find((s) => s.id === user.id) ? [] : [user]),
+              ].map((u) => ({
+                label: `${u.fullname} ${u.nip}`,
+                value: u.id,
+              }))}
+              onChange={(e) =>
+                setData((prev) => ({
+                  ...prev,
+                  userId: e,
+                  User: users.find((u) => u.id === e) as IUser,
+                }))
+              }
+              showSearch
+              onSearch={(value) => onsearch(value)}
+              filterOption={false}
+            />
+          </div>
+        </div>
         <InputUtil
           type="text"
           value={data.name}

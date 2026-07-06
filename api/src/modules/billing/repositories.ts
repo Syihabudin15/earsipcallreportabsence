@@ -66,11 +66,20 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
         Mitra: { select: { name: true, id: true } },
         Submission: {
           include: {
-            Debitur: true,
+            Debitur: { select: { fullname: true, cif: true } },
             Product: { select: { name: true, id: true } },
           },
+          omit: {
+            activities: true,
+            coments: true,
+            purpose: true,
+            doc_status: true,
+            flagging_status: true,
+            approve_status: true,
+            guarantee_status: true,
+          },
         },
-        Product: true,
+        Product: { select: { name: true } },
         User: {
           omit: {
             created_at: true,
@@ -288,6 +297,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
     const rows = (jsonData as any[])
       .map((item: any, index: number) => {
         const nama = text(getExcelValue(item, "NAMA"));
+        const per = parseDate(getExcelValue(item, "PERIODE"));
         const billDate = parseDate(getExcelValue(item, "TGL_JTH_TMP"));
 
         return {
@@ -300,7 +310,10 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
           cif: text(getExcelValue(item, "CIF")),
           nik: text(getExcelValue(item, "NO_IDENTITAS")),
           status: normalizeBillStatus(getExcelValue(item, "STATUS")),
-          billDate,
+          billDate: moment(billDate)
+            .set("month", per.getMonth())
+            .set("year", per.getFullYear())
+            .toDate(),
           startAt: parseDate(getExcelValue(item, "TGL_BUKA")),
           endAt: parseDate(getExcelValue(item, "TGL_AKHIR_FAS")),
           angsuran: number(getExcelValue(item, "NILAI_TGH_ANGSURAN")),
@@ -310,7 +323,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
           tungBga: number(getExcelValue(item, "SLD_TUNGGAK_BGA")),
           pkk: number(getExcelValue(item, "SLD_PINJAMAN_PKK")),
           col: text(getExcelValue(item, "KD_KOL_EFF")),
-          periode: parseDate(getExcelValue(item, "PERIODE")),
+          periode: per,
         };
       })
       .filter((row) => row.nama);
@@ -708,7 +721,25 @@ export const LAPORAN = async (
   const { month } = req.query;
   try {
     const data = await prisma.mitra.findMany({
-      where: { status: true },
+      where: {
+        status: true,
+        Billing: {
+          some: {
+            col: { in: ["1", "2", "3", "4", "5"] },
+            status: true,
+            periode: {
+              ...(month && {
+                gte: moment(new Date(month as string))
+                  .startOf("month")
+                  .toDate(),
+                lte: moment(new Date(month as string))
+                  .endOf("month")
+                  .toDate(),
+              }),
+            },
+          },
+        },
+      },
       omit: {
         file: true,
         address: true,
@@ -724,10 +755,10 @@ export const LAPORAN = async (
             status: true,
             periode: {
               ...(month && {
-                gte: moment(month as string)
+                gte: moment(new Date(month as string))
                   .startOf("month")
                   .toDate(),
-                lte: moment(month as string)
+                lte: moment(new Date(month as string))
                   .endOf("month")
                   .toDate(),
               }),
@@ -739,6 +770,9 @@ export const LAPORAN = async (
                 flagging_status: true,
                 doc_status: true,
                 activities: true,
+                coments: true,
+                approve_status: true,
+                guarantee_status: true,
               },
               include: {
                 Debitur: { select: { fullname: true } },
@@ -751,9 +785,14 @@ export const LAPORAN = async (
         },
       },
     });
+    const billings = await prisma.billing.findMany({
+      where: { status: true },
+      include: { Mitra: { select: { name: true, code: true } } },
+    });
     return ResponseServer(res, 200, {
       msg: "Laporan Billing berhasil digenerate",
       data: data,
+      billings,
     });
   } catch (err) {
     console.log(err);
@@ -770,4 +809,46 @@ const normalizeEnum = (value: any) => {
     .toUpperCase()
     .replace(/[\s-]+/g, "")
     .replace(/_+/g, "");
+};
+
+export const UPDATE_ALL_BILLDATE = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const BATCH_SIZE = 500;
+  let skip = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const billings = await prisma.billing.findMany({
+      take: BATCH_SIZE,
+      skip: skip,
+    });
+
+    if (billings.length === 0) {
+      hasMore = false;
+      break;
+    }
+    console.log({ batch: skip / BATCH_SIZE });
+
+    // Buat transaksi untuk update per baris dalam batch ini
+    await prisma.$transaction(
+      billings.map((f) => {
+        const newDate = moment(f.bill_date)
+          .set("month", f.periode.getMonth())
+          .set("year", f.periode.getFullYear())
+          .toDate();
+
+        return prisma.billing.update({
+          where: { id: f.id },
+          data: { bill_date: newDate },
+        });
+      }),
+    );
+
+    skip += BATCH_SIZE;
+  }
+
+  return ResponseServer(res, 200, { msg: "OK", status: 200 });
 };

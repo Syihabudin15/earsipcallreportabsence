@@ -12,5 +12,6 @@ router.post("/", upload.single("file"), BillingRoute.POST);
 router.put("/:id", BillingRoute.PUT);
 router.put("/", BillingRoute.PUT);
 router.delete("/", BillingRoute.DELETE);
+router.get("/update", BillingRoute.UPDATE_ALL_BILLDATE);
 
 export default router;

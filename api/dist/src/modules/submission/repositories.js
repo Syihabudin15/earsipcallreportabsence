@@ -352,6 +352,7 @@ export const IMPORT = async (req, res, next) => {
                 "DD/MM/YYYY",
                 "D/M/YYYY",
                 "YYYY-MM-DD",
+                "DD-MM-YYYY",
             ]);
             return parsed.isValid() ? parsed.toDate() : new Date();
         };

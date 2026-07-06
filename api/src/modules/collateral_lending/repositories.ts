@@ -227,7 +227,20 @@ export const PATCH = async (
     const collateral = await prisma.collateralLending.findFirst({
       where: { id: id as string },
       include: {
-        Submission: true,
+        Submission: {
+          include: {
+            Debitur: { select: { fullname: true, cif: true, nik: true } },
+          },
+          omit: {
+            activities: true,
+            coments: true,
+            purpose: true,
+            doc_status: true,
+            flagging_status: true,
+            approve_status: true,
+            guarantee_status: true,
+          },
+        },
         CreatedBy: true,
         ApproverBy: true,
       },

@@ -26,6 +26,7 @@ export default function AbsenceWidget({
   config: IAbsenceConfig;
 }) {
   const [modelLoad, setModelLoad] = useState(false);
+  const [isModelLoaded, setIsModelLoaded] = useState(false); // State baru untuk melacak status AI
   const [coords, setCoords] = useState<{
     lat: number;
     lon: number;
@@ -34,59 +35,57 @@ export default function AbsenceWidget({
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [disable, setDisable] = useState(false);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const [openFace, setOpenFace] = useState(false);
   const [scanStatus, setScanStatus] = useState<string>("Menunggu kamera...");
-  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Mengganti scanIntervalRef menjadi scanTimeoutRef untuk rekursif
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isVerifyingRef = useRef<boolean>(false);
   const { message } = App.useApp();
 
-  // Load Face-API models
+  // OPTIMASI 1: Load Face-API & Lokasi HANYA KETIKA WIDGET DIBUKA
   useEffect(() => {
-    const MODEL_URL = "/models";
-    (async () => {
-      try {
-        setLoading(true);
-        setModelLoad(true);
-        setDisable(true);
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        ]);
-        await handleGetLocation();
-        setDisable(false);
-      } catch (err) {
-        console.error("Gagal memuat model face-api", err);
-        message.error("Gagal memuat sistem deteksi wajah.");
-      } finally {
-        setLoading(false);
-        setModelLoad(false);
+    if (open) {
+      if (!isModelLoaded && !modelLoad) {
+        initFaceApi();
       }
-    })();
-  }, []);
-
-  // Ambil lokasi otomatis saat widget terbuka
-  useEffect(() => {
-    if (open && !coords) {
-      handleGetLocation();
+      if (!coords) {
+        handleGetLocation();
+      }
     }
-  }, [open, coords]);
+  }, [open]);
 
-  // Efek untuk mengontrol daur hidup kamera dan auto scan
+  const initFaceApi = async () => {
+    const MODEL_URL = "/models";
+    try {
+      setModelLoad(true);
+      setDisable(true);
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      ]);
+      setIsModelLoaded(true);
+    } catch (err) {
+      console.error("Gagal memuat model face-api", err);
+      message.error("Gagal memuat sistem deteksi wajah.");
+    } finally {
+      setModelLoad(false);
+      setDisable(false);
+    }
+  };
+
   useEffect(() => {
     if (openFace) {
       isVerifyingRef.current = false;
       setScanStatus("Posisikan wajah Anda di dalam lingkaran...");
-
       startCamera();
     } else {
       stopCamera();
     }
-
-    return () => {
-      stopCamera();
-    };
+    return () => stopCamera();
   }, [openFace]);
 
   const startCamera = async () => {
@@ -102,99 +101,81 @@ export default function AbsenceWidget({
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-
-        // Tunggu video benar-benar siap
         await new Promise((resolve) => {
-          videoRef.current!.onloadedmetadata = () => {
-            resolve(true);
-          };
+          videoRef.current!.onloadedmetadata = () => resolve(true);
         });
-
         await videoRef.current.play();
 
-        // Delay sedikit biar kamera fokus dulu
+        // Delay sedikit agar kamera fokus dulu
         setTimeout(() => {
-          startAutoScan();
+          scanLoop();
         }, 1000);
       }
     } catch (err) {
       message.error("Akses kamera ditolak! Periksa izin browser Anda.");
       setOpenFace(false);
-      console.error(err);
     }
   };
 
   const stopCamera = () => {
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current);
-      scanIntervalRef.current = null;
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+      scanTimeoutRef.current = null;
     }
-
     if (videoRef.current?.srcObject) {
       const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-
       tracks.forEach((track) => track.stop());
-
       videoRef.current.srcObject = null;
     }
   };
 
-  const startAutoScan = () => {
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current);
-    }
+  // OPTIMASI 2: Menggunakan loop setTimeout rekursif untuk menghindari penumpukan frame async
+  const scanLoop = async () => {
+    // Kondisi berhenti
+    if (!videoRef.current || isVerifyingRef.current || !openFace) return;
 
-    scanIntervalRef.current = setInterval(async () => {
-      if (!videoRef.current || isVerifyingRef.current || !openFace) {
-        return;
-      }
+    try {
+      const detection = await faceapi
+        .detectSingleFace(
+          videoRef.current,
+          new faceapi.TinyFaceDetectorOptions({
+            inputSize: 416,
+            scoreThreshold: 0.3,
+          }),
+        )
+        .withFaceLandmarks()
+        .withFaceDescriptor();
 
-      try {
-        const detection = await faceapi
-          .detectSingleFace(
-            videoRef.current,
-            new faceapi.TinyFaceDetectorOptions({
-              inputSize: 416, // lebih akurat
-              scoreThreshold: 0.3, // lebih sensitif
-            }),
-          )
-          .withFaceLandmarks()
-          .withFaceDescriptor();
-
-        if (!detection) {
-          setScanStatus("Wajah belum terdeteksi...");
-          return;
-        }
-
-        // Validasi ukuran wajah
+      if (!detection) {
+        setScanStatus("Wajah belum terdeteksi...");
+      } else {
         const box = detection.detection.box;
-
         if (box.width < 120 || box.height < 120) {
           setScanStatus("Dekatkan wajah ke kamera");
-          return;
+        } else {
+          isVerifyingRef.current = true;
+          setScanStatus("Wajah terdeteksi! Memverifikasi...");
+          await processVerification(detection.descriptor);
+          return; // Hentikan loop karena sedang verifikasi
         }
-
-        isVerifyingRef.current = true;
-
-        setScanStatus("Wajah terdeteksi! Memverifikasi...");
-
-        await processVerification(detection.descriptor);
-      } catch (err) {
-        console.error("Scan error:", err);
       }
-    }, 700); // scan tiap 700ms
+    } catch (err) {
+      console.error("Scan error:", err);
+    }
+
+    // Panggil ulang dirinya sendiri setelah proses frame sebelumnya benar-benar selesai
+    if (openFace && !isVerifyingRef.current) {
+      scanTimeoutRef.current = setTimeout(scanLoop, 500);
+    }
   };
 
   const processVerification = async (capturedDescriptor: Float32Array) => {
     setLoading(true);
-
     try {
       if (user.face) {
         const referenceDescriptor = new Float32Array(
           Object.values(JSON.parse(user.face)),
         );
-
-        // 0.55 lebih aman
         const isMatch = compareFaces(
           capturedDescriptor,
           referenceDescriptor,
@@ -203,22 +184,17 @@ export default function AbsenceWidget({
 
         if (!isMatch) {
           message.error("Wajah tidak cocok");
-
           setScanStatus("Wajah tidak cocok. Coba ulangi...");
-
           isVerifyingRef.current = false;
-
+          scanTimeoutRef.current = setTimeout(scanLoop, 1000); // Lanjutkan loop jika gagal
           return;
         }
 
         setScanStatus("Verifikasi berhasil! Menyimpan absensi...");
-
         await handleSaveAbsence();
-
         setOpenFace(false);
       } else {
         setScanStatus("Mendaftarkan wajah...");
-
         await api.request({
           method: "PUT",
           url: `${import.meta.env.VITE_API_URL}/user?id=${user.id}`,
@@ -227,21 +203,16 @@ export default function AbsenceWidget({
             face: JSON.stringify(Array.from(capturedDescriptor)),
           },
         });
-
         message.success("Wajah berhasil didaftarkan");
-
         setOpenFace(false);
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        setTimeout(() => window.location.reload(), 1000);
       }
     } catch (err) {
       console.error(err);
-
       message.error("Verifikasi gagal");
-    } finally {
       isVerifyingRef.current = false;
+      scanTimeoutRef.current = setTimeout(scanLoop, 1000); // Lanjutkan loop jika API error
+    } finally {
       setLoading(false);
     }
   };
@@ -282,7 +253,6 @@ export default function AbsenceWidget({
 
             if (distance > (config.meter_tolerance || 0)) {
               setDisable(true);
-              // message.error("Maaf, Anda berada di luar radius lokasi kantor!");
             }
           }
         } catch (error) {
@@ -417,7 +387,7 @@ export default function AbsenceWidget({
         ) : (
           <div className="space-y-2">
             <Alert
-              title="Anda Sudah Absen Masuk"
+              message="Anda Sudah Absen Masuk"
               type="success"
               showIcon
               icon={<CheckCircleOutlined />}

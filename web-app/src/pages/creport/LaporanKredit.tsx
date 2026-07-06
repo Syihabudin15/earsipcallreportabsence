@@ -31,13 +31,26 @@ import api from "../../libs/api";
 import ExcelJS from "exceljs";
 import moment from "moment";
 import { printKredit } from "../utils/pdfs/kredit";
+import type { IBilling } from "../../libs/interface";
 
 const { Title, Text } = Typography;
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import { TrendingUp } from "lucide-react";
 
 export default function LaporanKredit() {
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<any[]>([]);
+  const [trendData, setTrendData] = useState<any[]>([]);
   const [summary, setSummary] = useState({
     totalPlafond: 0,
     totalOs: 0,
@@ -62,6 +75,48 @@ export default function LaporanKredit() {
         const data = response.data.data;
         setDashboardData(data);
         calculateSummary(data);
+        const tagihan = response.data.billings.map((t: IBilling) =>
+          ["1", "2", "3", "4", "5"].includes(t.col || "1"),
+        );
+        const wo = response.data.billings.map(
+          (t: IBilling) => (t.col || "1") === "6",
+        );
+        const last12Months = Array.from({ length: 12 })
+          .map((_, i) => moment().subtract(i, "months").format("YYYY-MM"))
+          .reverse();
+
+        const monthlyMap: Record<
+          string,
+          { Tagihan: number; Pembayaran: number; "Pembayaran NPL": number }
+        > = {};
+
+        last12Months.forEach((month) => {
+          monthlyMap[month] = {
+            Tagihan: 0,
+            Pembayaran: 0,
+            "Pembayaran NPL": 0,
+          };
+        });
+
+        tagihan.forEach((b: IBilling) => {
+          const monthKey = moment(b.bill_date || new Date()).format("YYYY-MM");
+          if (!monthlyMap[monthKey]) return;
+
+          monthlyMap[monthKey].Tagihan += b.value || 0;
+          monthlyMap[monthKey].Pembayaran += b.realize_value || 0;
+
+          if (isNpl(b)) {
+            monthlyMap[monthKey]["Pembayaran NPL"] += b.realize_value || 0;
+          }
+        });
+        setTrendData(
+          last12Months.map((month) => ({
+            date: moment(month, "YYYY-MM").format("MMM YYYY"),
+            Tagihan: monthlyMap[month].Tagihan,
+            Pembayaran: monthlyMap[month].Pembayaran,
+            "Pembayaran NPL": monthlyMap[month]["Pembayaran NPL"],
+          })),
+        );
       }
     } catch (error) {
       console.error(error);
@@ -2493,6 +2548,67 @@ export default function LaporanKredit() {
                 </Col>
               </Row>
             </Card>
+          </Col>
+          <Col xs={24} md={12}>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">
+                    Tren Tagihan Bulanan
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Perbandingan total tagihan, pembayaran, dan pembayaran NPL
+                    12 bulan terakhir
+                  </p>
+                </div>
+                <div className="p-2 bg-slate-50 rounded-lg text-slate-500">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="w-full h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={trendData}
+                    margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis
+                      dataKey="date"
+                      stroke="#94a3b8"
+                      fontSize={12}
+                      tickLine={false}
+                    />
+                    <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} />
+                    <Tooltip formatter={(v) => formatRupiah(Number(v))} />
+                    <Legend
+                      iconType="circle"
+                      wrapperStyle={{ fontSize: "13px", paddingTop: "15px" }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="Tagihan"
+                      stroke="#3b82f6"
+                      strokeWidth={2.5}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="Pembayaran"
+                      stroke="#10b981"
+                      strokeWidth={2.5}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="Pembayaran NPL"
+                      stroke="#ef4444"
+                      strokeWidth={2.5}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </Col>
         </Row>
 

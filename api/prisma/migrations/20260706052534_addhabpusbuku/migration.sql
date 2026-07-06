@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `submission` MODIFY `approve_status` ENUM('PENDING', 'AKTIF', 'LUNAS', 'HAPUSBUKU', 'PASIF', 'BREAK') NOT NULL DEFAULT 'PENDING';

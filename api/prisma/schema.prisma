@@ -23,6 +23,7 @@ enum EArsipStatus {
   PENDING
   AKTIF
   LUNAS
+  HAPUSBUKU
   PASIF
   BREAK
 }
