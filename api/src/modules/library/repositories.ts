@@ -26,6 +26,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
         where,
         skip: skip,
         take: limit,
+        include: { LibraryCategory: { select: { id: true, name: true } } },
       }),
       prisma.library.count({
         where,

@@ -526,6 +526,13 @@ export default function DataLibrary() {
         },
       },
       {
+        title: "Kategori",
+        key: "category",
+        render(_v, record) {
+          return <Tag>{record.LibraryCategory.name}</Tag>;
+        },
+      },
+      {
         title: "Aksi",
         key: "action",
         width: 100,
