@@ -219,6 +219,7 @@ export interface IBilling {
   productId: string | null;
   col: string | null;
   periode: Date | null;
+  realize_date: Date;
 
   status: boolean;
   created_at: Date;
@@ -520,6 +521,29 @@ export interface IVisit {
   visitStatusId: string | null;
   visitPurposeId: string | null;
   submissionId?: string | null;
+}
+
+export interface ILibraryCategory {
+  id: string;
+  name: string;
+  status: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ILibrary {
+  id: string;
+  name: string;
+  code: string | null;
+  drawer_code: string | null;
+  desc: string | null;
+  file: string | null;
+
+  status: boolean;
+  created_at: Date;
+  updated_at: Date;
+  libraryCategoryId: string;
+  LibraryCategory: ILibraryCategory;
 }
 
 export interface IFileVisit {

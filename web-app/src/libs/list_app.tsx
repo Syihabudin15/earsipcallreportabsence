@@ -24,6 +24,7 @@ import {
   BankOutlined,
   BranchesOutlined,
   DollarCircleOutlined,
+  FolderOutlined,
   MoneyCollectOutlined,
   SecurityScanOutlined,
   TagsOutlined,
@@ -110,6 +111,13 @@ export const menus: IMenu[] = [
         icon: <FolderArchive size={15} />,
         need_access: true,
         can_access: ["read", "download"],
+      },
+      {
+        name: "E-Library",
+        path: "/app/earsip/library",
+        icon: <FolderOutlined size={15} />,
+        need_access: true,
+        can_access: ["read", "write", "update", "delete"],
       },
       {
         name: "Data Nasabah",

@@ -146,7 +146,7 @@ const generate = (record: any, selectedMonth: string | null) => {
         <img
           src="${logoUrl}"
           alt="Logo"
-          style="width: 54px; height: 54px; object-fit: contain;"
+          style="width: 94px; height: 94px; object-fit: contain;"
         />
       </div>
     </div>
@@ -158,20 +158,20 @@ const generate = (record: any, selectedMonth: string | null) => {
       <div>
         <div class="italic text-gray-500 mb-2">Depok, ${tanggalCetak}</div>
         <div class="font-bold text-gray-800">Disiapkan Oleh,</div>
-        <div class="mt-20 font-bold text-black underline">Leony</div>
-        <div class="text-gray-600">Admin Kredit</div>
+        <div class="mt-20 font-bold text-black w-32 border-b border-gray-400"></div>
+        <div class="text-gray-600"></div>
       </div>
       <div>
         <div class="h-4 mb-2"></div>
         <div class="font-bold text-gray-800">Diperiksa Oleh,</div>
-        <div class="mt-20 font-bold text-black underline">Komang Gd Ariawan</div>
-        <div class="text-gray-600">Head Bisnis</div>
+        <div class="mt-20 font-bold text-black underline w-32 border-b border-gray-400"> </div>
+        <div class="text-gray-600"></div>
       </div>
       <div>
         <div class="h-4 mb-2"></div>
         <div class="font-bold text-gray-800">Disetujui Oleh,</div>
-        <div class="mt-20 font-bold text-black underline">Ketut Sugiata</div>
-        <div class="text-gray-600">Direktur Utama</div>
+        <div class="mt-20 font-bold text-black underline w-32 border-b border-gray-400"></div>
+        <div class="text-gray-600"></div>
       </div>
     </div>
   `;
@@ -664,6 +664,56 @@ const generate = (record: any, selectedMonth: string | null) => {
         </tr>
       </tbody>
     </table>
+    
+    ${renderSignatures()}
+  </div>
+
+
+      <div class="page landscape page-break">
+  ${renderBprHeader("LAPORAN KREDIT WO")}
+  
+  <div class="text-xs font-bold mb-2" style="color: #1F4E78;">VIII. LAPORAN KREDIT WO</div>
+      <table class="text-left">
+          <thead>
+              <tr class="bg-primary-dark text-white">
+              <th>No</th>
+              <th>No Rekening</th>
+              <th>Nasabah</th>
+              <th>Instansi</th>
+              <th>Tgl WROFF</th>
+              <th>Saldo Pokok</th>
+              <th>Saldo Bunga</th>
+              <th>Pembayaran</th>
+              <th>Tgl Pembayaran</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${record.woData
+              .map((d: any, idx: number) => {
+                return `
+                <tr class="">
+                  <td class="border-excel-light text-center">${idx + 1}</td>
+                  <td class="border-excel-light text-center">${d.Submission.account_number}</td>
+                  <td class="border-excel-light">${d.Submission.Debitur.fullname || ""}</td>
+                  <td class="border-excel-light text-center">${d.Submission.Mitra.name}</td>
+                  <td class="border-excel-light text-center">${moment(d.bill_date).format("DD/MM/YYYY")}</td>
+                  <td class="border-excel-light text-right">${formatIDR(d.tung_pkk)}</td>
+                  <td class="border-excel-light text-right">${formatIDR(d.tung_bga)}</td>
+                  <td class="border-excel-light text-right">${formatIDR(d.realize_value)}</td>
+                  <td class="border-excel-light text-center">${d.realize_date ? moment(d.realize_date).format("DD/MM/YYYY") : ""}</td>
+                </tr>
+              `;
+              })
+              .join("")}
+            <tr class="bg-accent-total font-bold text-black">
+              <td colspan="5" class="border-excel-light border-total-top border-total-bottom text-left">GRAND TOTAL KONSOLIDASI</td>
+              <td class="border-excel-light border-total-top border-total-bottom text-right">${formatIDR(record.woData.reduce((a: number, b: any) => a + b.tung_pkk, 0))}</td>
+              <td class="border-excel-light border-total-top border-total-bottom text-right">${formatIDR(record.woData.reduce((a: number, b: any) => a + b.tung_bga, 0))}</td>
+              <td class="border-excel-light border-total-top border-total-bottom text-right">${formatIDR(record.woData.reduce((a: number, b: any) => a + b.realize_value, 0))}</td>
+              <td class="border-excel-light border-total-top border-total-bottom text-center">-</td>
+            </tr>
+          </tbody>
+        </table>
     
     ${renderSignatures()}
   </div>

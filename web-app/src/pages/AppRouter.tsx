@@ -51,6 +51,7 @@ import DataBilling from "./creport/Billing";
 import WelcomePage from "./app/WelcomePage";
 import LaporanEarsip from "./earsip/LaporanEarsip";
 import LaporanKredit from "./creport/LaporanKredit";
+import DataLibrary from "./earsip/Libraries";
 
 function AppRouter() {
   const path = window.location.pathname;
@@ -85,6 +86,7 @@ function AppRouter() {
           <Route path="/earsip/" element={<DashboardEarsip />} />
           <Route path="/earsip/laporan" element={<LaporanEarsip />} />
           <Route path="/earsip/product_type" element={<DataProductType />} />
+          <Route path="/earsip/library" element={<DataLibrary />} />
           <Route
             path="/earsip/product_type/upsert"
             element={<UpsertProductType />}

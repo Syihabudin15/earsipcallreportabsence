@@ -994,6 +994,7 @@ const UpdateData = ({
     realize_value: record.realize_value || 0,
     bill_date: record.bill_date ? moment(record.bill_date) : moment(),
     bill_status: record.bill_status || "BELUMBAYAR",
+    realize_date: record.realize_date ? moment(record.realize_date) : null,
   });
 
   const handleSubmit = async () => {
@@ -1007,7 +1008,8 @@ const UpdateData = ({
           userId: formData.userId,
           value: formData.value,
           realize_value: formData.realize_value,
-          bill_date: formData.bill_date.toISOString(),
+          realize_date: formData.realize_date?.toDate(),
+          bill_date: formData.bill_date.toDate(),
           bill_status: formData.bill_status,
         },
         headers: { "Content-Type": "Application/json" },
@@ -1110,6 +1112,26 @@ const UpdateData = ({
               setFormData({
                 ...formData,
                 bill_date: moment(e.target.value),
+              })
+            }
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Tanggal Pembayaran
+          </label>
+          <input
+            type="date"
+            value={
+              formData.realize_date
+                ? formData.realize_date.format("YYYY-MM-DD")
+                : undefined
+            }
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                realize_date: moment(e.target.value),
               })
             }
             className="w-full px-3 py-2 border border-gray-300 rounded"

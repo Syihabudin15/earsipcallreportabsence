@@ -26,6 +26,7 @@ import {
   ArrowDownOutlined,
   FileExcelOutlined,
   PrinterOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import api from "../../libs/api";
 import ExcelJS from "exceljs";
@@ -50,6 +51,8 @@ export default function LaporanKredit() {
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<any[]>([]);
+  const [woData, setWoData] = useState<any[]>([]);
+  const [debiturs, setDebiturs] = useState(0);
   const [trendData, setTrendData] = useState<any[]>([]);
   const [summary, setSummary] = useState({
     totalPlafond: 0,
@@ -75,12 +78,12 @@ export default function LaporanKredit() {
         const data = response.data.data;
         setDashboardData(data);
         calculateSummary(data);
-        const tagihan = response.data.billings.map((t: IBilling) =>
-          ["1", "2", "3", "4", "5"].includes(t.col || "1"),
+        setDebiturs(response.data.debiturs);
+        const tagihan = response.data.billings;
+        const wo = response.data.billings.filter(
+          (t: IBilling) => (t.col || "1") === "6",
         );
-        // const wo = response.data.billings.map(
-        //   (t: IBilling) => (t.col || "1") === "6",
-        // );
+        setWoData(wo);
         const last12Months = Array.from({ length: 12 })
           .map((_, i) => moment().subtract(i, "months").format("YYYY-MM"))
           .reverse();
@@ -176,7 +179,7 @@ export default function LaporanKredit() {
           const tagihan = bill.value || 0;
 
           rows.push({
-            tanggal: bill.bill_date,
+            tanggal: bill.realize_date || bill.bill_date,
             noLoan: bill.Submission.account_number,
             debitur: bill.Submission.Debitur.fullname,
             instansi: bill.Submission.Mitra.name,
@@ -629,6 +632,7 @@ export default function LaporanKredit() {
         ws.addRow([]);
         const cleanStart = startRow + 1;
 
+        // Tanggal
         ws.getCell(`A${cleanStart}`).value =
           `Depok, ${moment().format("DD MMMM YYYY")}`;
         ws.getCell(`A${cleanStart}`).font = {
@@ -638,6 +642,7 @@ export default function LaporanKredit() {
           color: { argb: "595959" },
         };
 
+        // Header Tanda Tangan
         ws.getCell(`A${cleanStart + 1}`).value = "Disiapkan Oleh,";
         ws.getCell(`D${cleanStart + 1}`).value = "Diperiksa Oleh,";
         ws.getCell(`F${cleanStart + 1}`).value = "Disetujui Oleh,";
@@ -650,18 +655,23 @@ export default function LaporanKredit() {
           color: { argb: "333333" },
         };
 
-        ws.getCell(`A${cleanStart + 5}`).value = "Leony";
-        ws.getCell(`A${cleanStart + 6}`).value = "Admin Kredit";
-        ws.getCell(`D${cleanStart + 5}`).value = "Komang Gd Ariawan";
-        ws.getCell(`D${cleanStart + 6}`).value = "Head Bisnis";
-        ws.getCell(`F${cleanStart + 5}`).value = "Ketut Sugiata";
-        ws.getCell(`F${cleanStart + 6}`).value = "Direktur Utama";
+        // Kolom yang membutuhkan tanda tangan (A, D, F)
+        const signColumns = ["A", "D", "F"];
 
-        for (let i = 5; i <= 6; i++) {
-          const r = ws.getRow(cleanStart + i);
-          r.font = { name: "Segoe UI", size: 10, bold: i === 5 };
-          if (i === 5) r.font.underline = true;
-        }
+        signColumns.forEach((col) => {
+          // Baris ke-5: Tempat Nama (Diberi border bawah agar ada garis walau kosong)
+          const nameCell = ws.getCell(`${col}${cleanStart + 5}`);
+          nameCell.value = "";
+          nameCell.font = { name: "Segoe UI", size: 10, bold: true };
+          nameCell.border = {
+            bottom: { style: "thin", color: { argb: "000000" } },
+          }; // Garis bawah
+
+          // Baris ke-6: Tempat Jabatan/Keterangan
+          const titleCell = ws.getCell(`${col}${cleanStart + 6}`);
+          titleCell.value = "";
+          titleCell.font = { name: "Segoe UI", size: 10, bold: false };
+        });
       };
 
       const autoFitColumns = (ws: ExcelJS.Worksheet) => {
@@ -1717,6 +1727,141 @@ export default function LaporanKredit() {
       // Tambahkan tanda tangan seperti Sheet VI
       addSignatures(ws7, totalRow7.number + 2);
 
+      const ws8 = workbook.addWorksheet("Lap. WO");
+      applyWorksheetConfig(ws1);
+      addBprHeader(ws8, "LAPORAN PEMBAYARAN KREDIT WO", 8);
+
+      ws1.getCell("A5").value = "VIII. LAPORAN PEMBAYARAN KREDIT WO";
+      ws1.getCell("A5").font = {
+        name: "Segoe UI",
+        size: 11,
+        bold: true,
+        color: { argb: PALETTE.primaryDark },
+      };
+
+      const hRow8 = ws8.getRow(6);
+      hRow8.values = [
+        "No",
+        "Nomor Rekening",
+        "Nasabah",
+        "Instansi",
+        "Tgl WROFF",
+        "Saldo Pokok WROFF",
+        "Saldo Bunga WROFF",
+        "Pembayaran",
+        "Tgl Pembayaran",
+      ];
+      hRow8.font = {
+        name: "Segoe UI",
+        size: 10,
+        bold: true,
+        color: { argb: "FFFFFF" },
+      };
+      hRow8.alignment = {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: true,
+      };
+      hRow8.height = 28;
+      ws8.views = [{ state: "frozen", ySplit: 6, showGridLines: true }];
+      ws8.getColumn(1).width = 5; // No
+      ws8.getColumn(2).width = 20; // Nomor Rekening
+      ws8.getColumn(3).width = 34; // Nasabah
+      ws8.getColumn(4).width = 25; // Instansi
+      ws8.getColumn(5).width = 15; // Tgl WROFF
+      ws8.getColumn(6).width = 18; // Pokok
+      ws8.getColumn(7).width = 18; // Bunga
+      ws8.getColumn(8).width = 18; // Pembayaran
+      ws8.getColumn(9).width = 15; // Tgl Pembayaran
+      hRow8.eachCell(
+        (c) =>
+          (c.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: PALETTE.primaryDark },
+          }),
+      );
+
+      let tDeb8 = 0,
+        tSisaPkk8 = 0,
+        tSisaBga8 = 0,
+        tBayar8 = 0;
+
+      woData.forEach((d) => {
+        tDeb8 += 1;
+        tSisaPkk8 += d.tung_pkk;
+        tSisaBga8 += d.tung_bga;
+        tBayar8 += d.realize_value;
+      });
+
+      woData.forEach((d, idx) => {
+        const r = ws8.addRow([
+          idx + 1,
+          d.Submission.account_number,
+          d.Submission.Debitur.fullname,
+          d.Submission.Mitra.name,
+          d.bill_date ? moment(d.bill_date).format("DD/MM/YYYY") : "-",
+          d.tung_pkk,
+          d.tung_bga,
+          d.realize_value,
+          d.realize_date ? moment(d.realize_date).format("DD/MM/YYYY") : "-",
+        ]);
+        r.height = 20;
+        r.alignment = { vertical: "middle" };
+        r.getCell(1).alignment = { horizontal: "center" };
+        r.getCell(2).alignment = { horizontal: "center" };
+        r.getCell(3).alignment = { horizontal: "center" };
+        r.getCell(4).alignment = { horizontal: "center" };
+        r.getCell(5).alignment = { horizontal: "center" };
+        r.getCell(6).numFmt = "#,##0";
+        r.getCell(7).numFmt = "#,##0";
+        r.getCell(8).numFmt = "0.00%";
+        r.getCell(9).alignment = { horizontal: "center" };
+      });
+
+      const currentRow8 = ws8.rowCount + 1;
+
+      const totalRow8 = ws8.addRow([
+        "GRAND TOTAL KONSOLIDASI",
+        "", // Merge Col 2
+        "", // Merge Col 3
+        "", // Merge Col 4
+        "", // Merge Col 5
+        tSisaPkk8, // Col 6: Total Pokok
+        tSisaBga8, // Col 7: Total Bunga
+        tBayar8, // Col 8: Total Pembayaran
+        "", // Col 9: Tgl Pembayaran (Kosong)
+      ]);
+
+      // Gabungkan kolom A sampai E (1 - 5) untuk teks Grand Total
+      ws8.mergeCells(currentRow, 1, currentRow, 5);
+
+      totalRow8.height = 22;
+      totalRow8.font = { name: "Segoe UI", size: 10, bold: true };
+      totalRow8.alignment = { vertical: "middle" };
+      totalRow8.getCell(1).alignment = { horizontal: "center" };
+
+      // Terapkan format angka pada Total
+      totalRow8.getCell(6).numFmt = "#,##0";
+      totalRow8.getCell(7).numFmt = "#,##0";
+      totalRow8.getCell(8).numFmt = "#,##0";
+
+      totalRow8.eachCell((cell) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: PALETTE.accentTotal },
+        };
+        cell.border = {
+          top: { style: "thin", color: { argb: "000000" } },
+          bottom: { style: "double", color: { argb: "000000" } },
+        };
+      });
+
+      applyCellBorders(ws8, 6, currentRow8 - 1, 8);
+      autoFitColumns(ws8);
+      addSignatures(ws8, currentRow8 + 1);
+
       // ==========================================
       // DISPATCHING FILES VIA BROWSER
       // ==========================================
@@ -2366,6 +2511,7 @@ export default function LaporanKredit() {
                     aoData: getAnalisisAoData(),
                     aoKolData: getAoKolektibilitasData(),
                     nplPaymentData: getNplPaymentData(),
+                    woData,
                   },
                   selectedMonth,
                 )
@@ -2380,7 +2526,7 @@ export default function LaporanKredit() {
       <Spin spinning={loading} tip="Memuat Analisis Laporan...">
         {/* Row 1: KPI Angka Utama */}
         <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
-          <Col xs={24} sm={12} lg={6}>
+          <Col xs={24} sm={12} lg={8}>
             <Card bordered={false} style={{ borderTop: "4px solid #1890ff" }}>
               <Statistic
                 title="Total Sisa Pokok"
@@ -2390,7 +2536,17 @@ export default function LaporanKredit() {
               />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
+          <Col xs={24} sm={12} lg={8}>
+            <Card bordered={false} style={{ borderTop: "4px solid #faad14" }}>
+              <Statistic
+                title="Total Debitur"
+                value={debiturs}
+                // formatter={(v) => formatRupiah(v as number)}
+                prefix={<UserOutlined style={{ color: "#faad14" }} />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={8}>
             <Card bordered={false} style={{ borderTop: "4px solid #faad14" }}>
               <Statistic
                 title="Total Nilai Tagihan"
@@ -2400,7 +2556,7 @@ export default function LaporanKredit() {
               />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
+          <Col xs={24} sm={12} lg={8}>
             <Card bordered={false} style={{ borderTop: "4px solid #52c41a" }}>
               <Statistic
                 title="Total Realisasi Penagihan"
@@ -2410,7 +2566,7 @@ export default function LaporanKredit() {
               />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
+          <Col xs={24} sm={12} lg={8}>
             <Card bordered={false} style={{ borderTop: "4px solid #f5222d" }}>
               <Statistic
                 title="Total Belum Bayar"

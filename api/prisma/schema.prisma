@@ -498,6 +498,7 @@ model Billing {
   tenor         Int       @default(0)
   value         Int       @default(0)
   realize_value Int       @default(0)
+  realize_date  DateTime?
   bill_status   EBill     @default(BELUMBAYAR)
   bill_date     DateTime
   name          String?
@@ -738,4 +739,29 @@ model LogActivities {
   userId     String
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt
+}
+
+model LibraryCategory {
+  id   String @id @default(uuid())
+  name String
+
+  status     Boolean   @default(true)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  Libraries  Library[]
+}
+
+model Library {
+  id              String          @id @default(uuid())
+  name            String
+  code            String?
+  drawer_code     String?
+  desc            String?         @db.Text
+  file            String?         @db.Text
+  LibraryCategory LibraryCategory @relation(fields: [libraryCategoryId], references: [id])
+
+  status            Boolean  @default(true)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+  libraryCategoryId String
 }

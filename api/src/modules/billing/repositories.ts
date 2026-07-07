@@ -720,79 +720,139 @@ export const LAPORAN = async (
 ) => {
   const { month } = req.query;
   try {
-    const data = await prisma.mitra.findMany({
-      where: {
-        status: true,
-        Billing: {
-          some: {
-            col: { in: ["1", "2", "3", "4", "5"] },
-            status: true,
-            periode: {
-              ...(month && {
-                gte: moment(new Date(month as string))
+    const [data, billings, debiturs] = await Promise.all([
+      prisma.mitra.findMany({
+        where: {
+          status: true,
+          Billing: {
+            some: {
+              col: { in: ["1", "2", "3", "4", "5"] },
+              status: true,
+              periode: {
+                gte: moment(month ? new Date(month as string) : new Date())
                   .startOf("month")
                   .toDate(),
-                lte: moment(new Date(month as string))
+                lte: moment(month ? new Date(month as string) : new Date())
                   .endOf("month")
                   .toDate(),
-              }),
+              },
             },
           },
         },
-      },
-      omit: {
-        file: true,
-        address: true,
-        phone: true,
-        email: true,
-        no_contract: true,
-        pic: true,
-      },
-      include: {
-        Billing: {
-          where: {
-            col: { in: ["1", "2", "3", "4", "5"] },
-            status: true,
-            periode: {
-              ...(month && {
-                gte: moment(new Date(month as string))
+        omit: {
+          file: true,
+          address: true,
+          phone: true,
+          email: true,
+          no_contract: true,
+          pic: true,
+        },
+        include: {
+          Billing: {
+            where: {
+              col: { in: ["1", "2", "3", "4", "5"] },
+              status: true,
+              periode: {
+                gte: moment(month ? new Date(month as string) : new Date())
                   .startOf("month")
                   .toDate(),
-                lte: moment(new Date(month as string))
+                lte: moment(month ? new Date(month as string) : new Date())
                   .endOf("month")
                   .toDate(),
-              }),
-            },
-          },
-          include: {
-            Submission: {
-              omit: {
-                flagging_status: true,
-                doc_status: true,
-                activities: true,
-                coments: true,
-                approve_status: true,
-                guarantee_status: true,
-              },
-              include: {
-                Debitur: { select: { fullname: true } },
-                Product: { select: { name: true } },
-                Mitra: { select: { name: true } },
               },
             },
-            User: { select: { fullname: true } },
+            include: {
+              Submission: {
+                omit: {
+                  flagging_status: true,
+                  doc_status: true,
+                  activities: true,
+                  coments: true,
+                  approve_status: true,
+                  guarantee_status: true,
+                  purpose: true,
+                  value: true,
+                  tenor: true,
+                  drawer_code: true,
+                  created_at: true,
+                  updated_at: true,
+                  createdById: true,
+                },
+                include: {
+                  Debitur: { select: { fullname: true } },
+                  Product: { select: { name: true } },
+                  Mitra: { select: { name: true } },
+                },
+              },
+              User: { select: { fullname: true, nip: true, nik: true } },
+            },
           },
         },
-      },
-    });
-    const billings = await prisma.billing.findMany({
-      where: { status: true },
-      include: { Mitra: { select: { name: true, code: true } } },
-    });
+      }),
+      prisma.billing.findMany({
+        where: {
+          status: true,
+          periode: {
+            gte: moment(month ? new Date(month as string) : new Date())
+              .startOf("month")
+              .toDate(),
+            lte: moment(month ? new Date(month as string) : new Date())
+              .endOf("month")
+              .toDate(),
+          },
+        },
+        include: {
+          Submission: {
+            omit: {
+              purpose: true,
+              coments: true,
+              flagging_status: true,
+              activities: true,
+              doc_status: true,
+              approve_status: true,
+              guarantee_status: true,
+              value: true,
+              tenor: true,
+              drawer_code: true,
+              created_at: true,
+              updated_at: true,
+              createdById: true,
+            },
+            include: {
+              Debitur: { select: { fullname: true } },
+              Mitra: { select: { name: true } },
+            },
+          },
+          Mitra: { select: { name: true, code: true } },
+        },
+      }),
+      prisma.debitur.count({
+        where: {
+          Submission: {
+            some: {
+              Billing: {
+                some: {
+                  status: true,
+                  periode: {
+                    gte: moment(month ? new Date(month as string) : new Date())
+                      .startOf("month")
+                      .toDate(),
+                    lte: moment(month ? new Date(month as string) : new Date())
+                      .endOf("month")
+                      .toDate(),
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
     return ResponseServer(res, 200, {
       msg: "Laporan Billing berhasil digenerate",
       data: data,
       billings,
+      debiturs,
     });
   } catch (err) {
     console.log(err);

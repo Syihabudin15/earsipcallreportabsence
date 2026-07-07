@@ -33,6 +33,8 @@ import fileRoute from "./modules/file/routes.js";
 import logActivitiesRoute from "./modules/log-activities/routes.js";
 import collateralLendingRoute from "./modules/collateral_lending/routes.js";
 import callreportRoute from "./modules/callreport/routes.js";
+import libraryRoute from "./modules/library/routes.js";
+import libcategoryRoute from "./modules/library_category/routes.js";
 import notifRoute from "./modules/notif/routes.js";
 import { DashboardAbsensi, DashboardEarsip, GET_HOLIDAY, MainDashboard, } from "./modules/route.js";
 import nodeCron from "node-cron";
@@ -63,6 +65,8 @@ app.use("/debitur", middleware, debiturRoute);
 app.use("/mitra", middleware, mitraRoute);
 app.use("/pay_office", middleware, payOfficeRoute);
 app.use("/insurance", middleware, insuranceRoute);
+app.use("/library", middleware, libraryRoute);
+app.use("/library_category", middleware, libcategoryRoute);
 app.use("/file", middleware, fileRoute);
 // EARSIP
 app.use("/sub_type", middleware, subTypeRoute);
