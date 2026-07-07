@@ -81,7 +81,7 @@ export default function LaporanKredit() {
         setDebiturs(response.data.debiturs);
         const tagihan = response.data.billings;
         const wo = response.data.billings.filter(
-          (t: IBilling) => (t.col || "1") === "6",
+          (t: IBilling) => (t.col || "1") === "6" && t.bill_status !== "BELUMBAYAR",
         );
         setWoData(wo);
         const last12Months = Array.from({ length: 12 })
