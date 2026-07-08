@@ -108,7 +108,7 @@ export default function LaporanKredit() {
         });
 
         tagihan.forEach((b: IBilling) => {
-          const monthKey = moment(b.bill_date || new Date()).format("YYYY-MM");
+          const monthKey = moment(b.periode || new Date()).format("YYYY-MM");
           if (!monthlyMap[monthKey]) return;
 
           monthlyMap[monthKey].Tagihan += b.value || 0;
