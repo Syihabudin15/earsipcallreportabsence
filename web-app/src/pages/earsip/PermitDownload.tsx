@@ -150,6 +150,7 @@ const PermitDownload = () => {
       title: "Permohonan",
       dataIndex: ["Submission"],
       key: "nik",
+      width: 300,
       render(_value, record, _index) {
         return (
           <div>

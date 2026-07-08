@@ -191,6 +191,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
       CreatedBy,
       PayOffice,
       Insurance,
+      Billing,
       ...savedSub
     } = body;
     const genId = await generateId();
@@ -214,9 +215,12 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
         },
       });
       for (const productTypeFile of Product.ProductType.ProductTypeFile) {
-        if (productTypeFile.Files) {
+        const filterFiles = productTypeFile.Files
+          ? productTypeFile.Files.filter((f: any) => f.url)
+          : [];
+        if (filterFiles.length !== 0) {
           await tx.files.createMany({
-            data: productTypeFile.Files.map((f: any) => ({
+            data: filterFiles.Files.map((f: any) => ({
               ...f,
               productTypeFileId: productTypeFile.id,
               submissionId: sub.id,
@@ -261,6 +265,7 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
       CreatedBy,
       PayOffice,
       Insurance,
+      Billing,
       ...savedSub
     } = body;
     const { SubmissionType, Visit, Submission, ...savedeb } = Debitur;
@@ -279,8 +284,11 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
         },
       });
       for (const productTypeFile of Product.ProductType.ProductTypeFile) {
-        if (productTypeFile.Files) {
-          for (const file of productTypeFile.Files) {
+        const filterFiles = productTypeFile.Files
+          ? productTypeFile.Files.filter((f: any) => f.url)
+          : [];
+        if (filterFiles.length !== 0) {
+          for (const file of filterFiles.Files) {
             const { id: fileId, ...fileData } = file;
 
             await tx.files.upsert({

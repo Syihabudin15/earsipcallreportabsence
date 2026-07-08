@@ -59,14 +59,41 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
       }),
       date_action: plan ? null : { not: null },
       ...(backdate && {
-        created_at: {
-          gte: moment((backdate as string).split(",")[0])
-            .startOf("date")
-            .toDate(),
-          lte: moment((backdate as string).split(",")[1])
-            .endOf("day")
-            .toDate(),
-        },
+        ...(plan
+          ? {
+              date_action: {
+                gte: moment((backdate as string).split(",")[0])
+                  .startOf("day")
+                  .toDate(),
+                lte: moment((backdate as string).split(",")[1])
+                  .endOf("day")
+                  .toDate(),
+              },
+            }
+          : {
+              OR: [
+                {
+                  date_plan: {
+                    gte: moment((backdate as string).split(",")[0])
+                      .startOf("day")
+                      .toDate(),
+                    lte: moment((backdate as string).split(",")[1])
+                      .endOf("day")
+                      .toDate(),
+                  },
+                },
+                {
+                  created_at: {
+                    gte: moment((backdate as string).split(",")[0])
+                      .startOf("day")
+                      .toDate(),
+                    lte: moment((backdate as string).split(",")[1])
+                      .endOf("day")
+                      .toDate(),
+                  },
+                },
+              ],
+            }),
       }),
     };
 
@@ -84,6 +111,7 @@ export const GET = async (req: Request, res: Response, next: NextFunction) => {
         },
         skip: skip,
         take: limit,
+        orderBy: { date_action: "desc" },
       }),
       prisma.visit.count({
         where: querywhere,

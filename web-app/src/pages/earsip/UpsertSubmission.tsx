@@ -67,7 +67,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
         api
           .request({
             method: "GET",
-            url: `${import.meta.env.VITE_API_URL}/sub_type?limit=1000`,
+            url: `${import.meta.env.VITE_API_URL}/sub_type?limit=100`,
           })
           .then((res) => setSubType(res.data.data)),
         api
@@ -131,6 +131,9 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
             title: "BERHASIL",
             content: res.data.msg,
           });
+          setTimeout(() => {
+            window.location.replace("/app/earsip/submission");
+          }, 1000);
         } else {
           modal.error({
             title: "ERROR",
@@ -139,6 +142,7 @@ export default function UpsertSubmission({ record }: { record?: ISubmission }) {
         }
       })
       .catch((err) => {
+        if (!record) setActivities([]);
         console.log(err);
         modal.error({
           title: "ERROR",

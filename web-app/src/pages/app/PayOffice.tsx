@@ -314,13 +314,24 @@ const FileListEditor = ({
 // ─── FileList Display (kolom tabel) ──────────────────────────────────────────
 
 const FileListDisplay = ({ raw }: { raw: string | null | undefined }) => {
+  // Tambahkan state untuk mendeteksi apakah list sedang di-expand atau tidak
+  const [expanded, setExpanded] = useState(false);
   const files = parseFiles(raw);
+
   if (!files.length)
     return <span style={{ color: "#cbd5e1", fontSize: 11 }}>—</span>;
 
+  // Tentukan batas maksimal file yang ingin ditampilkan (misal: 3)
+  const LIMIT = 3;
+  const isOverLimit = files.length > LIMIT;
+
+  // Potong array jika tidak di-expand
+  const displayedFiles = expanded ? files : files.slice(0, LIMIT);
+  const hiddenCount = files.length - LIMIT;
+
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-      {files.map((f, i) => (
+      {displayedFiles.map((f, i) => (
         <Tooltip key={i} title={f.url || "Belum ada URL"}>
           <a
             href={f.url || undefined}
@@ -335,6 +346,9 @@ const FileListDisplay = ({ raw }: { raw: string | null | undefined }) => {
                 cursor: f.url ? "pointer" : "default",
                 fontSize: 10,
                 margin: 0,
+                display: "flex",
+                gap: 2,
+                alignItems: "center",
               }}
             >
               {f.name || `File ${i + 1}`}
@@ -342,6 +356,40 @@ const FileListDisplay = ({ raw }: { raw: string | null | undefined }) => {
           </a>
         </Tooltip>
       ))}
+
+      {/* Tombol untuk Expand (+X lainnya...) */}
+      {isOverLimit && !expanded && (
+        <Tooltip title={`Tampilkan ${hiddenCount} berkas lainnya`}>
+          <Tag
+            color="default"
+            style={{
+              cursor: "pointer",
+              fontSize: 10,
+              margin: 0,
+              borderStyle: "dashed",
+            }}
+            onClick={() => setExpanded(true)}
+          >
+            +{hiddenCount} lainnya
+          </Tag>
+        </Tooltip>
+      )}
+
+      {/* Tombol untuk Collapse (Sembunyikan) */}
+      {isOverLimit && expanded && (
+        <Tag
+          color="default"
+          style={{
+            cursor: "pointer",
+            fontSize: 10,
+            margin: 0,
+            borderStyle: "dashed",
+          }}
+          onClick={() => setExpanded(false)}
+        >
+          Tampilkan lebih sedikit
+        </Tag>
+      )}
     </div>
   );
 };
@@ -397,6 +445,7 @@ export default function DataMitra() {
       title: "ID",
       key: "id",
       dataIndex: "id",
+      width: 30,
       render(value, _r, index) {
         return (
           <>
@@ -409,6 +458,7 @@ export default function DataMitra() {
     {
       title: "Nama Kantor Bayar",
       key: "name",
+      width: 250,
       fixed: window && window.innerWidth > 600 ? "left" : false,
       render(_v, record) {
         return (
@@ -422,7 +472,7 @@ export default function DataMitra() {
     {
       title: "Kontak",
       key: "contact",
-      width: 300,
+      width: 250,
       render(_v, record) {
         return (
           <div className="flex flex-col gap-0.5 text-xs opacity-80">
@@ -445,6 +495,7 @@ export default function DataMitra() {
     {
       title: "Kerjasama",
       key: "contract",
+      width: 300,
       render(_v, record) {
         return (
           <>

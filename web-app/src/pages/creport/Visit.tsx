@@ -86,7 +86,7 @@ export default function DataVisit() {
           visitCategoryId: pageprops.visitCategoryId,
           visitStatusId: pageprops.visitStatusId,
           visitPurposeId: pageprops.visitPurposeId,
-          backdate: pageprops.backdate,
+          backdate: pageprops.backdate ? pageprops.backdate.toString() : "",
           submissionTypeId: pageprops.submissionTypeId,
         },
       });

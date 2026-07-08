@@ -20,6 +20,7 @@ import {
   Tag,
   Tooltip,
   Typography,
+  message,
 } from "antd";
 import {
   CloseCircleOutlined,
@@ -509,11 +510,13 @@ export const FileArchiveSection = ({ record }: { record: any }) => {
     ptypefile?: string,
   ) => {
     if (ptypefile) {
+      const lod = message.loading("Menggabungkan file PDF...", 0);
       const allFiles = await MergePDFs(
         record.Product?.ProductType?.ProductTypeFile.find(
           (t: IProductTypeFile) => t.id === ptypefile,
         )?.Files.map((f: IFile) => f.url),
       );
+      lod();
       setCurrentFile({ url: allFiles || "", name, type });
     } else {
       setCurrentFile({ url, name, type });
@@ -798,16 +801,19 @@ export const MergePDFs = async (urls: string[]) => {
   try {
     const mergedPdf = await PDFDocument.create();
 
-    for (const url of urls) {
-      // 1. Ambil data PDF dari URL
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Gagal mengambil PDF dari: ${url}`);
+    const pdfBuffers = await Promise.all(
+      urls.map(async (url) => {
+        const response = await fetch(url);
 
-      const fileArrayBuffer = await response.arrayBuffer();
+        if (!response.ok) throw new Error(`Gagal mengambil PDF: ${url}`);
 
-      // 2. Load dan copy halaman
-      const pdf = await PDFDocument.load(fileArrayBuffer);
+        return response.arrayBuffer();
+      }),
+    );
+    for (const buffer of pdfBuffers) {
+      const pdf = await PDFDocument.load(buffer);
       const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+
       copiedPages.forEach((page) => mergedPdf.addPage(page));
     }
 

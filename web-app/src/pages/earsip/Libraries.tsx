@@ -334,12 +334,24 @@ const FileListEditor = ({
 // ─── Kolom Display ────────────────────────────────────────────────────────────
 
 const FileListDisplay = ({ raw }: { raw: string | null | undefined }) => {
+  // Tambahkan state untuk mendeteksi apakah list sedang di-expand atau tidak
+  const [expanded, setExpanded] = useState(false);
   const files = parseFiles(raw);
+
   if (!files.length)
-    return <span style={{ color: "#cbd5e1", fontSize: 12 }}>—</span>;
+    return <span style={{ color: "#cbd5e1", fontSize: 11 }}>—</span>;
+
+  // Tentukan batas maksimal file yang ingin ditampilkan (misal: 3)
+  const LIMIT = 3;
+  const isOverLimit = files.length > LIMIT;
+
+  // Potong array jika tidak di-expand
+  const displayedFiles = expanded ? files : files.slice(0, LIMIT);
+  const hiddenCount = files.length - LIMIT;
+
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-      {files.map((f, i) => (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+      {displayedFiles.map((f, i) => (
         <Tooltip key={i} title={f.url || "Belum ada URL"}>
           <a
             href={f.url || undefined}
@@ -348,25 +360,56 @@ const FileListDisplay = ({ raw }: { raw: string | null | undefined }) => {
             onClick={(e) => !f.url && e.preventDefault()}
           >
             <Tag
-              icon={<FileText size={10} style={{ marginRight: 3 }} />}
+              icon={<FileText size={10} />}
               color={f.url ? "blue" : "default"}
               style={{
                 cursor: f.url ? "pointer" : "default",
-                fontSize: 11,
-                padding: "2px 6px",
+                fontSize: 10,
                 margin: 0,
-                borderRadius: 4,
-                border: f.url ? "1px solid #93c5fd" : "1px solid #e2e8f0",
                 display: "flex",
-                alignItems: "center",
                 gap: 2,
+                alignItems: "center",
               }}
             >
-              {f.name || `Berkas ${i + 1}`}
+              {f.name || `File ${i + 1}`}
             </Tag>
           </a>
         </Tooltip>
       ))}
+
+      {/* Tombol untuk Expand (+X lainnya...) */}
+      {isOverLimit && !expanded && (
+        <Tooltip title={`Tampilkan ${hiddenCount} berkas lainnya`}>
+          <Tag
+            color="default"
+            style={{
+              cursor: "pointer",
+              fontSize: 10,
+              margin: 0,
+              borderStyle: "dashed",
+            }}
+            onClick={() => setExpanded(true)}
+          >
+            +{hiddenCount} lainnya
+          </Tag>
+        </Tooltip>
+      )}
+
+      {/* Tombol untuk Collapse (Sembunyikan) */}
+      {isOverLimit && expanded && (
+        <Tag
+          color="default"
+          style={{
+            cursor: "pointer",
+            fontSize: 10,
+            margin: 0,
+            borderStyle: "dashed",
+          }}
+          onClick={() => setExpanded(false)}
+        >
+          Tampilkan lebih sedikit
+        </Tag>
+      )}
     </div>
   );
 };
@@ -448,7 +491,7 @@ export default function DataLibrary() {
         title: "ID",
         key: "id",
         dataIndex: "id",
-        width: 60,
+        width: 30,
         render(value, _r, index) {
           return (
             <>
@@ -489,7 +532,14 @@ export default function DataLibrary() {
                   <Tag
                     icon={<FolderTree size={10} className="mr-1" />}
                     color="purple"
-                    style={{ margin: 0, fontSize: 10, borderRadius: 4 }}
+                    style={{
+                      margin: 0,
+                      fontSize: 10,
+                      borderRadius: 4,
+                      display: "flex",
+                      gap: 2,
+                      alignItems: "center",
+                    }}
                   >
                     {record.LibraryCategory.name}
                   </Tag>
@@ -515,13 +565,6 @@ export default function DataLibrary() {
               <FileListDisplay raw={record.file} />
             </div>
           );
-        },
-      },
-      {
-        title: "Kategori",
-        key: "category",
-        render(_v, record) {
-          return <Tag>{record.LibraryCategory.name}</Tag>;
         },
       },
       {

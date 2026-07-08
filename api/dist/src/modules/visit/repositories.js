@@ -49,7 +49,7 @@ export const GET = async (req, res, next) => {
                         .startOf("date")
                         .toDate(),
                     lte: moment(backdate.split(",")[1])
-                        .endOf("day")
+                        .endOf("date")
                         .toDate(),
                 },
             }),

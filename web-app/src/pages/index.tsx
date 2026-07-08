@@ -78,7 +78,7 @@ export default function MainLayout({
 
   useEffect(() => {
     getNotif(); // Call sekali di awal
-    const interval = setInterval(getNotif, 60000); // Polling setiap 1 menit
+    const interval = setInterval(getNotif, 1000 * 60 * 5); // Polling setiap 1 menit
     return () => clearInterval(interval); // Bersihkan interval saat unmount
   }, []);
 
