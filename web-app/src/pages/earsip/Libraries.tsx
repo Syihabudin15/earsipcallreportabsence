@@ -40,6 +40,7 @@ import type { HookAPI } from "antd/es/modal/useModal";
 import api from "../../libs/api";
 import useContext from "../../libs/context";
 import { InputFileUploadVisit, InputUtil } from "../utils/utilForm";
+import { CollapseText } from "../utils/utilComp";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
@@ -563,6 +564,18 @@ export default function DataLibrary() {
                 </span>
               </div>
               <FileListDisplay raw={record.file} />
+            </div>
+          );
+        },
+      },
+      {
+        title: "Keterangan",
+        key: "description",
+        width: 200,
+        render(_, record, _i) {
+          return (
+            <div>
+              <CollapseText text={record.desc || ""} />
             </div>
           );
         },
