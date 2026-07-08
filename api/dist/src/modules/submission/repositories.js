@@ -79,7 +79,7 @@ export const GET = async (req, res, next) => {
                 guarantee_date: { not: null },
             }),
             ...(tbo_status &&
-                tbo_status === "MASA TBO" && {
+                tbo_status === "LEWAT TBO" && {
                 guarantee_status: "PENDING",
                 flagging_status: { not: "NON_PENSIUNAN" },
                 guarantee_date: {
@@ -87,7 +87,7 @@ export const GET = async (req, res, next) => {
                 },
             }),
             ...(tbo_status &&
-                tbo_status === "LEWAT TBO" && {
+                tbo_status === "MASA TBO" && {
                 guarantee_status: "PENDING",
                 flagging_status: { not: "NON_PENSIUNAN" },
                 guarantee_date: {

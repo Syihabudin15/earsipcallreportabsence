@@ -285,9 +285,6 @@ const generate = (record: IVisit) => {
         }
 
         .photo-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-          gap: 10px;
         }
 
         .photo-item {
@@ -300,7 +297,7 @@ const generate = (record: IVisit) => {
 
         .photo-item img {
           width: 100%;
-          height: 180px;
+          height: 250px;
           object-fit: contain;
           border-radius: 4px;
           margin-bottom: 2px;
