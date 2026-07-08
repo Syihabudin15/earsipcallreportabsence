@@ -793,37 +793,11 @@ export const LAPORAN = async (
         where: {
           status: true,
           periode: {
-            gte: moment(month ? new Date(month as string) : new Date())
-              .startOf("month")
-              .toDate(),
+            gte: moment().subtract(12, "month").startOf("month").toDate(),
             lte: moment(month ? new Date(month as string) : new Date())
               .endOf("month")
               .toDate(),
           },
-        },
-        include: {
-          Submission: {
-            omit: {
-              purpose: true,
-              coments: true,
-              flagging_status: true,
-              activities: true,
-              doc_status: true,
-              approve_status: true,
-              guarantee_status: true,
-              value: true,
-              tenor: true,
-              drawer_code: true,
-              created_at: true,
-              updated_at: true,
-              createdById: true,
-            },
-            include: {
-              Debitur: { select: { fullname: true } },
-              Mitra: { select: { name: true } },
-            },
-          },
-          Mitra: { select: { name: true, code: true } },
         },
       }),
     ]);

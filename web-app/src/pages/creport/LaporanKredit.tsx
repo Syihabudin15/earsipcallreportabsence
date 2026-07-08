@@ -82,7 +82,12 @@ export default function LaporanKredit() {
         const tagihan = response.data.billings;
         const wo = response.data.billings.filter(
           (t: IBilling) =>
-            (t.col || "1") === "6" && t.bill_status !== "BELUMBAYAR",
+            (t.col || "1") === "6" &&
+            t.bill_status !== "BELUMBAYAR" &&
+            moment(t.periode).isSame(
+              moment(selectedMonth || new Date()),
+              "month",
+            ),
         );
         setWoData(wo);
         const last12Months = Array.from({ length: 12 })
