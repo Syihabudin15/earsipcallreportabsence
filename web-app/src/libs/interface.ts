@@ -220,6 +220,11 @@ export interface IBilling {
   col: string | null;
   periode: Date | null;
   realize_date: Date;
+  plafond: number;
+  tenor: number;
+  pkk: number;
+  tung_pkk: number;
+  tung_bga: number;
 
   status: boolean;
   created_at: Date;

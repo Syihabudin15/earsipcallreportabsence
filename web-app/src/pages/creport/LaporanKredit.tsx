@@ -26,7 +26,6 @@ import {
   ArrowDownOutlined,
   FileExcelOutlined,
   PrinterOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import api from "../../libs/api";
 import ExcelJS from "exceljs";
@@ -52,19 +51,21 @@ export default function LaporanKredit() {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [dashboardData, setDashboardData] = useState<any[]>([]);
   const [woData, setWoData] = useState<any[]>([]);
-  const [debiturs, setDebiturs] = useState(0);
   const [trendData, setTrendData] = useState<any[]>([]);
   const [summary, setSummary] = useState({
     totalPlafond: 0,
     totalOs: 0,
     totalValue: 0,
     totalRealize: 0,
+    totalPartial: 0,
     totalTunggakan: 0,
     nplPercentage: 0,
     collectionRate: 0,
-
     totalLar: 0,
     larPercentage: 0,
+    debs: 0,
+    debspay: 0,
+    debspartial: 0,
   });
 
   // Fetch data dari API berdasarkan bulan yang dipilih
@@ -78,10 +79,10 @@ export default function LaporanKredit() {
         const data = response.data.data;
         setDashboardData(data);
         calculateSummary(data);
-        setDebiturs(response.data.debiturs);
         const tagihan = response.data.billings;
         const wo = response.data.billings.filter(
-          (t: IBilling) => (t.col || "1") === "6" && t.bill_status !== "BELUMBAYAR",
+          (t: IBilling) =>
+            (t.col || "1") === "6" && t.bill_status !== "BELUMBAYAR",
         );
         setWoData(wo);
         const last12Months = Array.from({ length: 12 })
@@ -205,20 +206,32 @@ export default function LaporanKredit() {
     let totalOs = 0;
     let value = 0;
     let realize = 0;
+    let realizepartial = 0;
     let totalTunggakan = 0;
+    let debpay = 0;
+    let debpartial = 0;
+    let debs = 0;
 
     let totalLar = 0;
     let totalNpl = 0;
 
     data.forEach((mitra) => {
-      mitra.Billing?.forEach((bill: any) => {
+      mitra.Billing?.forEach((bill: IBilling) => {
         const sisaPokok = bill.pkk || 0;
 
         plafond += bill.plafond || 0;
         totalOs += sisaPokok;
         value += bill.value || 0;
-        realize += bill.realize_value || 0;
         totalTunggakan += (bill.tung_pkk || 0) + (bill.tung_bga || 0);
+        if (bill.bill_status === "BAYAR") {
+          realize += bill.realize_value || 0;
+          debpay += 1;
+        }
+        if (bill.bill_status === "PARTIAL") {
+          realizepartial += bill.realize_value || 0;
+          debpartial += 1;
+        }
+        debs += 1;
 
         // LAR = Kol 2 sampai Kol 5
         if (isLar(bill)) {
@@ -246,6 +259,10 @@ export default function LaporanKredit() {
       collectionRate: parseFloat(collection.toFixed(2)),
       totalLar,
       larPercentage: parseFloat(lar.toFixed(2)),
+      totalPartial: realizepartial,
+      debs: debs,
+      debspartial: debpartial,
+      debspay: debpay,
     });
   };
 
@@ -2470,16 +2487,6 @@ export default function LaporanKredit() {
           </Text>
         </Col>
         <Col>
-          {/* <Space direction="vertical" size={2}>
-            <Text strong>Pilih Periode Laporan:</Text>
-            <DatePicker
-              picker="month"
-              onChange={(_date, datestr) => setSelectedMonth(datestr as string)}
-              allowClear={true}
-              placeholder="Semua Periode"
-              style={{ width: 200 }}
-            />
-          </Space> */}
           <Space size={12}>
             <DatePicker
               picker="month"
@@ -2539,31 +2546,49 @@ export default function LaporanKredit() {
           <Col xs={24} sm={12} lg={8}>
             <Card bordered={false} style={{ borderTop: "4px solid #faad14" }}>
               <Statistic
-                title="Total Debitur"
-                value={debiturs}
-                // formatter={(v) => formatRupiah(v as number)}
-                prefix={<UserOutlined style={{ color: "#faad14" }} />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={8}>
-            <Card bordered={false} style={{ borderTop: "4px solid #faad14" }}>
-              <Statistic
                 title="Total Nilai Tagihan"
                 value={summary.totalValue}
                 formatter={(v) => formatRupiah(v as number)}
                 prefix={<FileTextOutlined style={{ color: "#faad14" }} />}
               />
+              <Text
+                type="secondary"
+                style={{ fontSize: "12px", display: "block", marginTop: "8px" }}
+              >
+                👥 {summary.debs} Debitur/Rekening
+              </Text>
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={8}>
             <Card bordered={false} style={{ borderTop: "4px solid #52c41a" }}>
               <Statistic
-                title="Total Realisasi Penagihan"
+                title="Total Bayar"
                 value={summary.totalRealize}
                 formatter={(v) => formatRupiah(v as number)}
                 prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
               />
+              <Text
+                type="secondary"
+                style={{ fontSize: "12px", display: "block", marginTop: "8px" }}
+              >
+                👥 {summary.debspay} Debitur/Rekening
+              </Text>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={8}>
+            <Card bordered={false} style={{ borderTop: "4px solid #52c41a" }}>
+              <Statistic
+                title="Total Partial"
+                value={summary.totalPartial}
+                formatter={(v) => formatRupiah(v as number)}
+                prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+              />
+              <Text
+                type="secondary"
+                style={{ fontSize: "12px", display: "block", marginTop: "8px" }}
+              >
+                👥 {summary.debspartial} Debitur/Rekening
+              </Text>
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={8}>
@@ -2574,6 +2599,13 @@ export default function LaporanKredit() {
                 formatter={(v) => formatRupiah(v as number)}
                 prefix={<WarningOutlined style={{ color: "#f5222d" }} />}
               />
+              <Text
+                type="secondary"
+                style={{ fontSize: "12px", display: "block", marginTop: "8px" }}
+              >
+                👥 {summary.debs - (summary.debspay + summary.debspartial)}{" "}
+                Debitur/Rekening
+              </Text>
             </Card>
           </Col>
         </Row>

@@ -720,7 +720,7 @@ export const LAPORAN = async (
 ) => {
   const { month } = req.query;
   try {
-    const [data, billings, debiturs] = await Promise.all([
+    const [data, billings] = await Promise.all([
       prisma.mitra.findMany({
         where: {
           status: true,
@@ -826,33 +826,11 @@ export const LAPORAN = async (
           Mitra: { select: { name: true, code: true } },
         },
       }),
-      prisma.debitur.count({
-        where: {
-          Submission: {
-            some: {
-              Billing: {
-                some: {
-                  status: true,
-                  periode: {
-                    gte: moment(month ? new Date(month as string) : new Date())
-                      .startOf("month")
-                      .toDate(),
-                    lte: moment(month ? new Date(month as string) : new Date())
-                      .endOf("month")
-                      .toDate(),
-                  },
-                },
-              },
-            },
-          },
-        },
-      }),
     ]);
     return ResponseServer(res, 200, {
       msg: "Laporan Billing berhasil digenerate",
       data: data,
       billings,
-      debiturs,
     });
   } catch (err) {
     console.log(err);
