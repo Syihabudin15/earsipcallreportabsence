@@ -39,7 +39,6 @@ import type {
 import type { HookAPI } from "antd/es/modal/useModal";
 import api from "../../libs/api";
 import useContext from "../../libs/context";
-import { CollapseText } from "../utils/utilComp";
 import { InputFileUploadVisit, InputUtil } from "../utils/utilForm";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
