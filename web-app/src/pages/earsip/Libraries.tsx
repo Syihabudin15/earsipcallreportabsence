@@ -519,13 +519,6 @@ export default function DataLibrary() {
         },
       },
       {
-        title: "Keterangan",
-        key: "desc",
-        render(_v, record) {
-          return <CollapseText text={record.desc || ""} />;
-        },
-      },
-      {
         title: "Kategori",
         key: "category",
         render(_v, record) {
