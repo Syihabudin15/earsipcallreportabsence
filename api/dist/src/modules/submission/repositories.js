@@ -152,7 +152,7 @@ export const GET = async (req, res, next) => {
 export const POST = async (req, res, next) => {
     let body = req.body;
     try {
-        const { id, User, PermitFileDetail, Debitur, Product, Files, Mitra, CollateralLending, CreatedBy, PayOffice, Insurance, ...savedSub } = body;
+        const { id, User, PermitFileDetail, Debitur, Product, Files, Mitra, CollateralLending, CreatedBy, PayOffice, Insurance, Billing, ...savedSub } = body;
         const genId = await generateId();
         const genDebId = await generateDebiturId();
         Debitur.id = Debitur.id ? Debitur.id : genDebId;
@@ -174,9 +174,12 @@ export const POST = async (req, res, next) => {
                 },
             });
             for (const productTypeFile of Product.ProductType.ProductTypeFile) {
-                if (productTypeFile.Files) {
+                const filterFiles = productTypeFile.Files
+                    ? productTypeFile.Files.filter((f) => f.url)
+                    : [];
+                if (filterFiles.length !== 0) {
                     await tx.files.createMany({
-                        data: productTypeFile.Files.map((f) => ({
+                        data: filterFiles.Files.map((f) => ({
                             ...f,
                             productTypeFileId: productTypeFile.id,
                             submissionId: sub.id,
@@ -209,7 +212,7 @@ export const PUT = async (req, res, next) => {
         });
         if (!find)
             return ResponseServer(res, 404, { msg: "Not found data" });
-        const { User, PermitFileDetail, Debitur, Product, Files, Mitra, CollateralLending, CreatedBy, PayOffice, Insurance, ...savedSub } = body;
+        const { User, PermitFileDetail, Debitur, Product, Files, Mitra, CollateralLending, CreatedBy, PayOffice, Insurance, Billing, ...savedSub } = body;
         const { SubmissionType, Visit, Submission, ...savedeb } = Debitur;
         await prisma.$transaction(async (tx) => {
             await tx.debitur.update({
@@ -225,8 +228,11 @@ export const PUT = async (req, res, next) => {
                 },
             });
             for (const productTypeFile of Product.ProductType.ProductTypeFile) {
-                if (productTypeFile.Files) {
-                    for (const file of productTypeFile.Files) {
+                const filterFiles = productTypeFile.Files
+                    ? productTypeFile.Files.filter((f) => f.url)
+                    : [];
+                if (filterFiles.length !== 0) {
+                    for (const file of filterFiles) {
                         const { id: fileId, ...fileData } = file;
                         await tx.files.upsert({
                             where: { id: fileId, productTypeFileId: productTypeFile.id }, // Jika file baru, id biasanya kosong

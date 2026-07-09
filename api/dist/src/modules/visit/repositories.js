@@ -44,14 +44,41 @@ export const GET = async (req, res, next) => {
             }),
             date_action: plan ? null : { not: null },
             ...(backdate && {
-                created_at: {
-                    gte: moment(backdate.split(",")[0])
-                        .startOf("date")
-                        .toDate(),
-                    lte: moment(backdate.split(",")[1])
-                        .endOf("date")
-                        .toDate(),
-                },
+                ...(plan
+                    ? {
+                        date_action: {
+                            gte: moment(backdate.split(",")[0])
+                                .startOf("day")
+                                .toDate(),
+                            lte: moment(backdate.split(",")[1])
+                                .endOf("day")
+                                .toDate(),
+                        },
+                    }
+                    : {
+                        OR: [
+                            {
+                                date_plan: {
+                                    gte: moment(backdate.split(",")[0])
+                                        .startOf("day")
+                                        .toDate(),
+                                    lte: moment(backdate.split(",")[1])
+                                        .endOf("day")
+                                        .toDate(),
+                                },
+                            },
+                            {
+                                created_at: {
+                                    gte: moment(backdate.split(",")[0])
+                                        .startOf("day")
+                                        .toDate(),
+                                    lte: moment(backdate.split(",")[1])
+                                        .endOf("day")
+                                        .toDate(),
+                                },
+                            },
+                        ],
+                    }),
             }),
         };
         const [data, total] = await Promise.all([
@@ -68,6 +95,7 @@ export const GET = async (req, res, next) => {
                 },
                 skip: skip,
                 take: limit,
+                orderBy: { date_action: "desc" },
             }),
             prisma.visit.count({
                 where: querywhere,

@@ -529,7 +529,7 @@ export default function DataLibrary() {
                 >
                   @{record.code}
                 </Tag>
-                {record.LibraryCategory?.name && (
+                {/* {record.LibraryCategory?.name && (
                   <Tag
                     icon={<FolderTree size={10} className="mr-1" />}
                     color="purple"
@@ -544,7 +544,7 @@ export default function DataLibrary() {
                   >
                     {record.LibraryCategory.name}
                   </Tag>
-                )}
+                )} */}
               </div>
             </div>
           );
@@ -576,6 +576,32 @@ export default function DataLibrary() {
           return (
             <div>
               <CollapseText text={record.desc || ""} />
+            </div>
+          );
+        },
+      },
+      {
+        title: "Kategori",
+        key: "category",
+        render(_, record, _i) {
+          return (
+            <div>
+              {record.LibraryCategory?.name && (
+                <Tag
+                  icon={<FolderTree size={10} className="mr-1" />}
+                  color="purple"
+                  style={{
+                    margin: 0,
+                    fontSize: 10,
+                    borderRadius: 4,
+                    display: "flex",
+                    gap: 2,
+                    alignItems: "center",
+                  }}
+                >
+                  {record.LibraryCategory.name}
+                </Tag>
+              )}
             </div>
           );
         },

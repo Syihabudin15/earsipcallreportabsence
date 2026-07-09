@@ -288,7 +288,7 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
           ? productTypeFile.Files.filter((f: any) => f.url)
           : [];
         if (filterFiles.length !== 0) {
-          for (const file of filterFiles.Files) {
+          for (const file of filterFiles) {
             const { id: fileId, ...fileData } = file;
 
             await tx.files.upsert({
