@@ -297,6 +297,7 @@ export default function LaporanKredit() {
       let totalTunggakan = 0;
       let larValue = 0;
       let nplValue = 0;
+      let bayar = 0;
 
       mitra.Billing?.forEach((bill: any) => {
         const os = bill.pkk || 0;
@@ -315,6 +316,9 @@ export default function LaporanKredit() {
         if (isNpl(bill)) {
           nplValue += os;
         }
+        if(["BAYAR","PARTIAL"].includes(bill.bill_status)){
+          bayar += bill.realize_value;
+        }
       });
 
       const nplGross = sisaPokok > 0 ? (nplValue / sisaPokok) * 100 : 0;
@@ -328,11 +332,7 @@ export default function LaporanKredit() {
         plafondDisalurkan,
         sisaPokok,
         angsuran,
-        realisasi:
-          mitra.Billing?.reduce(
-            (acc: number, b: any) => acc + (b.realize_value || 0),
-            0,
-          ) || 0,
+        realisasi:bayar,
         tunggakanPokok,
         totalTunggakan,
         larValue,
