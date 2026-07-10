@@ -299,7 +299,6 @@ export default function LaporanKredit() {
       let nplValue = 0;
       let bayar = 0;
       let debpay = 0;
-      let debpart = 0;
 
       mitra.Billing?.forEach((bill: any) => {
         const os = bill.pkk || 0;
@@ -320,11 +319,7 @@ export default function LaporanKredit() {
         }
         if (["BAYAR", "PARTIAL"].includes(bill.bill_status)) {
           bayar += bill.realize_value;
-          if (bill.bill_status === "PARTIAL") {
-            debpart += 1;
-          } else {
-            debpay += 1;
-          }
+          debpay += 1;
         }
       });
 
@@ -336,7 +331,6 @@ export default function LaporanKredit() {
         instansi: mitra.name || "Tanpa Nama",
         code: mitra.code || "-",
         deb,
-        debpart,
         debpay,
         plafondDisalurkan,
         sisaPokok,
@@ -1352,7 +1346,7 @@ export default function LaporanKredit() {
         tDebPay,
         tRealizTotal,
         tAngs1 > 0 ? tRealizTotal / tAngs1 : 0,
-        tDeb1-tDebPay,
+        tDeb1 - tDebPay,
         totalSisaPokokSemua,
         tAngs1 > 0 ? totalSisaPokokSemua / tAngs1 : 0,
       ]);
