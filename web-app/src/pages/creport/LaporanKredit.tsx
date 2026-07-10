@@ -2603,7 +2603,10 @@ export default function LaporanKredit() {
             <Card bordered={false} style={{ borderTop: "4px solid #f5222d" }}>
               <Statistic
                 title="Total Belum Bayar"
-                value={summary.totalValue - summary.totalRealize}
+                value={
+                  summary.totalValue -
+                  (summary.totalRealize + summary.totalPartial)
+                }
                 formatter={(v) => formatRupiah(v as number)}
                 prefix={<WarningOutlined style={{ color: "#f5222d" }} />}
               />
