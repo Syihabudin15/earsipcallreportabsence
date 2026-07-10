@@ -94,12 +94,8 @@ const generate = (record: any, selectedMonth: string | null) => {
   let tDebRealisasi = 0;
   let tDebTunggakan = 0;
   instansiData.forEach((d) => {
-    const deb = d.deb || 0;
-    const angs = d.angsuran || 0;
-    const real = d.realisasi || 0;
-
-    if (real > 0) tDebRealisasi += deb;
-    if (angs - real > 0) tDebTunggakan += deb;
+    tDebRealisasi += d.debpay;
+    tDebTunggakan += d.deb - d.debpay;
   });
 
   // ==========================================
@@ -500,10 +496,10 @@ const generate = (record: any, selectedMonth: string | null) => {
                   <td class="border-excel-light text-center">${deb}</td>
                   <td class="border-excel-light text-right">${formatIDR(d.sisaPokok)}</td>
                   <td class="border-excel-light text-right">${formatIDR(angs)}</td>
-                  <td class="border-excel-light text-center">${real > 0 ? deb : 0}</td>
+                  <td class="border-excel-light text-center">${d.debpay}</td>
                   <td class="border-excel-light text-right">${formatIDR(real)}</td>
                   <td class="border-excel-light text-center">${formatPct(pctBayar)}</td>
-                  <td class="border-excel-light text-center">${sisaTunggakan > 0 ? deb : 0}</td>
+                  <td class="border-excel-light text-center">${d.deb - d.debpay}</td>
                   <td class="border-excel-light text-right">${formatIDR(sisaTunggakan)}</td>
                   <td class="border-excel-light text-center">${formatPct(pctSisa)}</td>
                 </tr>

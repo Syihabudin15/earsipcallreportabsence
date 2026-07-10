@@ -298,6 +298,8 @@ export default function LaporanKredit() {
       let larValue = 0;
       let nplValue = 0;
       let bayar = 0;
+      let debpay = 0;
+      let debpart = 0;
 
       mitra.Billing?.forEach((bill: any) => {
         const os = bill.pkk || 0;
@@ -316,8 +318,13 @@ export default function LaporanKredit() {
         if (isNpl(bill)) {
           nplValue += os;
         }
-        if(["BAYAR","PARTIAL"].includes(bill.bill_status)){
+        if (["BAYAR", "PARTIAL"].includes(bill.bill_status)) {
           bayar += bill.realize_value;
+          if (bill.bill_status === "PARTIAL") {
+            debpart += 1;
+          } else {
+            debpay += 1;
+          }
         }
       });
 
@@ -329,10 +336,12 @@ export default function LaporanKredit() {
         instansi: mitra.name || "Tanpa Nama",
         code: mitra.code || "-",
         deb,
+        debpart,
+        debpay,
         plafondDisalurkan,
         sisaPokok,
         angsuran,
-        realisasi:bayar,
+        realisasi: bayar,
         tunggakanPokok,
         totalTunggakan,
         larValue,
@@ -1297,7 +1306,7 @@ export default function LaporanKredit() {
         const pctBayar = d.angsuran > 0 ? d.realisasi / d.angsuran : 0;
         const pctSisa = d.angsuran > 0 ? sisaTunggakan / d.angsuran : 0;
         tRealizTotal += d.realisasi;
-        tDebPay += d.realisasi > 0 ? d.deb : 0;
+        tDebPay += d.debpay;
 
         const r = ws5.addRow([
           d.no,
@@ -1305,10 +1314,10 @@ export default function LaporanKredit() {
           d.deb,
           d.sisaPokok,
           d.angsuran,
-          d.realisasi > 0 ? d.deb : 0,
+          d.debpay,
           d.realisasi,
           pctBayar,
-          sisaTunggakan > 0 ? d.deb : 0,
+          d.deb - d.debpay,
           sisaTunggakan,
           pctSisa,
         ]);
@@ -1343,7 +1352,7 @@ export default function LaporanKredit() {
         tDebPay,
         tRealizTotal,
         tAngs1 > 0 ? tRealizTotal / tAngs1 : 0,
-        tDeb1,
+        tDeb1-tDebPay,
         totalSisaPokokSemua,
         tAngs1 > 0 ? totalSisaPokokSemua / tAngs1 : 0,
       ]);
