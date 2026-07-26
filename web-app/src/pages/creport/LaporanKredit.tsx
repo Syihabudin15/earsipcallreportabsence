@@ -61,6 +61,7 @@ export default function LaporanKredit() {
     totalTunggakan: 0,
     nplPercentage: 0,
     collectionRate: 0,
+    collectiondeb: 0,
     totalLar: 0,
     larPercentage: 0,
     debs: 0,
@@ -190,6 +191,7 @@ export default function LaporanKredit() {
             debitur: bill.Submission.Debitur.fullname,
             instansi: bill.Submission.Mitra.name,
             ao: getAoName(bill),
+            coll: bill.col,
             pembayaran,
             tagihan,
             status: bill.bill_status,
@@ -252,7 +254,9 @@ export default function LaporanKredit() {
 
     const npl = totalOs > 0 ? (totalNpl / totalOs) * 100 : 0;
     const lar = totalOs > 0 ? (totalLar / totalOs) * 100 : 0;
-    const collection = value > 0 ? (realize / value) * 100 : 0;
+    const collection =
+      value > 0 ? ((realize + realizepartial) / value) * 100 : 0;
+    const collectiondeb = debs > 0 ? ((debpay + debpartial) / debs) * 100 : 0;
 
     setSummary({
       totalPlafond: plafond,
@@ -262,6 +266,7 @@ export default function LaporanKredit() {
       totalTunggakan,
       nplPercentage: parseFloat(npl.toFixed(2)),
       collectionRate: parseFloat(collection.toFixed(2)),
+      collectiondeb: parseFloat(collectiondeb.toFixed(2)),
       totalLar,
       larPercentage: parseFloat(lar.toFixed(2)),
       totalPartial: realizepartial,
@@ -1547,6 +1552,7 @@ export default function LaporanKredit() {
         "Nama Debitur",
         "Instansi",
         "AO",
+        "Kolektibilitas",
         "Tagihan",
         "Pembayaran",
         "Status",
@@ -1597,7 +1603,8 @@ export default function LaporanKredit() {
       ws7.getColumn(6).width = 45;
       ws7.getColumn(7).width = 16;
       ws7.getColumn(8).width = 16;
-      ws7.getColumn(9).width = 12;
+      ws7.getColumn(9).width = 16;
+      ws7.getColumn(10).width = 12;
 
       let no = 1;
       let row = 7;
@@ -1626,6 +1633,7 @@ export default function LaporanKredit() {
             item.debitur,
             item.instansi,
             item.ao,
+            item.coll || "-",
             item.tagihan || "-",
             item.pembayaran || "-",
             item.status,
@@ -1674,6 +1682,7 @@ export default function LaporanKredit() {
         "",
         "",
         totalDebbt7,
+        "",
         "",
         "",
         totaltagihan,
@@ -2640,7 +2649,7 @@ export default function LaporanKredit() {
                 <Col>
                   <div style={{ maxWidth: 220 }}>
                     <Statistic
-                      title="Berhasil Direalisasi"
+                      title="Berhasil Direalisasi (Rp)"
                       value={summary.collectionRate}
                       precision={2}
                       suffix="%"
@@ -2655,6 +2664,38 @@ export default function LaporanKredit() {
                       }}
                     >
                       Persentase dana tagihan aktif yang sukses disetor kembali
+                      oleh seluruh mitra.
+                    </p>
+                  </div>
+                </Col>
+              </Row>
+              <Row align="middle" justify="space-around">
+                <Col>
+                  <Progress
+                    type="dashboard"
+                    percent={summary.collectiondeb}
+                    strokeColor={{ "0%": "#108ee9", "100%": "#87d068" }}
+                    width={120}
+                  />
+                </Col>
+                <Col>
+                  <div style={{ maxWidth: 220 }}>
+                    <Statistic
+                      title="Berhasil Direalisasi (Akun)"
+                      value={summary.collectiondeb}
+                      precision={2}
+                      suffix="%"
+                      valueStyle={{ color: "#3f8600" }}
+                      prefix={<ArrowUpOutlined />}
+                    />
+                    <p
+                      style={{
+                        marginTop: 8,
+                        color: "#8c8c8c",
+                        fontSize: "12px",
+                      }}
+                    >
+                      Persentase akun tagihan aktif yang sukses disetor kembali
                       oleh seluruh mitra.
                     </p>
                   </div>
@@ -2827,7 +2868,7 @@ export default function LaporanKredit() {
                   dataSource={getAnalisisMitraData()}
                   columns={mitraColumns}
                   // pagination={{ pageSize: 5 }}
-                  scroll={{ x: 1000 }}
+                  scroll={{ x: 1300 }}
                   size="small"
                 />
               </div>
@@ -2846,7 +2887,7 @@ export default function LaporanKredit() {
                   dataSource={getSegmentasiProdukData()}
                   columns={productColumns}
                   // pagination={{ pageSize: 5 }}
-                  scroll={{ x: 1000 }}
+                  scroll={{ x: 1300 }}
                   size="small"
                 />
               </div>

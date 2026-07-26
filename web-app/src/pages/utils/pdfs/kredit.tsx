@@ -236,7 +236,7 @@ const generate = (record: any, selectedMonth: string | null) => {
     </head>
     <body class="text-gray-900 bg-white p-2">
 
-      <div class="page landscape">
+      <div class="page">
         ${renderBprHeader("LAPORAN POSISI KOLEKTIBILITAS PINJAMAN")}
         
         <div class="text-xs font-bold mb-2" style="color: #1F4E78;">I. KOLEKTIBILITAS BERDASARKAN INSTANSI</div>
@@ -309,7 +309,7 @@ const generate = (record: any, selectedMonth: string | null) => {
         ${renderSignatures()}
       </div>
 
-      <div class="page landscape page-break">
+      <div class="page page-break">
         ${renderBprHeader("LAPORAN POSISI KOLEKTIBILITAS PINJAMAN")}
         
         <div class="text-xs font-bold mb-2" style="color: #1F4E78;">II. KOLEKTIBILITAS BERDASARKAN SEGMENTASI KREDIT</div>
@@ -523,7 +523,7 @@ const generate = (record: any, selectedMonth: string | null) => {
         ${renderSignatures()}
       </div>
 
-      <div class="page landscape page-break">
+      <div class="page page-break">
         ${renderBprHeader("LAPORAN POSISI KOLEKTIBILITAS PINJAMAN")}
         
         <div class="text-xs font-bold mb-2" style="color: #1F4E78;">VI. KOLEKTIBILITAS BERDASARKAN AO</div>
@@ -592,6 +592,7 @@ const generate = (record: any, selectedMonth: string | null) => {
           <th>Nama Debitur</th>
           <th>Instansi</th>
           <th>AO</th>
+          <th>Kolektibilitas</th>
           <th>Tagihan</th>
           <th>Pembayaran</th>
           <th>Status</th>
@@ -631,6 +632,7 @@ const generate = (record: any, selectedMonth: string | null) => {
           <td class="border-excel-light">${d.debitur}</td>
           <td class="border-excel-light">${d.instansi}</td>
           <td class="border-excel-light text-center">${d.ao}</td>
+          <td class="border-excel-light text-center">${d.coll}</td>
           <td class="border-excel-light text-right">${formatIDR(d.tagihan)}</td>
           <td class="border-excel-light text-right">${formatIDR(d.pembayaran)}</td>
 
@@ -652,6 +654,7 @@ const generate = (record: any, selectedMonth: string | null) => {
         <tr class="bg-accent-total font-bold text-black">
           <td colspan="3" class="border-excel-light border-total-top border-total-bottom text-left">GRAND TOTAL KONSOLIDASI NPL</td>
           <td class="border-excel-light border-total-top border-total-bottom text-center">${debt7}</td>
+          <td class="border-excel-light border-total-top border-total-bottom text-center"></td>
           <td class="border-excel-light border-total-top border-total-bottom text-center"></td>
           <td class="border-excel-light border-total-top border-total-bottom text-center"></td>
           <td class="border-excel-light border-total-top border-total-bottom text-right">${formatIDR(install7)}</td>

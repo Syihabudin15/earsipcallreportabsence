@@ -10,7 +10,7 @@ export const signIn = async (user) => {
         roleId: user.roleId,
     };
     // Access token expires in 1 hour
-    const accessToken = jwt.sign(payload, secretkey, { expiresIn: "1h" });
+    const accessToken = jwt.sign(payload, secretkey, { expiresIn: "5h" });
     return accessToken;
 };
 export const comparaPassword = async (pass, has) => {

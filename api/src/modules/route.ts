@@ -396,7 +396,10 @@ export const DashboardEarsip = async (req: Request, res: Response) => {
         status: true,
         ...(month && {
           Submission: {
-            some: dateFilter,
+            some: {
+              ...dateFilter,
+              Product: { ProductType: { name: { contains: "Kredit" } } },
+            },
           },
         }),
       },
@@ -419,6 +422,7 @@ export const DashboardEarsip = async (req: Request, res: Response) => {
       where: {
         status: true,
         ...dateFilter,
+        Product: { ProductType: { name: { contains: "Kredit" } } },
       },
       include: {
         Files: { select: { id: true } },
@@ -435,7 +439,7 @@ export const DashboardEarsip = async (req: Request, res: Response) => {
     }),
 
     prisma.productType.findMany({
-      where: { status: true },
+      where: { status: true, name: { contains: "Kredit" } },
       include: {
         Product: {
           include: {
@@ -469,6 +473,7 @@ export const DashboardEarsip = async (req: Request, res: Response) => {
           where: {
             status: true,
             ...dateFilter,
+            Product: { ProductType: { name: { contains: "Kredit" } } },
           },
           select: {
             value: true,
@@ -492,6 +497,7 @@ export const DashboardEarsip = async (req: Request, res: Response) => {
           where: {
             status: true,
             ...dateFilter,
+            Product: { ProductType: { name: { contains: "Kredit" } } },
           },
           select: {
             value: true,

@@ -85,13 +85,24 @@ export const GET = async (req, res, next) => {
             prisma.visit.findMany({
                 where: querywhere,
                 include: {
-                    Debitur: { include: { SubmissionType: true } },
-                    Submission: { include: { Debitur: true, Product: true } },
+                    Debitur: {
+                        select: {
+                            fullname: true,
+                            cif: true,
+                            SubmissionType: { select: { name: true } },
+                        },
+                    },
+                    Submission: {
+                        select: {
+                            account_number: true,
+                            Product: { select: { name: true } },
+                        },
+                    },
                     VisitCategory: true,
                     VisitStatus: true,
                     VisitPurpose: true,
-                    User: true,
-                    Mitra: true,
+                    User: { select: { fullname: true, nip: true } },
+                    Mitra: { select: { code: true, name: true } },
                 },
                 skip: skip,
                 take: limit,

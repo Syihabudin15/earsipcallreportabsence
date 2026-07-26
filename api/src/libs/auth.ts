@@ -22,7 +22,7 @@ export const signIn = async (user: any) => {
   };
 
   // Access token expires in 1 hour
-  const accessToken = jwt.sign(payload, secretkey, { expiresIn: "1h" });
+  const accessToken = jwt.sign(payload, secretkey, { expiresIn: "5h" });
 
   return accessToken;
 };
