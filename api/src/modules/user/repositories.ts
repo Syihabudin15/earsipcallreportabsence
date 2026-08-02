@@ -112,12 +112,20 @@ export const PUT = async (req: Request, res: Response, next: NextFunction) => {
       });
     const find = await prisma.user.findFirst({ where: { id: id as string } });
     if (!find) return ResponseServer(res, 404, { msg: "Not found data" });
-    const hashed = await bcrypt.hash(usersaved.password, 10);
+
+    const { password, ...userPayload } = usersaved;
+    let passwordToSave = find.password;
+
+    if (typeof password === "string" && password !== "") {
+      passwordToSave =
+        password.length < 20 ? await bcrypt.hash(password, 10) : password;
+    }
+
     const saved = await prisma.user.update({
       where: { id: find.id },
       data: {
-        ...usersaved,
-        password: usersaved.password.length < 20 ? hashed : find.password,
+        ...userPayload,
+        password: passwordToSave,
         updated_at: new Date(),
       },
     });

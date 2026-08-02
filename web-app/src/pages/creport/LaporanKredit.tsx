@@ -14,6 +14,7 @@ import {
   Progress,
   Tabs,
   Button,
+  Divider,
 } from "antd";
 import {
   DollarOutlined,
@@ -67,6 +68,12 @@ export default function LaporanKredit() {
     debs: 0,
     debspay: 0,
     debspartial: 0,
+    nplValue: 0,
+    nplPayValue: 0,
+    nplPayDeb: 0,
+    nplDeb: 0,
+    nplPayPercentage: 0,
+    nplPayPercentageDeb: 0,
   });
 
   // Fetch data dari API berdasarkan bulan yang dipilih
@@ -221,6 +228,10 @@ export default function LaporanKredit() {
 
     let totalLar = 0;
     let totalNpl = 0;
+    let tagihanNpl = 0;
+    let debNpl = 0;
+    let payNplValue = 0;
+    let payNplDeb = 0;
 
     data.forEach((mitra) => {
       mitra.Billing?.forEach((bill: IBilling) => {
@@ -248,6 +259,12 @@ export default function LaporanKredit() {
         // NPL Gross = Kol 3 sampai Kol 5
         if (isNpl(bill)) {
           totalNpl += sisaPokok;
+          tagihanNpl += bill.value || 0;
+          debNpl += 1;
+          if (bill.bill_status === "BAYAR" || bill.bill_status === "PARTIAL") {
+            payNplDeb += 1;
+            payNplValue += bill.realize_value || 0;
+          }
         }
       });
     });
@@ -273,6 +290,12 @@ export default function LaporanKredit() {
       debs: debs,
       debspartial: debpartial,
       debspay: debpay,
+      nplDeb: debNpl,
+      nplPayDeb: payNplDeb,
+      nplPayValue: payNplValue,
+      nplValue: tagihanNpl,
+      nplPayPercentage: payNplValue > 0 ? (payNplValue / tagihanNpl) * 100 : 0,
+      nplPayPercentageDeb: debNpl > 0 ? (payNplDeb / debNpl) * 100 : 0,
     });
   };
 
@@ -2625,6 +2648,43 @@ export default function LaporanKredit() {
               >
                 👥 {summary.debs - (summary.debspay + summary.debspartial)}{" "}
                 Debitur/Rekening
+              </Text>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={8}>
+            <Card bordered={false} style={{ borderTop: "4px solid #f5222d" }}>
+              <div className="flex gap-2 items-center justify-between">
+                <div>
+                  <Statistic
+                    title="Pembayaran & Tagihan NPL"
+                    value={summary.nplPayValue}
+                    formatter={(v) => formatRupiah(v as number)}
+                    valueStyle={{ fontSize: 16 }}
+                    // prefix={<WarningOutlined style={{ color: "#f5222d" }} />}
+                  />
+                  <Divider style={{ margin: 2 }} />
+                  <Statistic
+                    // title="Tagihan NPL"
+                    value={summary.nplValue}
+                    formatter={(v) => formatRupiah(v as number)}
+                    valueStyle={{ fontSize: 16 }}
+                    prefix={<WarningOutlined style={{ color: "#f5222d" }} />}
+                  />
+                </div>
+                <Progress
+                  type="dashboard"
+                  percent={parseFloat(summary.nplPayPercentage.toFixed(2))}
+                  // strokeColor={{ "0%": "#108ee9", "100%": "#87d068" }}
+                  strokeColor="#722ed1"
+                  width={50}
+                />
+              </div>
+              <Text
+                type="secondary"
+                style={{ fontSize: "12px", display: "block", marginTop: "8px" }}
+              >
+                👥 {summary.nplPayDeb}/{summary.nplDeb} Rekening (
+                {summary.nplPayPercentageDeb.toFixed(2)}%)
               </Text>
             </Card>
           </Col>

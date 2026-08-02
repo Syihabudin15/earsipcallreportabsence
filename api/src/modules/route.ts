@@ -529,6 +529,7 @@ export const DashboardEarsip = async (req: Request, res: Response) => {
             approve_status: true,
             flagging_status: true,
             guarantee_status: true,
+
             mitraId: true,
             insuranceId: true,
           },

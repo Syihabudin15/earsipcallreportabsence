@@ -61,32 +61,30 @@ export default function UserProfile() {
       formDataUpload.append("file", file);
 
       // Upload file ke server
-      const uploadResponse = await api.request({
-        url: `${import.meta.env.VITE_API_URL}/file`,
-        method: "POST",
-        data: formDataUpload,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      console.log({ uploadResponse });
+      const uploadResponse = await api.post("/file", formDataUpload);
 
       if (uploadResponse.data.url) {
         // Update user photo
-        await api.request({
-          url: `${import.meta.env.VITE_API_URL}/user?id=${user.id}`,
-          method: "PUT",
-          data: { photo: uploadResponse.data.url },
-        });
+        await api.put(
+          "/user",
+          { photo: uploadResponse.data.url },
+          {
+            params: { id: user.id },
+          },
+        );
 
         message.success("Foto profil berhasil diupdate");
         // Refresh user data
         window.location.reload();
+      } else {
+        message.error("Gagal upload foto: URL tidak ditemukan");
       }
     } catch (error) {
+      console.error(error);
       message.error("Gagal upload foto");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
     return false; // Prevent default upload behavior
   };
 
