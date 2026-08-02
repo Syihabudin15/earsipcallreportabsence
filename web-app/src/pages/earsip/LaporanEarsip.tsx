@@ -563,29 +563,44 @@ export default function LaporanEarsip() {
                     innerRadius={30}
                     outerRadius={42}
                     paddingAngle={2}
+                    minAngle={5}
                     dataKey="value"
                   >
-                    {statusState.guarantee.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={
-                          COLOR_STATUS[entry.name.toUpperCase()] ||
-                          PALETTE[(index + 2) % PALETTE.length]
-                        }
-                      />
-                    ))}
+                    {statusState.guarantee.map((entry, index) => {
+                      // Tentukan warna konsisten berdasarkan mapping atau indeks palette
+                      const color =
+                        COLOR_STATUS[entry.name.toUpperCase()] ||
+                        PALETTE[index % PALETTE.length];
+
+                      return <Cell key={`cell-${index}`} fill={color} />;
+                    })}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
             </div>
+
+            {/* Daftar Teks dengan Indikator Warna yang Sinkron */}
             <div className="text-[10px] font-medium space-y-1 border-t pt-2 border-slate-50 text-slate-600">
-              {statusState.guarantee.map((item, i) => (
-                <div key={i} className="flex justify-between">
-                  <span>{item.name}</span>
-                  <b>{item.value} Agunan</b>
-                </div>
-              ))}
+              {statusState.guarantee.map((item, i) => {
+                const color =
+                  COLOR_STATUS[item.name.toUpperCase()] ||
+                  PALETTE[i % PALETTE.length];
+
+                return (
+                  <div key={i} className="flex justify-between items-center">
+                    <span className="flex items-center gap-1.5">
+                      {/* Indikator titik warna agar sama persis dengan chart */}
+                      <span
+                        className="w-2 h-2 rounded-full inline-block"
+                        style={{ backgroundColor: color }}
+                      />
+                      {item.name}
+                    </span>
+                    <b>{item.value} Agunan</b>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -604,29 +619,71 @@ export default function LaporanEarsip() {
                     innerRadius={30}
                     outerRadius={42}
                     paddingAngle={2}
+                    minAngle={5}
                     dataKey="value"
                   >
-                    {statusState.flagging.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={
-                          COLOR_STATUS[entry.name.toUpperCase()] ||
-                          PALETTE[(index + 3) % PALETTE.length]
-                        }
-                      />
-                    ))}
+                    {statusState.flagging.map((entry, index) => {
+                      const nameUpper = entry.name.toUpperCase();
+
+                      // Aturan warna spesifik
+                      let color;
+                      if (nameUpper === "FLAGGING") {
+                        color = "#10b981"; // Hijau
+                      } else if (nameUpper.includes("PENDING")) {
+                        color = "#f59e0b"; // Orange
+                      } else if (
+                        nameUpper.includes("NON") ||
+                        nameUpper.includes("PENSIUNAN")
+                      ) {
+                        color = "#ef4444"; // Merah
+                      } else {
+                        color =
+                          COLOR_STATUS[nameUpper] ||
+                          PALETTE[(index + 3) % PALETTE.length];
+                      }
+
+                      return <Cell key={`cell-${index}`} fill={color} />;
+                    })}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
             </div>
+
             <div className="text-[10px] font-medium space-y-1 border-t pt-2 border-slate-50 text-slate-600">
-              {statusState.flagging.map((item, i) => (
-                <div key={i} className="flex justify-between">
-                  <span>{item.name}</span>
-                  <b>{item.value} Data</b>
-                </div>
-              ))}
+              {statusState.flagging.map((item, i) => {
+                const nameUpper = item.name.toUpperCase();
+
+                // Gunakan logika warna yang SAMA PERSIS agar sinkron
+                let color;
+                if (nameUpper === "FLAGGING") {
+                  color = "#10b981"; // Hijau
+                } else if (nameUpper.includes("PENDING")) {
+                  color = "#f59e0b"; // Orange
+                } else if (
+                  nameUpper.includes("NON") ||
+                  nameUpper.includes("PENSIUNAN")
+                ) {
+                  color = "#ef4444"; // Merah
+                } else {
+                  color =
+                    COLOR_STATUS[nameUpper] ||
+                    PALETTE[(i + 3) % PALETTE.length];
+                }
+
+                return (
+                  <div key={i} className="flex justify-between items-center">
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className="w-2 h-2 rounded-full inline-block"
+                        style={{ backgroundColor: color }}
+                      />
+                      {item.name}
+                    </span>
+                    <b>{item.value} Data</b>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
