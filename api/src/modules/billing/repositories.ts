@@ -251,20 +251,19 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
     const number = (value: any) => {
       if (value === null || value === undefined || value === "") return 0;
 
-      // Langsung bulatkan jika tipe data sudah number dari Excel
       if (typeof value === "number") return Math.round(value);
 
       const raw = String(value).trim();
 
       // Format Indonesia: 1.234.567,89
       if (raw.includes(",")) {
-        const parsed = Number(raw.replace(/\./g, "").replace(/,/g, ".")) || 0;
-        return Math.round(parsed);
+        return (
+          Math.round(Number(raw.replace(/\./g, "").replace(/,/g, "."))) || 0
+        );
       }
 
       // Format angka biasa / Excel number
-      const parsed = Number(raw.replace(/\./g, "")) || 0;
-      return Math.round(parsed);
+      return Number(raw.replace(/\./g, "")) || 0;
     };
 
     const parseDate = (value: any): Date => {
