@@ -264,19 +264,37 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
       return Number(raw.replace(/\./g, "")) || 0;
     };
 
+    // const parseDate = (value: any) => {
+    //   if (!value) return new Date();
+    //   if (value instanceof Date) return value;
+
+    //   const parsed = moment(String(value).trim(), [
+    //     "DD/MM/YYYY",
+    //     "D/M/YYYY",
+    //     "YYYY-MM-DD",
+    //     "MM/DD/YYYY",
+    //   ]);
+
+    //   return parsed.isValid() ? parsed.toDate() : new Date();
+    // };
     const parseDate = (value: any) => {
       if (!value) return new Date();
 
-      // Jika SheetJS mengembalikan objek Date (karena cellDates: true)
+      // Jika dari Excel dengan cellDates: true
       if (value instanceof Date) {
-        // Ambil komponen UTC untuk menghindari pergeseran timezone lokal (WIB)
-        const year = value.getUTCFullYear();
-        const month = value.getUTCMonth();
-        const day = value.getUTCDate();
-        return new Date(year, month, day); // Buat tanggal lokal yang akurat
+        // Kembalikan objek Date aslinya secara utuh,
+        // atau gunakan UTC agar tidak terpengaruh zona waktu lokal
+        return new Date(
+          value.getUTCFullYear(),
+          value.getUTCMonth(),
+          value.getUTCDate(),
+          12,
+          0,
+          0, // Set jam 12 siang agar aman dari pergeseran timezone manapun
+        );
       }
 
-      // Jika berupa string atau angka serial Excel
+      // Jika berupa string / format lain
       const parsed = moment(String(value).trim(), [
         "DD/MM/YYYY",
         "D/M/YYYY",
