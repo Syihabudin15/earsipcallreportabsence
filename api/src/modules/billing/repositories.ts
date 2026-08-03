@@ -251,15 +251,13 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
     const number = (value: any) => {
       if (value === null || value === undefined || value === "") return 0;
 
-      if (typeof value === "number") return Math.round(value);
+      if (typeof value === "number") return value;
 
       const raw = String(value).trim();
 
       // Format Indonesia: 1.234.567,89
       if (raw.includes(",")) {
-        return (
-          Math.round(Number(raw.replace(/\./g, "").replace(/,/g, "."))) || 0
-        );
+        return Number(raw.replace(/\./g, "").replace(/,/g, ".")) || 0;
       }
 
       // Format angka biasa / Excel number
