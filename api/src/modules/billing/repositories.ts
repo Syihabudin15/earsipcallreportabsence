@@ -322,18 +322,10 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
     const rows = (jsonData as any[])
       .map((item: any, index: number) => {
         const nama = text(getExcelValue(item, "NAMA"));
-        const per = parseDate(getExcelValue(item, "PERIODE"));
-        const billDateRaw = parseDate(getExcelValue(item, "TGL_JTH_TMP"));
-        const billDate = new Date(
-          Date.UTC(
-            per.getUTCFullYear(),
-            per.getUTCMonth(),
-            billDateRaw.getUTCDate(),
-            12,
-            0,
-            0,
-          ),
-        );
+        const per = moment(parseDate(getExcelValue(item, "PERIODE")))
+          .add(1, "day")
+          .toDate();
+        const billDate = parseDate(getExcelValue(item, "TGL_JTH_TMP"));
 
         return {
           rowIndex: index + 2,
@@ -345,7 +337,10 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
           cif: text(getExcelValue(item, "CIF")),
           nik: text(getExcelValue(item, "NO_IDENTITAS")),
           status: normalizeBillStatus(getExcelValue(item, "STATUS")),
-          billDate: billDate,
+          billDate: moment(billDate)
+            .set("month", per.getMonth())
+            .set("year", per.getFullYear())
+            .toDate(),
           startAt: parseDate(getExcelValue(item, "TGL_BUKA")),
           endAt: parseDate(getExcelValue(item, "TGL_AKHIR_FAS")),
           angsuran: number(getExcelValue(item, "NILAI_TGH_ANGSURAN")),
