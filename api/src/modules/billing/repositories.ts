@@ -266,8 +266,17 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
 
     const parseDate = (value: any) => {
       if (!value) return new Date();
-      if (value instanceof Date) return value;
 
+      // Jika SheetJS mengembalikan objek Date (karena cellDates: true)
+      if (value instanceof Date) {
+        // Ambil komponen UTC untuk menghindari pergeseran timezone lokal (WIB)
+        const year = value.getUTCFullYear();
+        const month = value.getUTCMonth();
+        const day = value.getUTCDate();
+        return new Date(year, month, day); // Buat tanggal lokal yang akurat
+      }
+
+      // Jika berupa string atau angka serial Excel
       const parsed = moment(String(value).trim(), [
         "DD/MM/YYYY",
         "D/M/YYYY",
