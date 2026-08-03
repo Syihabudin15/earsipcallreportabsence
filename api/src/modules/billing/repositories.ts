@@ -264,45 +264,43 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
       return Number(raw.replace(/\./g, "")) || 0;
     };
 
-    // const parseDate = (value: any) => {
-    //   if (!value) return new Date();
-    //   if (value instanceof Date) return value;
-
-    //   const parsed = moment(String(value).trim(), [
-    //     "DD/MM/YYYY",
-    //     "D/M/YYYY",
-    //     "YYYY-MM-DD",
-    //     "MM/DD/YYYY",
-    //   ]);
-
-    //   return parsed.isValid() ? parsed.toDate() : new Date();
-    // };
-    const parseDate = (value: any) => {
+    const parseDate = (value: any): Date => {
       if (!value) return new Date();
 
-      // Jika dari Excel dengan cellDates: true
-      if (value instanceof Date) {
-        // Tambahkan 7 jam (offset WIB) untuk mengimbangi mundurnya waktu UTC dari Excel
-        const adjustedDate = new Date(value.getTime() + 7 * 60 * 60 * 1000);
+      let year: number, month: number, day: number;
 
-        return new Date(
-          adjustedDate.getUTCFullYear(),
-          adjustedDate.getUTCMonth(),
-          adjustedDate.getUTCDate(),
-          12,
-          0,
-          0,
-        );
+      if (value instanceof Date) {
+        // Gunakan method lokal (getFullYear/getMonth/getDate) karena SheetJS
+        // mengeset tanggal yang benar di zona waktu lokal (WIB)
+        year = value.getFullYear();
+        month = value.getMonth();
+        day = value.getDate();
+      } else if (typeof value === "number") {
+        // Jika Excel membaca sebagai serial number (misal: 46235)
+        const utcDays = Math.floor(value - 25569);
+        const utcValue = utcDays * 86400 * 1000;
+        const dateInfo = new Date(utcValue);
+        year = dateInfo.getUTCFullYear();
+        month = dateInfo.getUTCMonth();
+        day = dateInfo.getUTCDate();
+      } else {
+        // Jika berupa string ("01/08/2026", "YYYY-MM-DD", dll)
+        const parsed = moment(String(value).trim(), [
+          "DD/MM/YYYY",
+          "D/M/YYYY",
+          "YYYY-MM-DD",
+          "MM/DD/YYYY",
+        ]);
+        if (!parsed.isValid()) return new Date();
+        year = parsed.year();
+        month = parsed.month();
+        day = parsed.date();
       }
 
-      // Jika berupa string/format lain
-      const parsed = moment.utc(
-        String(value).trim(),
-        ["DD/MM/YYYY", "D/M/YYYY", "YYYY-MM-DD", "MM/DD/YYYY"],
-        true,
-      );
-
-      return parsed.isValid() ? parsed.toDate() : new Date();
+      // Kunci waktu pada 12:00:00 UTC mutlak
+      // Hasil di DB UTC: 2026-08-01 12:00:00 | Hasil di WIB: 2026-08-01 19:00:00
+      // Kedua zona waktu TETAP berada di tanggal 01/08/2026
+      return new Date(Date.UTC(year, month, day, 12, 0, 0));
     };
 
     const getExcelValue = (row: any, keyName: string) => {
@@ -325,7 +323,17 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
       .map((item: any, index: number) => {
         const nama = text(getExcelValue(item, "NAMA"));
         const per = parseDate(getExcelValue(item, "PERIODE"));
-        const billDate = parseDate(getExcelValue(item, "TGL_JTH_TMP"));
+        const billDateRaw = parseDate(getExcelValue(item, "TGL_JTH_TMP"));
+        const billDate = new Date(
+          Date.UTC(
+            per.getUTCFullYear(),
+            per.getUTCMonth(),
+            billDateRaw.getUTCDate(),
+            12,
+            0,
+            0,
+          ),
+        );
 
         return {
           rowIndex: index + 2,
@@ -337,10 +345,7 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
           cif: text(getExcelValue(item, "CIF")),
           nik: text(getExcelValue(item, "NO_IDENTITAS")),
           status: normalizeBillStatus(getExcelValue(item, "STATUS")),
-          billDate: moment(billDate)
-            .set("month", per.getMonth())
-            .set("year", per.getFullYear())
-            .toDate(),
+          billDate: billDate,
           startAt: parseDate(getExcelValue(item, "TGL_BUKA")),
           endAt: parseDate(getExcelValue(item, "TGL_AKHIR_FAS")),
           angsuran: number(getExcelValue(item, "NILAI_TGH_ANGSURAN")),
