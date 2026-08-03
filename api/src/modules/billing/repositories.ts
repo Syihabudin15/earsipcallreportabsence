@@ -282,25 +282,25 @@ export const POST = async (req: Request, res: Response, next: NextFunction) => {
 
       // Jika dari Excel dengan cellDates: true
       if (value instanceof Date) {
-        // Kembalikan objek Date aslinya secara utuh,
-        // atau gunakan UTC agar tidak terpengaruh zona waktu lokal
+        // Tambahkan 7 jam (offset WIB) untuk mengimbangi mundurnya waktu UTC dari Excel
+        const adjustedDate = new Date(value.getTime() + 7 * 60 * 60 * 1000);
+
         return new Date(
-          value.getUTCFullYear(),
-          value.getUTCMonth(),
-          value.getUTCDate(),
+          adjustedDate.getUTCFullYear(),
+          adjustedDate.getUTCMonth(),
+          adjustedDate.getUTCDate(),
           12,
           0,
-          0, // Set jam 12 siang agar aman dari pergeseran timezone manapun
+          0,
         );
       }
 
-      // Jika berupa string / format lain
-      const parsed = moment(String(value).trim(), [
-        "DD/MM/YYYY",
-        "D/M/YYYY",
-        "YYYY-MM-DD",
-        "MM/DD/YYYY",
-      ]);
+      // Jika berupa string/format lain
+      const parsed = moment.utc(
+        String(value).trim(),
+        ["DD/MM/YYYY", "D/M/YYYY", "YYYY-MM-DD", "MM/DD/YYYY"],
+        true,
+      );
 
       return parsed.isValid() ? parsed.toDate() : new Date();
     };
