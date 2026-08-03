@@ -416,7 +416,7 @@ export default function UpsertVisitPlan({ record }: { record?: IVisit }) {
                     submissionId: e,
                     ...(find && {
                       col: find.Billing?.[0]?.col || "",
-                      value: find.Billing?.[0]?.value || 0,
+                      value: Number(find.Billing?.[0]?.value || 0),
                     }),
                   });
                 }}

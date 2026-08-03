@@ -204,8 +204,8 @@ export interface IDeduction {
 
 export interface IBilling {
   id: string;
-  value: number;
-  realize_value: number;
+  value: number | string;
+  realize_value: number | string;
   bill_status: "BAYAR" | "BELUMBAYAR" | "PARTIAL";
   bill_date: Date;
   name: string | null;
@@ -222,9 +222,9 @@ export interface IBilling {
   realize_date: Date;
   plafond: number;
   tenor: number;
-  pkk: number;
-  tung_pkk: number;
-  tung_bga: number;
+  pkk: number | string;
+  tung_pkk: number | string;
+  tung_bga: number | string;
 
   status: boolean;
   created_at: Date;

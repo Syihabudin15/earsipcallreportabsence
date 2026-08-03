@@ -496,15 +496,15 @@ model Billing {
   id            String    @id @default(uuid())
   plafond       Int       @default(0)
   tenor         Int       @default(0)
-  value         Int       @default(0)
-  realize_value Int       @default(0)
+  value         Decimal   @default(0) @db.Decimal(15, 2)
+  realize_value Decimal   @default(0) @db.Decimal(15, 2)
   realize_date  DateTime?
   bill_status   EBill     @default(BELUMBAYAR)
   bill_date     DateTime
   name          String?
-  pkk           Int       @default(0)
-  tung_pkk      Int       @default(0)
-  tung_bga      Int       @default(0)
+  pkk           Decimal   @default(0) @db.Decimal(15, 2)
+  tung_pkk      Decimal   @default(0) @db.Decimal(15, 2)
+  tung_bga      Decimal   @default(0) @db.Decimal(15, 2)
   start_at      DateTime?
   end_at        DateTime?
   col           String?

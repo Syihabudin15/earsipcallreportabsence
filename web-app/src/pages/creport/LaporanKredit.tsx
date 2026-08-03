@@ -119,11 +119,11 @@ export default function LaporanKredit() {
           const monthKey = moment(b.periode || new Date()).format("YYYY-MM");
           if (!monthlyMap[monthKey]) return;
 
-          monthlyMap[monthKey].Tagihan += b.value || 0;
-          monthlyMap[monthKey].Pembayaran += b.realize_value || 0;
+          monthlyMap[monthKey].Tagihan += Number(b.value || 0);
+          monthlyMap[monthKey].Pembayaran += Number(b.realize_value || 0);
 
           if (isNpl(b)) {
-            monthlyMap[monthKey]["Pembayaran NPL"] += b.realize_value || 0;
+            monthlyMap[monthKey]["Pembayaran NPL"] += Number(b.realize_value || 0);
           }
         });
         setTrendData(
@@ -189,8 +189,8 @@ export default function LaporanKredit() {
         (bill: any) => {
           if (!isNpl(bill)) return;
 
-          const pembayaran = bill.realize_value || 0;
-          const tagihan = bill.value || 0;
+          const pembayaran = Number(bill.realize_value || 0);
+          const tagihan = Number(bill.value || 0);
 
           rows.push({
             tanggal: bill.realize_date || bill.bill_date,
@@ -235,18 +235,18 @@ export default function LaporanKredit() {
 
     data.forEach((mitra) => {
       mitra.Billing?.forEach((bill: IBilling) => {
-        const sisaPokok = bill.pkk || 0;
+        const sisaPokok = toNumber(bill.pkk);
 
         plafond += bill.plafond || 0;
         totalOs += sisaPokok;
-        value += bill.value || 0;
-        totalTunggakan += (bill.tung_pkk || 0) + (bill.tung_bga || 0);
+        value += toNumber(bill.value);
+        totalTunggakan += toNumber(bill.tung_pkk) + toNumber(bill.tung_bga);
         if (bill.bill_status === "BAYAR") {
-          realize += bill.realize_value || 0;
+          realize += toNumber(bill.realize_value);
           debpay += 1;
         }
         if (bill.bill_status === "PARTIAL") {
-          realizepartial += bill.realize_value || 0;
+          realizepartial += toNumber(bill.realize_value);
           debpartial += 1;
         }
         debs += 1;
@@ -259,11 +259,11 @@ export default function LaporanKredit() {
         // NPL Gross = Kol 3 sampai Kol 5
         if (isNpl(bill)) {
           totalNpl += sisaPokok;
-          tagihanNpl += bill.value || 0;
+          tagihanNpl += toNumber(bill.value);
           debNpl += 1;
           if (bill.bill_status === "BAYAR" || bill.bill_status === "PARTIAL") {
             payNplDeb += 1;
-            payNplValue += bill.realize_value || 0;
+            payNplValue += toNumber(bill.realize_value);
           }
         }
       });
@@ -312,6 +312,8 @@ export default function LaporanKredit() {
     }).format(val);
   };
 
+  const toNumber = (value: any): number => Number(value ?? 0);
+
   // ==========================================
   // DATA PREPARATION FOR TABLES & EXCEL
   // ==========================================
@@ -329,14 +331,14 @@ export default function LaporanKredit() {
       let debpay = 0;
 
       mitra.Billing?.forEach((bill: any) => {
-        const os = bill.pkk || 0;
+        const os = toNumber(bill.pkk);
 
         deb += 1;
         plafondDisalurkan += bill.plafond || 0;
         sisaPokok += os;
-        angsuran += bill.value || 0;
-        tunggakanPokok += bill.tung_pkk || 0;
-        totalTunggakan += (bill.tung_pkk || 0) + (bill.tung_bga || 0);
+        angsuran += toNumber(bill.value);
+        tunggakanPokok += toNumber(bill.tung_pkk);
+        totalTunggakan += toNumber(bill.tung_pkk) + toNumber(bill.tung_bga);
 
         if (isLar(bill)) {
           larValue += os;
@@ -381,7 +383,7 @@ export default function LaporanKredit() {
     dashboardData.forEach((mitra) => {
       mitra.Billing?.forEach((bill: any) => {
         const segName = bill.Submission?.Product?.name || "Non Keagenan";
-        const os = bill.pkk || 0;
+        const os = toNumber(bill.pkk);
 
         if (!segmentMap[segName]) {
           segmentMap[segName] = {
@@ -401,10 +403,10 @@ export default function LaporanKredit() {
         segmentMap[segName].deb += 1;
         segmentMap[segName].plafondDisalurkan += bill.plafond || 0;
         segmentMap[segName].sisaPokok += os;
-        segmentMap[segName].angsuran += bill.value || 0;
-        segmentMap[segName].tunggakanPokok += bill.tung_pkk || 0;
+        segmentMap[segName].angsuran += toNumber(bill.value);
+        segmentMap[segName].tunggakanPokok += toNumber(bill.tung_pkk);
         segmentMap[segName].totalTunggakan +=
-          (bill.tung_pkk || 0) + (bill.tung_bga || 0);
+          toNumber(bill.tung_pkk) + toNumber(bill.tung_bga);
 
         if (isLar(bill)) {
           segmentMap[segName].larValue += os;
@@ -444,15 +446,16 @@ export default function LaporanKredit() {
   });
 
   const addBillToKolItem = (item: any, bill: any) => {
-    const os = bill.pkk || 0;
+    const os = toNumber(bill.pkk);
 
     item.deb += 1;
     item.plafondDisalurkan += bill.plafond || 0;
     item.sisaPokok += os;
-    item.angsuran += bill.value || 0;
-    item.realisasi += bill.realize_value || 0;
-    item.tunggakanPokok += bill.tung_pkk || 0;
-    item.totalTunggakan += (bill.tung_pkk || 0) + (bill.tung_bga || 0);
+    item.angsuran += toNumber(bill.value);
+    item.realisasi += toNumber(bill.realize_value);
+    item.tunggakanPokok += toNumber(bill.tung_pkk);
+    item.totalTunggakan +=
+      toNumber(bill.tung_pkk) + toNumber(bill.tung_bga);
 
     if (isLar(bill)) item.larValue += os;
     if (isNpl(bill)) item.nplValue += os;

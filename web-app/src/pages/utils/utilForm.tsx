@@ -8,13 +8,14 @@ import type { IFile, IFileVisit } from "../../libs/interface";
 import { useState } from "react";
 import api from "../../libs/api";
 
-export const IDRFormat = (number: number) => {
+export const IDRFormat = (number: number | string) => {
+  const value = Number(number) || 0;
   const temp = new Intl.NumberFormat("de-DE", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
     style: "decimal",
     currency: "IDR",
-  }).format(number);
+  }).format(value);
   return temp;
 };
 
